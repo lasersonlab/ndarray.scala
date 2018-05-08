@@ -1,2 +1,6 @@
+*.log
+10x_parquet
+dependency-reduced-pom.xml
 files
+metastore_db
 target

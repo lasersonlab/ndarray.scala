@@ -1,11 +1,11 @@
 // ~/sw/spark-2.2.1-bin-hadoop2.7/bin/spark-shell --master local[2] --jars ~/.m2/repository/com/tom_e_white/hdf5-java-cloud/0.0.1-SNAPSHOT/hdf5-java-cloud-0.0.1-SNAPSHOT.jar
 
 import hammerlab.path._
-
 import com.tom_e_white.hdf5_java_cloud.ArrayUtils
 import com.tom_e_white.hdf5_java_cloud.NioReadOnlyRandomAccessFile
-import org.apache.spark.mllib.linalg.{SparseVector, Vector, Vectors}
-import org.apache.spark.sql.{Row, SaveMode}
+import org.apache.spark.SparkContext
+import org.apache.spark.mllib.linalg.{ SparseVector, Vector, Vectors }
+import org.apache.spark.sql.{ Row, SaveMode, SparkSession }
 import org.apache.spark.sql.types._
 import ucar.nc2.NetcdfFile
 
@@ -14,6 +14,9 @@ val t0 = System.currentTimeMillis()
 val file = "files/1M_neurons_filtered_gene_bc_matrices_h5.h5" // change to "gs://..." for GCS
 val output = "10x_parquet"
 val totalShards = 320
+
+def sc: SparkContext
+def spark: SparkSession
 
 // Read the k'th shard of the HDF5 file and return a sequence of barcode-vector tuples. Each shard must fit in memory.
 def readShard(k: Int): Seq[(String, Vector)] = {
@@ -60,12 +63,27 @@ def readShard(k: Int): Seq[(String, Vector)] = {
 
 val actualShards = totalShards // change this to test on a subset
 val shardIndexes = sc.parallelize(0 until actualShards, totalShards)
-val rows = shardIndexes.flatMap(readShard(_)).map {case (id, vec) => Row(id, vec.asInstanceOf[SparseVector].indices, vec.asInstanceOf[SparseVector].values)}
+val rows =
+  shardIndexes
+    .flatMap(readShard)
+    .map {
+      case (id, vec) ⇒
+        Row(
+          id,
+          vec
+            .asInstanceOf[SparseVector]
+            .indices,
+          vec
+            .asInstanceOf[SparseVector]
+            .values
+        )
+    }
 
 val schema = StructType(
-  StructField("id", StringType, false) ::
-    StructField("idx", ArrayType(IntegerType, false), false) ::
-    StructField("quant", ArrayType(DoubleType, false), false) :: Nil)
+  StructField(   "id", StringType                    , false) ::
+  StructField(  "idx",  ArrayType(IntegerType, false), false) ::
+  StructField("quant",  ArrayType( DoubleType, false), false) :: Nil
+)
 
 val df = spark.createDataFrame(rows, schema)
 df.write.mode(SaveMode.Overwrite).parquet(output)

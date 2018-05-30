@@ -13,7 +13,7 @@ import java.util.List;
 public class NioReadOnlyRandomAccessFileTest {
   @Test
   public void test() throws Exception {
-    URI uri = ClassLoader.getSystemClassLoader().getResource("chunked.hdf5").toURI();
+    URI uri = Thread.currentThread().getContextClassLoader().getResource("chunked.hdf5").toURI();
     RandomAccessFile raf = new NioReadOnlyRandomAccessFile(uri);
     NetcdfFile ncfile = NetcdfFile.open(raf, uri.toString(), null, null);
 

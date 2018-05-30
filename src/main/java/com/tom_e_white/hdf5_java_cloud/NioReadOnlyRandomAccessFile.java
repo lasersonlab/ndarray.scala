@@ -96,4 +96,9 @@ public class NioReadOnlyRandomAccessFile extends RandomAccessFile {
   public long getLastModified() {
     return lastModified;
   }
+
+  @Override
+  public String toString() {
+    return path.toString();
+  }
 }

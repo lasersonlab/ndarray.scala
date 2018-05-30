@@ -50,18 +50,24 @@ def readShard(k: Int): Seq[(String, Vector)] = {
   val indicesData: Array[Long] = ArrayUtils.index(indices, firstIndptr, lastIndptr).getStorage.asInstanceOf[Array[Long]]
   val dataData: Array[Int] = ArrayUtils.index(data, firstIndptr, lastIndptr).getStorage.asInstanceOf[Array[Int]]
 
-  (0 until end - start).map(i => {
-    val barcode = barcodeData(i)
-    val indicesSlice = indicesData.slice((indptrData(i) - firstIndptr).toInt, (indptrData(i + 1) - firstIndptr).toInt)
-    val dataSlice = dataData.slice((indptrData(i) - firstIndptr).toInt, (indptrData(i + 1) - firstIndptr).toInt)
-    val indexDataPairs = indicesSlice.zip(dataSlice)
-      .map {case (k: Long, v: Int) => (k.toInt, v.toDouble)} // Vector is (Int, Double)
+  (0 until end - start).map {
+    i ⇒
+      val barcode = barcodeData(i)
+      val indicesSlice = indicesData.slice((indptrData(i) - firstIndptr).toInt, (indptrData(i + 1) - firstIndptr).toInt)
+      val dataSlice = dataData.slice((indptrData(i) - firstIndptr).toInt, (indptrData(i + 1) - firstIndptr).toInt)
+      val indexDataPairs =
+        indicesSlice
+          .zip(dataSlice)
+          .map {
+            case (k: Long, v: Int) ⇒
+              (k.toInt, v.toDouble)  // Vector is (Int, Double)
+          }
     val vec = Vectors.sparse(numFeatures, indexDataPairs)
-    (barcode, vec)
-  })
+      (barcode, vec)
+  }
 }
 
-val actualShards = totalShards // change this to test on a subset
+val actualShards = totalShards  // change this to test on a subset
 val shardIndexes = sc.parallelize(0 until actualShards, totalShards)
 val rows =
   shardIndexes

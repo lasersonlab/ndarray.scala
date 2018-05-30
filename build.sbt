@@ -1,8 +1,15 @@
+import settings._
+
+scalaVersion := "2.11.12"
 
 libraryDependencies ++= Seq(
-  "edu.ucar" % "cdm" % "5.0.0-SNAPSHOT",
-  "org.hammerlab" %% "channel" % "1.4.0",
-  "com.novocode" % "junit-interface" % "0.11" % "test"
+  cdm,
+  channel,
+  junit,
+  `google-cloud-nio`,
+  spark.core,
+  spark.mllib,
+  spark.sql
 )
 
 resolvers += Resolver.mavenLocal

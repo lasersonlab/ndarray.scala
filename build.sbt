@@ -1,15 +1,14 @@
-import settings._
+addSparkDeps
+sparkVersion := "2.2.1"
 
-scalaVersion := "2.11.12"
+dep(
+  "org.lasersonlab.thredds" ^ "cdm" ^ "5.0.0" snapshot,
+  "com.novocode" ^ "junit-interface" ^ "0.11" tests,
+  "com.google.cloud" ^ "google-cloud-nio" ^ "0.49.0-alpha",
 
-libraryDependencies ++= Seq(
-  cdm,
-  channel,
-  junit,
-  `google-cloud-nio`,
-  spark.core,
-  spark.mllib,
-  spark.sql
+  hammerlab.channel % "1.5.0",
+
+  mllib
 )
 
-resolvers += Resolver.mavenLocal
+deps += "org.apache.spark" ^^ "spark-sql" ^ sparkVersion.value

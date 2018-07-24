@@ -47,7 +47,7 @@ public class NioReadOnlyRandomAccessFile extends RandomAccessFile {
     super(bufferSize);
     this.path = path;
     SeekableByteChannel sbc = Files.newByteChannel(path);
-    CachingChannel.Config config = new CachingChannel.Config(1024 * 1024, 2, 4 * 64 * 1024 * 1024);
+    CachingChannel.Config config = new CachingChannel.Config(1 << 20, 2, 1 << 28);
     this.cachingChannel = CachingChannel$.MODULE$.makeCachingChannel(SeekableByteChannel$.MODULE$.makeChannelByteChannel(sbc), config);
     this.lastModified = Files.getLastModifiedTime(path).to(TimeUnit.MILLISECONDS);
   }

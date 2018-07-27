@@ -2,9 +2,9 @@ spark
 spark.version := "2.2.1"
 
 dep(
-  "org.lasersonlab.thredds" ^ "cdm" ^ "5.0.0" snapshot,
+  "org.lasersonlab.thredds" ^ "cdm" ^ "5.0.0",
   "com.novocode" ^ "junit-interface" ^ "0.11" tests,
-  "com.google.cloud" ^ "google-cloud-nio" ^ "0.54.0-alpha",
+  "org.lasersonlab" ^ "google-cloud-nio" ^ "0.55.2-alpha" snapshot,
 
   hammerlab.bytes % "1.2.0",
   hammerlab.channel % "1.5.0",

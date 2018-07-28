@@ -52,7 +52,7 @@ object Main
         )
 
         for {
-          arg ← _args.args
+          arg ← args
           path = Path(arg)
           _ = println(show"Inspecting: ${path.toString} ${Bytes.format(path.size)}")
           raf = new NioReadOnlyRandomAccessFile(path)

@@ -7,6 +7,16 @@ default(
   )
 )
 
+lazy val ndarray = crossProject.settings(
+  dep(
+    hammerlab.shapeless_utils % "1.4.0",
+    shapeless
+  )
+)
+lazy val `ndarray.jvm` = ndarray.jvm
+lazy val `ndarray.js`  = ndarray.js
+lazy val `ndarray-x`   = parent(`ndarray.jvm`, `ndarray.js`)
+
 lazy val netcdf = project.settings(
   dep(
     `google-cloud-nio`,
@@ -44,6 +54,7 @@ lazy val utils = project.settings(
 )
 
 lazy val `hdf5-java-cloud` = root(
+  `ndarray-x`,
   netcdf,
   singlecell,
   utils

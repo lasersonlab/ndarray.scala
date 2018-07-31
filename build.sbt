@@ -53,11 +53,18 @@ lazy val utils = project.settings(
   )
 )
 
+lazy val zarr = project.settings(
+  dep(
+    hammerlab.types
+  )
+)
+
 lazy val `hdf5-java-cloud` = root(
   `ndarray-x`,
   netcdf,
   singlecell,
-  utils
+  utils,
+  zarr
 )
 
 val `google-cloud-nio` = "org.lasersonlab" ^ "google-cloud-nio" ^ "0.55.2-alpha"

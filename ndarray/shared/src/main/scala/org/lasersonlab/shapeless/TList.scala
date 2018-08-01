@@ -6,37 +6,55 @@ import shapeless.Nat._
 import shapeless.ops.nat.ToInt
 
 /**
- * Collection of `n` [[Int]]s, with the size stored in the type-level
+ * Collection of objects, with the size incorporated into the type-system
  *
  * Notable members:
  *
- * - `n`: size of current / "head" dimension
- * - `rest`: "tail" of this type-level list of [[Int]]s, having a size one less than this [[TList]]'s
- * - `size`: number of dimensions ([[Int]]s) in this [[TList]]
+ * - `head`: first value in the list
+ * - `tail`: [[TList]] with all elements after `head`
+ * - `size`: number of elements
  */
 sealed abstract class TList[T] {
   def head: T
 
+  // type-level size
   type Size <: Nat
   protected implicit def _size: Size
+
   def size: Int
 
-  type Tail <: Nat
-  def tail: Option[TList.Of[T, Tail]]
+  /**
+   * should be one less than [[Size]], i.e. Size =:= Succ[Prev]; enforcement left to
+   * implementations
+   */
+  type Prev <: Nat
+  type Tail <: TList.Of[T, Prev]
+  def tail: Option[Tail]
 
-  def prepend(
+  /**
+   * Prepend an element to this [[TList]]
+   *
+   * The returned [[Cons]] can store its [[Tail]]-type anywhere between the specific `this.type`
+   * and the upper-bound `TList.Of[T, Size]`
+   */
+  def prepend[
+    R
+      >: this.type
+      <: TList.Of[T, Size]
+  ](
     t: T
   )(
     implicit
     n: Succ[Size],
     ti: ToInt[Succ[Size]]
   ):
-    Cons[T, Size] =
-    Cons[T, Size](
+    Cons[T, Size, R] =
+    Cons[T, Size, R](
       t,
       this
     )
 }
+
 object TList {
 
   /** Can implicitly convert a [[TList]] to its leading dimension [[Int]] */
@@ -47,10 +65,11 @@ object TList {
 
   case class Cons[
     T,
-    _P <: Nat
+    _P <: Nat,
+    _Tail <: TList.Of[T, _P]
   ](
      head: T,
-     _rest: TList.Of[T, _P]
+     _rest: _Tail
   )(
      implicit
      protected val _size: Succ[_P],
@@ -58,20 +77,56 @@ object TList {
   )
   extends TList[T] {
     type Size = Succ[_P]
-    type Tail = _P
-    val tail: Some[TList.Of[T, Tail]] = Some(_rest)
+    type Prev = _P
+    type Tail = _Tail
+    val tail: Some[Tail] = Some(_rest)
     val size = _size.toInt
   }
 
   case class Base[T](head: T) extends TList[T] {
     type Size = _1
-    type Tail = _0
+    type Prev = _0
     val _size = _1
     val size = 1
     val tail = None
   }
+  object Base {
+    implicit def wrap[T](t: T): Base[T] = Base(t)
+  }
+
+  import hammerlab.shapeless._
 
   def apply[T](t: T): Base[T] = Base(t)
-  def apply[T](s1: T, s2: T): Cons[T, _1] = Cons(s1, TList(s2))(_2, ToInt[_2])
-  def apply[T](s1: T, s2: T, s3: T): Cons[T, _2] = Cons(s1, TList(s2, s3))(_3, ToInt[_3])
+
+  def apply[T](
+    s1: T,
+    s2: T
+  ):
+    Cons[T, _1, Base[T]] =
+    Cons(
+      s1,
+      TList(s2)
+    )
+
+  def apply[T](
+    s1: T,
+    s2: T,
+    s3: T
+  ):
+    Cons[
+       T,
+      _2,
+      Cons[
+         T,
+        _1,
+        Base[T]
+      ]
+    ] =
+    Cons(
+      s1,
+      TList(
+        s2,
+        s3
+      )
+    )
 }

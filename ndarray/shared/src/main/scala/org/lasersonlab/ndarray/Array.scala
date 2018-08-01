@@ -1,5 +1,6 @@
 package org.lasersonlab.ndarray
 
+import org.lasersonlab.ndarray.Array.Idx
 import org.lasersonlab.shapeless.TList
 import shapeless.{ Nat, Succ }
 import shapeless.Nat._
@@ -11,14 +12,11 @@ trait Array[T] {
   // Number of dimensions
   type N <: Nat
 
-  type Shape <: TList.Of[Int, N]
+  // N-element list of [[Int]] indices
+  type Shape <: Idx[N]
   def shape: Shape
 
   def apply(shape: Shape): T
-
-  // (N-1)-dimensional arrays
-  type Reduced
-  //def data: scala.Array[Reduced]
 }
 
 object Array {
@@ -32,18 +30,18 @@ object Array {
   implicit def lift[
     T,
     P <: Nat,
-    A <: Array.Of[T, P, Idx[P]]
+    _Shape <: Idx[P]
   ](
-    ts: Seq[A]
+    ts: Seq[Array.Of[T, P, _Shape]]
   )(
     implicit
     n: Succ[P],
     toInt: ToInt[Succ[P]],
-    pShape: Idx[P]
+    pShape: _Shape
   ):
-    Array.Of[T, Succ[P], TList.Cons[Int, P]] =
+    Array.Of[T, Succ[P], TList.Cons[Int, P, _Shape]] =
     Rec[
-      T, P, A
+      T, P, _Shape
     ](
       ts
     )(
@@ -57,7 +55,6 @@ object Array {
     type N = _1
     type Shape = TList.Base[Int]
     val shape: Shape = TList(data.length)
-    type Reduced = T
     def apply(shape: Shape): T = data(shape.head)
   }
   object Base {
@@ -73,20 +70,19 @@ object Array {
   case class Rec[
     T,
     P <: Nat,
-    Red <: Array.Of[T, P, Idx[P]]
+    _Shape <: Idx[P]
   ](
-    data: Seq[Red]
+    data: Seq[Array.Of[T, P, _Shape]]
   )(
     implicit
     val n: Succ[P],
-    reducedShape: Idx[P],
+    reducedShape: _Shape,
     toInt: ToInt[Succ[P]]
   )
   extends Array[T] {
     type N = Succ[P]
-    type Shape = TList.Cons[Int, P]
+    type Shape = TList.Cons[Int, P, _Shape]
     override def shape: Shape = reducedShape.prepend(data.length)
-    override type Reduced = Red
     def apply(shape: Shape): T = data(shape.head)(shape.tail.get)
   }
 }

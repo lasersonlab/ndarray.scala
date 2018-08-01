@@ -54,7 +54,7 @@ class TListTest
     }
 
     ==(three._rest.head, 20)
-    three.tail should be(Some(Cons(20, Base(30))))
+    three.tail should be(Some(Cons[Int, _1, Base[Int]](20, Base(30))))
     three.tail should be(Some(TList(20, 30)))
   }
 

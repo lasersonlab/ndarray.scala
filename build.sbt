@@ -11,7 +11,8 @@ lazy val ndarray = crossProject.settings(
   dep(
     hammerlab.shapeless_utils % "1.4.0",
     shapeless
-  )
+  ),
+  addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.7" cross CrossVersion.binary)
 )
 lazy val `ndarray.jvm` = ndarray.jvm
 lazy val `ndarray.js`  = ndarray.js

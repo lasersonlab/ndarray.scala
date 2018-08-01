@@ -13,10 +13,13 @@ trait Array[T] {
   type N <: Nat
 
   // N-element list of [[Int]] indices
-  type Shape <: Idx[N]
+  type Shape = Idx[N]
   def shape: Shape
 
-  def apply(shape: Shape): T
+  type P <: Nat
+  implicit def ev: N =:= Succ[P]
+
+  def apply(shape: TList.WithPrev[Int, N, P]): T
 }
 
 object Array {
@@ -25,64 +28,93 @@ object Array {
 
   type Idx[N <: Nat] = TList.Of[Int, N]
 
-  def apply[T](elems: T*): Base[T] = Base(elems)
-
-  implicit def lift[
+  def apply[
     T,
     P <: Nat,
-    _Shape <: Idx[P]
+    A <: Array.Of[T, P]
   ](
-    ts: Seq[Array.Of[T, P, _Shape]]
+    elems: A*
   )(
     implicit
     n: Succ[P],
-    toInt: ToInt[Succ[P]],
-    pShape: _Shape
+    toInt: ToInt[Succ[P]]
   ):
-    Array.Of[T, Succ[P], TList.Cons[Int, P, _Shape]] =
+  Array.Of[
+    T,
+    Succ[P]
+  ] =
+    lift[T, P](elems)
+
+  implicit def lift[
+    T,
+    P <: Nat
+  ](
+    ts: Seq[Array.Of[T, P]]
+  )(
+    implicit
+    n: Succ[P],
+    toInt: ToInt[Succ[P]]
+  ):
+    Array.Of[
+      T,
+      Succ[P]
+    ] =
     Rec[
-      T, P, _Shape
+      T, P
     ](
       ts
     )(
       n,
-      pShape,
       toInt
     )
 
   case class Base[T](data: Seq[T])
     extends Array[T] {
     type N = _1
-    type Shape = TList.Base[Int]
+
+    type P = _0
+    implicit val ev: N =:= Succ[P] = implicitly
+
+    //type Shape = TList.Base[Int]
     val shape: Shape = TList(data.length)
-    def apply(shape: Shape): T = data(shape.head)
+    def apply(shape: TList.WithPrev[Int, N, P]): T = data(shape.head)
   }
   object Base {
     implicit def wrap[T](ts: Seq[T]): Base[T] = Base(ts)
   }
 
-  type Of[T, _N <: Nat, _Shape <: Idx[_N]] =
+  type Of[T, _N <: Nat] =
     Array[T] {
       type N = _N
-      type Shape = _Shape
+      type Shape <: Idx[N]
     }
 
   case class Rec[
     T,
-    P <: Nat,
-    _Shape <: Idx[P]
+    _P <: Nat
   ](
-    data: Seq[Array.Of[T, P, _Shape]]
+    data: Seq[Array.Of[T, _P]]
   )(
     implicit
-    val n: Succ[P],
-    reducedShape: _Shape,
-    toInt: ToInt[Succ[P]]
+    val n: Succ[_P],
+    toInt: ToInt[Succ[_P]]
   )
   extends Array[T] {
     type N = Succ[P]
-    type Shape = TList.Cons[Int, P, _Shape]
-    override def shape: Shape = reducedShape.prepend(data.length)
-    def apply(shape: Shape): T = data(shape.head)(shape.tail.get)
+    type P = _P
+    implicit val ev: N =:= Succ[P] = implicitly
+    //override type Shape = TList.Cons[Int, P]
+
+    override val shape: TList.Cons[Int, P] = data.head.shape.prepend(data.length)
+
+    implicitly[shape.Prev =:= P]
+    def apply(shape: TList.WithPrev[Int, N, P]): T = {
+      ???
+//      import shape.ev
+//      implicitly[shape.Size =:= N]
+//      implicitly[shape.Prev =:= P]
+//      implicitly[shape.Prev =:= _P]
+//      data(shape.head)(shape.tail.get)
+    }
   }
 }

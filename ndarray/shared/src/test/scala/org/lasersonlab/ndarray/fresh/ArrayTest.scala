@@ -36,18 +36,21 @@ class ArrayTest
       r ← 0 to 2
       c ← 0 to 10
     } {
-      a(TList(r, c)) should be(10 + 20 * r + c)
+      a(r, c) should be(10 + 20 * r + c)
+      a((r, c)) should be(10 + 20 * r + c)
     }
+
+    // none of these compile; dimensions are wrong:
+    // a(r, r, c)
+    // a((r, r, c))
+    // a(r)
+    // a((r))
   }
 
   test("three") {
-//    Array[Int, _2, λ[T ⇒ Seq[Seq[T]]]](Seq(10 to 20: Seq[Int]))
-//    Array(Seq(10 to 20: Seq[Int]))
-//    Array(Seq(10 to 20: Seq[Int], 30 to 40))
-//    Array(Seq(10 to 20, 30 to 40))
-
-    val a: Array[Int, _3] =
-      Array[Int, _2, _3, Seq[Seq[Int]]](
+    // specify the
+    val a =
+      Array(
         Seq(
           10 to  20: Seq[Int],
           30 to  40: Seq[Int],
@@ -62,38 +65,16 @@ class ArrayTest
 
     a.n.toInt should be(3)
 
-    Array(
-      Seq(
-        10 to  20,
-        30 to  40,
-        50 to  60
-      ),
-      Seq(
-        50 to  60,
-        70 to  80,
-        90 to 100
-      )
-    )
-
-    Array(
-      Seq(
-        10 to  20,
-        30 to  40,
-        50 to  60
-      ),
-      Seq(
-        50 to  60,
-        70 to  80,
-        90 to 100
-      )
-    ): Array[Int, _3]
+    // here's the inferred type, in case you need/want it
+    a: Array[Int, _3]
 
     for {
       x ← 0 to  1
       y ← 0 to  2
       z ← 0 to 10
     } {
-      a(TList(x, y, z)) should be(10 + 40*x + 20*y + z)
+      a(x, y, z) should be(10 + 40*x + 20*y + z)
+      a((x, y, z)) should be(10 + 40*x + 20*y + z)
     }
   }
 
@@ -135,7 +116,8 @@ class ArrayTest
       y ← 0 to  2
       z ← 0 to 10
     } withClue(s"$sgn $x $y $z") {
-      a(TList(w, x, y, z)) should be(sgn * (10 + 40*x + 20*y + z))
+      a(w, x, y, z) should be(sgn * (10 + 40*x + 20*y + z))
+      a((w, x, y, z)) should be(sgn * (10 + 40*x + 20*y + z))
     }
 
   }

@@ -53,7 +53,7 @@ public class NioReadOnlyRandomAccessFile extends RandomAccessFile {
   }
 
   @Override
-  protected int read_(final long pos, final byte[] buffer, final int offset, final int length) throws IOException {
+  protected int read_(final long pos, final byte[] buffer, final int offset, final int length) {
     if (length < 0) {
       throw new IndexOutOfBoundsException();
     }

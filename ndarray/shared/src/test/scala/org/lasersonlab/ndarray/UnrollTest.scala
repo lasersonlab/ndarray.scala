@@ -1,6 +1,6 @@
-package org.lasersonlab.ndarray.fresh
+package org.lasersonlab.ndarray
 
-import org.lasersonlab.ndarray.fresh.Unroll.Aux
+import Unroll.Aux
 import shapeless.nat._
 
 class UnrollTest

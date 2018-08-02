@@ -1,6 +1,6 @@
-package org.lasersonlab.ndarray.fresh
+package org.lasersonlab.ndarray
 
-import org.lasersonlab.ndarray.fresh.Array.Idx
+import Array.Idx
 import shapeless._
 import shapeless.ops.nat.ToInt
 
@@ -136,6 +136,22 @@ object Array {
   {
     type N = _N
     val n = toInt()
-    def apply(idx: Idx[N]): T = nseq(idx, data)
+    @inline def apply(idx: Idx[_N]): T = nseq(idx, data)
+  }
+
+  case class Fn[
+    T,
+    _N <: Nat
+  ](
+    fn: Idx[_N] ⇒ T
+  )(
+    implicit
+    toInt: ToInt[_N]
+  )
+  extends Array[T]
+  {
+    type N = _N
+    val n: Int = toInt()
+    @inline def apply(idx: Idx[_N]): T = fn(idx)
   }
 }

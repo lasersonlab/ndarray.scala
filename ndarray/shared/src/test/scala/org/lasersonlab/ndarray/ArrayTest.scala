@@ -1,4 +1,4 @@
-package org.lasersonlab.ndarray.fresh
+package org.lasersonlab.ndarray
 
 import hammerlab.shapeless._
 import shapeless._

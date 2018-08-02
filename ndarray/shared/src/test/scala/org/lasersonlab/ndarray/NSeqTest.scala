@@ -1,7 +1,7 @@
-package org.lasersonlab.ndarray.fresh
+package org.lasersonlab.ndarray
 
-import org.lasersonlab.ndarray.fresh.NSeq.succ
-import org.lasersonlab.ndarray.fresh.TList.Base
+import NSeq.succ
+import TList.Base
 import shapeless._, nat._
 
 class NSeqTest

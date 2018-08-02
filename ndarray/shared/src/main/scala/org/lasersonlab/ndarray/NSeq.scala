@@ -1,9 +1,9 @@
-package org.lasersonlab.ndarray.fresh
+package org.lasersonlab.ndarray
 
 import shapeless._
 import nat._
-import org.lasersonlab.ndarray.fresh.Array.Idx
-import org.lasersonlab.ndarray.fresh.TList.{ Base, Cons }
+import Array.Idx
+import TList.{ Base, Cons }
 
 /**
  * Given an [[N]]-element [[Idx index]] structure ([[N]] integer coordinates), index into an [[N]]-nested [[Seq]] to
@@ -19,6 +19,7 @@ trait NSeq[T, N <: Nat] {
 
 object NSeq {
 
+  /** Short-hand for fully specifying the input and output types */
   type Aux[T, N <: Nat, _Out] = NSeq[T, N] { type Out = _Out }
 
   /**
@@ -32,6 +33,7 @@ object NSeq {
 
   /**
    * Inductive step: [[N]]+1 dimensions implemented in terms of [[N]] dimensions
+   *
    * @param n [[N]]-dimensional indexer pulling out an element of type [[T]]
    * @tparam T element type returned [[Idx]]-application
    * @tparam N previous number of dimensions

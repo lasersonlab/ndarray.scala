@@ -1,4 +1,4 @@
-package org.lasersonlab.ndarray.fresh
+package org.lasersonlab.ndarray
 
 class TListTest
   extends hammerlab.Suite {

@@ -1,6 +1,6 @@
-package org.lasersonlab.ndarray.fresh
+package org.lasersonlab.ndarray
 
-import org.lasersonlab.ndarray.fresh.Repd.Aux
+import Repd.Aux
 import shapeless.nat._
 
 class RepdTest

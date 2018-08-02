@@ -1,37 +1,44 @@
 package org.lasersonlab.ndarray.fresh
 
-//import hamm
-import shapeless.{ nat, _ }
+import shapeless._
 import nat._
 import org.lasersonlab.ndarray.fresh.Array.Idx
-import org.lasersonlab.ndarray.fresh.NSeq.Indexed
-import org.lasersonlab.ndarray.fresh.Repd.Aux
 import org.lasersonlab.ndarray.fresh.TList.{ Base, Cons }
+import shapeless.ops.nat.ToInt
 
-//trait Indexed[T] {
-//  def apply(idx: Int): T = ???
-//}
-//object Indexed {
-//  implicit def fromSeq[T](s: Seq[T]): Indexed[T] = ???
-//  def apply[T](ts: T*): Indexed[T] = ???
-//}
-/*
-trait Index[S[_]] {
-  def apply[T](s: S[T], idx: Int): T
+sealed trait Unroll[In] {
+  type N <: Nat
+  def n: Int
+  type Out
 }
-trait LowPri {
-  implicit val indexedSeq: Index[IndexedSeq] =
-    new Index[IndexedSeq] {
-      override def apply[T](s: IndexedSeq[T], idx: Int): T = s(idx)
+trait LowPriUnroll {
+  type Aux[In, _N <: Nat, _Out] =
+    Unroll[In] {
+      type N = _N
+      type Out = _Out
+    }
+
+  type Natd[In, _N <: Nat] =
+    Unroll[In] {
+      type N = _N
+    }
+
+  implicit def zero[T]: Aux[T, _0, T] =
+    new Unroll[T] {
+      type N = _0
+      val n = 0
+      type Out = T
     }
 }
-object Index extends LowPri {
-  implicit val seq: Index[Seq] =
-    new Index[Seq] {
-      override def apply[T](s: Seq[T], idx: Int): T = s(idx)
+object Unroll
+  extends LowPriUnroll {
+  implicit def rep[In, _N <: Nat, _Out](implicit prev: Lazy[Aux[In, _N, _Out]]): Aux[Seq[In], Succ[_N], _Out] =
+    new Unroll[Seq[In]] {
+      type N = Succ[_N]
+      def n: Int = prev.value.n + 1
+      type Out = _Out
     }
 }
-*/
 
 sealed trait Repd[In] {
   type N <: Nat
@@ -40,25 +47,22 @@ sealed trait Repd[In] {
   def apply(in: In): Out
 }
 trait LowPri {
+  type Aux[In, _N <: Nat, _Out] =
+    Repd[In] {
+      type N = _N
+      type Out = _Out
+    }
+
   implicit def zero[T]: Aux[T, _0, T] =
     new Repd[T] {
       type N = _0
       val n = 0
       type Out = T
-      def apply(in: T): Out = {
-//        println(s"base case: $in")
-        in
-      }
+      def apply(in: T): Out = in
     }
-//  implicit def one[T]: Aux[Seq[T], _1] =
-//    new Repd[Seq[T]] {
-//      type N = _1
-//      val n = 1
-//    }
 }
 object Repd
   extends LowPri {
-  type Aux[In, _N <: Nat, _Out] = Repd[In] { type N = _N; type Out = _Out }
   implicit def range[R <: Range]:
     Aux[
       R,
@@ -69,10 +73,7 @@ object Repd
       type N = _1
       val n = 1
       type Out = Seq[Int]
-      def apply(in: R): Out = {
-//        println(s"converting range: $in")
-        in
-      }
+      def apply(in: R): Out = in
     }
 
   implicit def cons[
@@ -93,55 +94,65 @@ object Repd
       type N = Succ[_N]
       val n = r.value.n + 1
       type Out = Seq[r.value.Out]
-      def apply(in: I[PrevIn]): Out = {
-        val out = in.toSeq.map(r.value(_))
-//        println(s"level $n: $in $out")
-        out
-      }
+      def apply(in: I[PrevIn]): Out =
+        in.map(r.value(_))
     }
 }
 
 object Foo {
-  implicitly[Repd[Seq[Int]]]
-  implicitly[Aux[Seq[Int], _1, Seq[Int]]]
-  implicitly[Aux[Vector[Int], _1, Seq[Int]]]
-  implicitly[Aux[Range, _1, Seq[Int]]]
-  implicitly[Aux[Range.Inclusive, _1, Seq[Int]]]
-  implicitly[Aux[Range, _1, Seq[Int]]]
-  implicitly[Repd[Range.Inclusive]]
-  implicitly[Repd[Range]]
+  {
+    import Repd.Aux
+    implicitly[Repd[Seq[Int]]]
+    implicitly[Aux[Seq[Int], _1, Seq[Int]]]
+    implicitly[Aux[Vector[Int], _1, Seq[Int]]]
+    implicitly[Aux[Range, _1, Seq[Int]]]
+    implicitly[Aux[Range.Inclusive, _1, Seq[Int]]]
+    implicitly[Aux[Range, _1, Seq[Int]]]
+    implicitly[Repd[Range.Inclusive]]
+    implicitly[Repd[Range]]
 
-  implicitly[Repd[Seq[Seq[Int]]]]
-  implicitly[Aux[Seq[Seq[Int]], _2, Seq[Seq[Int]]]]
-  implicitly[Aux[Vector[IndexedSeq[Int]], _2, Seq[Seq[Int]]]]
+    implicitly[Repd[Seq[Seq[Int]]]]
+    implicitly[Aux[Seq[Seq[Int]], _2, Seq[Seq[Int]]]]
+    implicitly[Aux[Vector[IndexedSeq[Int]], _2, Seq[Seq[Int]]]]
 
-  implicitly[Repd[Seq[Seq[Seq[Int]]]]]
-  implicitly[Aux[Seq[Seq[Seq[Int]]], _3, Seq[Seq[Seq[Int]]]]]
+    implicitly[Repd[Seq[Seq[Seq[Int]]]]]
+    implicitly[Aux[Seq[Seq[Seq[Int]]], _3, Seq[Seq[Seq[Int]]]]]
+  }
+  {
+    import Unroll.Aux
+
+    the[Unroll[Seq[Int]]]
+    the[Unroll[Seq[Seq[Int]]]]
+    the[Unroll[Seq[Seq[Seq[Int]]]]]
+
+    the[Aux[Int, _0, Int]]
+    the[Aux[Seq[Int], _1, Int]]
+    the[Aux[Seq[Seq[Int]], _2, Int]]
+    the[Aux[Seq[Seq[Seq[Int]]], _3, Int]]
+  }
 }
 
-trait NSeq[N <: Nat] {
-  type Out[T]
-  def apply[T](idx: Idx[N], seqs: Out[T]): T
+trait NSeq[T, N <: Nat] {
+  type Out
+  def apply(idx: Idx[N], seqs: Out): T
 }
 
 object NSeq {
-  type Indexed[+T] = Seq[T]
-  val Indexed = Seq
 
-  type Aux[N <: Nat, _Out[_]] = NSeq[N] { type Out[T] = _Out[T] }
+  type Aux[T, N <: Nat, _Out] = NSeq[T, N] { type Out = _Out }
 
-  implicit val bases: NSeq.Aux[_1, Indexed] =
-    new NSeq[_1] {
-      type Out[T] = Indexed[T]
-      def apply[T](idx: Idx[nat._1], seqs: Out[T]): T = seqs(idx.head)
+  implicit def bases[T]: NSeq.Aux[T, _1, Seq[T]] =
+    new NSeq[T, _1] {
+      type Out = Seq[T]
+      def apply(idx: Idx[nat._1], seqs: Out): T = seqs(idx.head)
     }
 
-  implicit def succ[N <: Nat](implicit n: NSeq[N]): NSeq.Aux[Succ[N], λ[T ⇒ Indexed[n.Out[T]]]] =
-    new NSeq[Succ[N]] {
-      type Out[T] = Indexed[n.Out[T]]
-      def apply[T](
+  implicit def succ[T, N <: Nat](implicit n: NSeq[T, N]): NSeq.Aux[T, Succ[N], Seq[n.Out]] =
+    new NSeq[T, Succ[N]] {
+      type Out = Seq[n.Out]
+      def apply(
         idx: Idx[Succ[N]],
-        seqs: Out[T]
+        seqs: Out
       ):
         T =
         idx match {
@@ -154,80 +165,111 @@ object NSeq {
         }
     }
 
-  val one = the[NSeq.Aux[_1, Indexed]]
-  the[NSeq[_1]]
-  the[NSeq.Aux[_1, λ[T ⇒ Indexed[T]]]]
+  val one = the[NSeq.Aux[Int, _1, Seq[Int]]]
+  the[NSeq[Int, _1]]
+  the[NSeq.Aux[Int, _1, Seq[Int]]]
 //  val one = bases[Seq]
   one(TList.Base(1), Seq(1, 2, 3))
-  val x: one.Out[Int] = Seq(1, 2, 3)
+  val x: one.Out = Seq(1, 2, 3)
 
-  val two = succ[_1]
-  two(TList.Cons(0, Base(1)), Indexed(Indexed(1, 2, 3)))
-  val y: two.Out[Int] = Indexed(Indexed(1, 2, 3))
+  val two = succ[Int, _1]
+  two(TList.Cons(0, Base(1)), Seq(Seq(1, 2, 3)))
+  val y: two.Out = Seq(Seq(1, 2, 3))
 
-  val two2 = the[NSeq.Aux[_2, λ[T ⇒ Indexed[Indexed[T]]]]]
-  two2(TList.Cons(0, Base(1)), Indexed(Indexed(1, 2, 3)))
-  val y2: two2.Out[Int] = Indexed(Indexed(1, 2, 3))
+  val two2 = the[NSeq.Aux[Int, _2, Seq[Seq[Int]]]]
+  two2(TList.Cons(0, Base(1)), Seq(Seq(1, 2, 3)))
+  val y2: two2.Out = Seq(Seq(1, 2, 3))
 
-  val two3 = the[NSeq[_2]]
-  two3(TList.Cons(0, Base(1)), Indexed(Indexed(1, 2, 3)))
-  val y3: two3.Out[Int] = Indexed(Indexed(1, 2, 3))
+  val two3 = the[NSeq[Int, _2]]
+  two3(TList.Cons(0, Base(1)), Seq(Seq(1, 2, 3)))
+  val y3: two3.Out = Seq(Seq(1, 2, 3))
 
-  succ[_2]
+  succ[Int, _2]
 
-  val three = the[NSeq[_3]]
-  val z: three.Out[Int] = Indexed(Indexed(Indexed(1, 2, 3)))
+  val three = the[NSeq[Int, _3]]
+  val z: three.Out = Seq(Seq(Seq(1, 2, 3)))
 
-  val three3 = the[NSeq.Aux[_3, λ[T ⇒ Indexed[Indexed[Indexed[T]]]]]]
-  val z3: three3.Out[Int] = Indexed(Indexed(Indexed(1, 2, 3)))
+  val three3 = the[NSeq.Aux[Int, _3, Seq[Seq[Seq[Int]]]]]
+  val z3: three3.Out = Seq(Seq(Seq(1, 2, 3)))
 
 }
 
 trait Array[T, N <: Nat] {
+  def n: N
   def apply(idx: Idx[N]): T
 }
 object Array {
   type Idx[N <: Nat] = TList[Int, N]
-  //val Idx = TList.apply()[Int] _
 
-  sealed case class Arg[Out](out: Out)
+  sealed case class Arg[Out, N <: Nat](out: Out, n: Int)
   object Arg {
-    implicit def make[In, N <: Nat, Out](in: In)(implicit r: Repd.Aux[In, N, Out]): Arg[Out] = Arg(r(in))
+    implicit def make[
+      In,
+      N <: Nat,
+      Out
+    ](
+      in: In
+    )(
+      implicit
+      r: Repd.Aux[In, N, Out],
+      n: N,
+      toInt: ToInt[N]
+    ):
+      Arg[
+        Out,
+        N
+      ] =
+      Arg(
+        r(in),
+        toInt()
+      )
   }
 
   def apply[
     T,
     N <: Nat,
-    S[U]
+    Nxt <: Succ[N],
+    S
   ](
-    args: Arg[S[T]]*
+    args: Arg[S, N]*
   )(
     implicit
-    nseq: NSeq.Aux[Succ[N], λ[A ⇒ Seq[S[A]]]]
+    unroll: Unroll.Aux[Seq[S], Nxt, T],
+    nseq: NSeq.Aux[T, Nxt, Seq[S]],
+    n: Nxt,
+    ti: ToInt[N],
+    toInt: ToInt[Nxt]
   ):
-    Array[T, Succ[N]] =
+    Array[T, Nxt] = {
+    println(s"arg degrees: ${args.map(_.n).mkString(",")}… ${ti()} ${toInt()}")
     Seqs[
       T,
-      Succ[N],
-      λ[T ⇒ Seq[S[T]]]
+      Nxt,
+      S
     ](
       args.map(_.out)
     )(
-      nseq
+      nseq,
+      n,
+      toInt
     )
+  }
 
   case class Seqs[
     T,
     N <: Nat,
-    S[_] <: Indexed[_]
+    S
   ](
-    v: S[T]
+    v: Seq[S]
   )(
     implicit
-    nseq: NSeq.Aux[N, S]
+    nseq: NSeq.Aux[T, N, Seq[S]],
+    val n: N,
+    toInt: ToInt[N]
   )
   extends Array[T, N]
   {
+    println(s"made array: ${toInt()}")
     def apply(idx: Idx[N]): T = nseq(idx, v)
   }
 }

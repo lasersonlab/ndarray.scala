@@ -13,7 +13,7 @@ class ArrayTest
   test("one") {
     val a = Array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
 
-    a.n.toInt should be(1)
+    a.n should be(1)
 
     for {
       i ← 0 until 10
@@ -32,18 +32,16 @@ class ArrayTest
     // This won't compile; the dimensions are wrong!
     illTyped("Array(10 to 20, 30 to 40, 50)")
 
-    Array(
-      10 to 20,
-      30 to 40,
-      50 to 60
-    )
-
-    val a: Array[Int, _2] =
+    val a =
       Array(
         10 to 20,
         30 to 40,
         50 to 60
       )
+
+    // verifying inferred type
+    a: Array[Int]
+    a: Array.Aux[Int, _2]
 
     for {
       r ← 0 to 2
@@ -77,10 +75,11 @@ class ArrayTest
         )
       )
 
-    a.n.toInt should be(3)
+    a.n should be(3)
 
     // here's the inferred type, in case you need/want it
-    a: Array[Int, _3]
+    a: Array[Int]
+    a: Array.Aux[Int, _3]
 
     for {
       x ← 0 to  1
@@ -122,7 +121,7 @@ class ArrayTest
         )
       )
 
-    a.n.toInt should be(4)
+    a.n should be(4)
 
     for {
       w ← 0 to 1

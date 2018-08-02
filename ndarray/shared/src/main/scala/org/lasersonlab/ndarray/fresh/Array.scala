@@ -5,17 +5,20 @@ import shapeless._
 import shapeless.ops.nat.ToInt
 
 /**
- * [[N]]-dimensional array interface
+ * N-dimensional array interface
  *
  * @tparam T element type
- * @tparam N (type-level) number of dimensions
  */
-trait Array[T, N <: Nat] {
+trait Array[T] {
+  type N <: Nat
   def n: Int
   def apply(idx: Idx[N]): T
 }
 
 object Array {
+
+  type Aux[T, _N <: Nat] = Array[T] { type N = _N }
+
   /**
    * Index into an [[N]]-dimensional [[Array]]: a [[TList typed list]] with [[N]] [[Int integers]]s
    */
@@ -95,7 +98,7 @@ object Array {
     nseq: NSeq.Aux[T, N, Seq[S]],
     toInt: ToInt[N]
   ):
-    Array[T, N] =
+    Array.Aux[T, N] =
     Seqs[
       T,
       N,
@@ -108,29 +111,30 @@ object Array {
     )
 
   /**
-   * [[N]]-dimensional [[Array]] implementation wrapping an [[N]]-nested [[Seq]] data-structure
+   * [[_N]]-dimensional [[Array]] implementation wrapping an [[_N]]-nested [[Seq]] data-structure
    *
-   * @param data wrapped [[N]]-D data: an [[N]]-level [[Seq]] of [[T]]s
-   * @param nseq implementation of [[N]]-dimensional indexing, taking an [[N]]-D [[Idx index]], applying it to this
+   * @param data wrapped [[_N]]-D data: an [[_N]]-level [[Seq]] of [[T]]s
+   * @param nseq implementation of [[_N]]-dimensional indexing, taking an [[_N]]-D [[Idx index]], applying it to this
    *             [[Array]], and returning a single [[T element]]
-   * @param toInt convert type-level number of dimensions [[N]] into an [[Int]], for runtime/value-level access
+   * @param toInt convert type-level number of dimensions [[_N]] into an [[Int]], for runtime/value-level access
    * @tparam T element type
-   * @tparam N (type-level) number of dimensions
-   * @tparam Data [[N]]-level [[Seq]] of [[T]]s
+   * @tparam _N (type-level) number of dimensions
+   * @tparam Data [[_N]]-level [[Seq]] of [[T]]s
    */
   case class Seqs[
     T,
-    N <: Nat,
+    _N <: Nat,
     Data
   ](
      data: Data
   )(
     implicit
-    nseq: NSeq.Aux[T, N, Data],
-    toInt: ToInt[N]
+    nseq: NSeq.Aux[T, _N, Data],
+    toInt: ToInt[_N]
   )
-  extends Array[T, N]
+  extends Array[T]
   {
+    type N = _N
     val n = toInt()
     def apply(idx: Idx[N]): T = nseq(idx, data)
   }

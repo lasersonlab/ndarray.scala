@@ -1,0 +1,137 @@
+package org.lasersonlab.ndarray.fresh
+
+import org.lasersonlab.ndarray.fresh.Array.Idx
+import shapeless._
+import shapeless.ops.nat.ToInt
+
+/**
+ * [[N]]-dimensional array interface
+ *
+ * @tparam T element type
+ * @tparam N (type-level) number of dimensions
+ */
+trait Array[T, N <: Nat] {
+  def n: Int
+  def apply(idx: Idx[N]): T
+}
+
+object Array {
+  /**
+   * Index into an [[N]]-dimensional [[Array]]: a [[TList typed list]] with [[N]] [[Int integers]]s
+   */
+  type Idx[N <: Nat] = TList[Int, N]
+
+  /**
+   * Wrapper type for [[Array]]-construction DSL
+   *
+   * For various types that are isomorphic to [[N]]-dimensional [[Seq]]s (e.g. [[N]]-level nests of more specialized
+   * [[Seq]] implementations like [[IndexedSeq]], [[Vector]], etc.), homogenize all layers to [[Seq]] to get simplify
+   * type-calculations in [[apply Array-construction]] below
+   *
+   * @param out converted/wrapped [[N]]-dimensional [[Seq]]
+   * @tparam Out [[N]]-nested [[Seq]] structure
+   * @tparam N number of levels of [[Seq]]-nesting
+   */
+  sealed case class Arg[Out, N <: Nat](out: Out)
+  object Arg {
+    /**
+     * If an [[In input type]] can be represented as [[N]] levels of [[Seq]] (cf. [[Repd]] evidence `r` below), perform
+     * that conversion, and wrap the output in an [[Arg]] instance.
+     *
+     * @param in input instance; [[N]]-nested [[Seq]]-like structure (each level may be a more specific [[Seq]]-subtype)
+     * @param r evidence that [[In]] is equivalent to an [[N]]-nested [[Seq]]
+     * @tparam In input type; [[N]]-nested [[Seq]]-like structure (each level may be a more specific [[Seq]]-subtype)
+     * @tparam N number of levels of nestedness in [[In]] and [[Out]]
+     * @tparam Out output type: [[N]]-nested [[Seq]]
+     * @return input `in` converted to output type [[Out]], wrapped in an [[Arg]], ready for use in
+     *         [[apply Arry-construction]]
+     */
+    implicit def make[
+      In,
+      N <: Nat,
+      Out
+    ](
+      in: In
+    )(
+      implicit
+      r: Repd.Aux[In, N, Out]
+    ):
+      Arg[
+        Out,
+        N
+      ] =
+      Arg(
+        r(in)
+      )
+  }
+
+  /**
+   * Create an n-dimensional array from arguments that are (or can be converted to) [[N]] nested layers of [[Seq]]s
+   * wrapping elements of type [[T]]
+   *
+   * @param args wrap raw elements in [[Arg]]s, which has the effect of homogenizing various allowed structures that are
+   *             all isomorphic to nested [[Seq]]s
+   * @param unroll evidence that the sequence of `S`s (wrapped in `args` above) represents [[N]] levels of nested
+   *               [[Seq]]s around elements of type [[T]]
+   * @param nseq implements indexing into an [[N]]-dimensional [[Array]] by an [[N]]-dimensional [[Idx]]
+   * @tparam T type of elements stored in this [[Array]]
+   * @tparam ArgN dimension of the individual arguments to this function (wrapped in [[Arg]]s); the dimension [[N]] of
+   *              the resulting array is one more than this (the varargs prepends a dimension)
+   * @tparam N type-level number of dimensions in this [[Array]]
+   * @tparam S the type wrapped in each [[Arg argument]]: elements of type [[T]] nested in [[ArgN]] levels (one less
+   *           than [[N]]) of [[Seq]]
+   * @return [[N]]-d [[Array]] wrapping the input arguments
+   */
+  def apply[
+    T,
+    ArgN <: Nat,
+    N <: Succ[ArgN],
+    S
+  ](
+    args: Arg[S, ArgN]*
+  )(
+    implicit
+    unroll: Unroll.Aux[Seq[S], N, T],
+    nseq: NSeq.Aux[T, N, Seq[S]],
+    toInt: ToInt[N]
+  ):
+    Array[T, N] =
+    Seqs[
+      T,
+      N,
+      Seq[S]
+    ](
+      args.map(_.out)
+    )(
+      nseq,
+      toInt
+    )
+
+  /**
+   * [[N]]-dimensional [[Array]] implementation wrapping an [[N]]-nested [[Seq]] data-structure
+   *
+   * @param data wrapped [[N]]-D data: an [[N]]-level [[Seq]] of [[T]]s
+   * @param nseq implementation of [[N]]-dimensional indexing, taking an [[N]]-D [[Idx index]], applying it to this
+   *             [[Array]], and returning a single [[T element]]
+   * @param toInt convert type-level number of dimensions [[N]] into an [[Int]], for runtime/value-level access
+   * @tparam T element type
+   * @tparam N (type-level) number of dimensions
+   * @tparam Data [[N]]-level [[Seq]] of [[T]]s
+   */
+  case class Seqs[
+    T,
+    N <: Nat,
+    Data
+  ](
+     data: Data
+  )(
+    implicit
+    nseq: NSeq.Aux[T, N, Data],
+    toInt: ToInt[N]
+  )
+  extends Array[T, N]
+  {
+    val n = toInt()
+    def apply(idx: Idx[N]): T = nseq(idx, data)
+  }
+}

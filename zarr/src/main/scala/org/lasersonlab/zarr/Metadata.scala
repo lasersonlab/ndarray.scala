@@ -11,12 +11,12 @@ case class Shape(dimensions: Seq[Int]) {
 }
 
 case class Metadata[T](
-                          shape: Shape,
-                          chunks: ChunkSize,
-                          dtype: DataType[T],
-                          compressor: Compressor,
-                          order: Order,
-                          fill_value: Opt[T] = None,
-                          zarr_format: Format = `2`,
-                          filters: Seq[Filter] = Nil
+  shape: Shape,
+  chunks: ChunkSize,
+  dtype: DataType[T],
+  compressor: Compressor,
+  order: Order,
+  fill_value: Opt[T] = None,
+  zarr_format: Format = `2`,
+  filters: Seq[Filter] = Nil
 )

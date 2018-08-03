@@ -6,7 +6,7 @@ case class Bytes[
   T,
   Idx <: TList.Aux[Int]
 ](
-  bytes: Array[Byte],
+  bytes: scala.Array[Byte],
   shape: Idx
 )(
   implicit

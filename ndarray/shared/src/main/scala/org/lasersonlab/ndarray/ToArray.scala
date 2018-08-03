@@ -4,9 +4,9 @@ import shapeless._
 
 trait ToArray[T] {
   type Elem
-  type Idx
-  def shape(t: T): Idx
-  def apply(t: T, idx: Idx): Elem
+    type Idx
+    def shape(t: T): Idx
+    def apply(t: T, idx: Idx): Elem
 }
 
 trait LowPriToArray {

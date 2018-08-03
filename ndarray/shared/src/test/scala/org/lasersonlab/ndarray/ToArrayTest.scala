@@ -46,16 +46,20 @@ class ToArrayTest
     val s =
       Seq(
         Seq(
-          10 to  20,
-          30 to  40,
-          50 to  60
+          10 to  20: Seq[Int],
+          30 to  40: Seq[Int],
+          50 to  60: Seq[Int]
         ),
         Seq(
-          50 to  60,
-          70 to  80,
-          90 to 100
+          50 to  60: Seq[Int],
+          70 to  80: Seq[Int],
+          90 to 100: Seq[Int]
         )
       )
+
+    Array.fromToArray[Seq[Seq[Seq[Int]]], Int, Int :: Int :: Int :: TNil](s)
+    Array.fromToArray(s)
+    s: Array[Int]
 
     a.shape(s) should be(2 :: 3 :: 11 :: TNil)
 

@@ -1,9 +1,6 @@
 package org.lasersonlab.ndarray
 
-import shapeless.{ HList, _ }
-import shapeless.{ Nat, Succ }
-import org.hammerlab.shapeless.tlist.TList.{ Base, Cons }
-//import shapeless.ops.tuple.Prepend
+import shapeless._
 
 trait ToArray[T] {
   type Elem
@@ -11,29 +8,6 @@ trait ToArray[T] {
   def shape(t: T): Idx
   def apply(t: T, idx: Idx): Elem
 }
-
-//trait Head[T] {
-//  type Out
-//  def apply(t: T): Out
-//}
-//trait LowPriHead {
-//  type Aux[T, _O] = Head[T] { type Out = _O }
-//  def apply[T, _O](fn: T ⇒ _O): Aux[T, _O] =
-//    new Head[T] {
-//      type Out = _O
-//      @inline def apply(t: T): _O = fn(t)
-//    }
-//
-//  implicit def id[T]: Aux[T, T] = apply(x ⇒ x)
-//}
-//object Head
-//  extends LowPriHead {
-//  implicit def generic[H, L <: HList]: Aux[H :: L, H] = apply(_.head)
-//  implicit def product[T <: Product, L <: HList](implicit g: Generic.Aux[T, L], l: Head[L]): Aux[T, l.Out] =
-//    apply(t ⇒ l(g.to(t)))
-//}
-
-//case object Empty
 
 trait LowPriToArray {
 
@@ -61,38 +35,6 @@ trait LowPriToArray {
       (t, idx) ⇒ t
     )
 }
-
-//trait Prepend[H, T] {
-//  type Out
-//  def apply(h: H, t: T): Out
-//  def apply(out: Out): (H, T)
-//}
-//trait LowPriPrepend {
-//  type Aux[H, T, _Out] = Prepend[H, T] { type Out = _Out }
-//  def apply[H, T, _Out](to: (H, T) ⇒ _Out, from: _Out ⇒ (H, T)): Aux[H, T, _Out] =
-//    new Prepend[H, T] {
-//      type Out = _Out
-//      @inline def apply(h: H, t: T): _Out = to(h, t)
-//      @inline def apply(out: _Out): (H, T) = from(out)
-//    }
-////  implicit def base[H]: Aux[H, Empty.type, H]  = apply((h, _) ⇒ h, h ⇒ (h, Empty))
-//}
-//object Prepend
-//  extends LowPriPrepend {
-//  implicit def singletonHList[H]: Aux[H, HNil.type, H :: HNil] =
-//    apply(
-//      (h, _) ⇒ h :: HNil,
-//      l ⇒ (l.head, HNil)
-//    )
-//
-//  implicit def cons[H, L <: HList, M <: HList](implicit l: Aux[H, M, L]): Aux[H, L, H :: L] =
-//    apply(
-//      (h, l) ⇒ h :: l,
-//      l ⇒ (l.head, l.tail)
-//    )
-//
-//  implicit def generic[T, L <: HList]
-//}
 
 object ToArray
   extends LowPriToArray {

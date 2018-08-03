@@ -1,5 +1,9 @@
 package org.lasersonlab.zarr
 
+import java.nio.ByteBuffer
+
+import org.lasersonlab.ndarray.Read
+
 sealed abstract class ByteOrder(override val toString: String)
 object ByteOrder {
 
@@ -31,9 +35,12 @@ sealed abstract class DataType[T](
   order: ByteOrder,
   dType: DType,
   size: Int
-) {
+)
+extends Read[T]
+{
   override def toString = s"$order$dType$size"
-  def apply(bytes: Array[Byte], pos: Int): T = ???
+//  def apply(bytes: Array[Byte], pos: Int): T = ???
+//  override def apply(buff: ByteBuffer, idx: Int): T = ???
 }
 object DataType {
 

@@ -4,9 +4,9 @@ import shapeless._
 
 trait ToArray[T] {
   type Elem
-    type Idx
-    def shape(t: T): Idx
-    def apply(t: T, idx: Idx): Elem
+  type Idx
+  def shape(t: T): Idx
+  def apply(t: T, idx: Idx): Elem
 }
 
 trait LowPriToArray {
@@ -89,10 +89,11 @@ object ToArray
 
   implicit def bytes[
     T,
-    Idx <: TList.Aux[Int]
+    Idx <: TList.Aux[Int],
+    B <: Bytes[T, Idx]
   ]:
     Aux[
-      Bytes[T, Idx],
+      B,
       T,
       Idx
     ] =

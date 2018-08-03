@@ -2,12 +2,14 @@ package org.lasersonlab.ndarray
 
 import java.nio.ByteBuffer
 
-case class Bytes[
+import org.lasersonlab.ndarray
+
+abstract class Bytes[
   T,
   Shape
 ](
-  bytes: scala.Array[Byte],
-  shape: Shape
+  val bytes: scala.Array[Byte],
+  val shape: Shape
 )(
   implicit
   read: Read[T],
@@ -15,7 +17,8 @@ case class Bytes[
 ) {
   val buff = ByteBuffer.wrap(bytes)
   val shapeList = toList(shape)
-  val sizeProducts = shapeList.scanRight(1)(_ * _).drop(1)
+  import scala.::
+  val total :: sizeProducts = shapeList.scanRight(1)(_ * _)
   def apply(idx: Shape): T = {
     val offset =
       toList(idx)
@@ -27,11 +30,26 @@ case class Bytes[
           case (idx, (offset, stepSize)) ⇒
             idx + offset * stepSize
         }
+
     read(buff, offset)
   }
 }
 
 object Bytes {
+  case class Bytes[
+    T,
+    Shape
+  ](
+    override val bytes: scala.Array[Byte],
+    override val shape: Shape
+  )(
+    implicit
+    read: Read[T],
+    toList: ToList[Int, Shape]
+  )
+  extends ndarray.Bytes[T, Shape](bytes, shape)
+
+
   case class Builder[T](bytes: scala.Array[Byte]) {
     def apply[Shape](shape: Shape)(
       implicit

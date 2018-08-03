@@ -54,18 +54,23 @@ lazy val utils = project.settings(
   )
 )
 
-lazy val zarr = project.settings(
+lazy val zarr = crossProject.settings(
   dep(
     hammerlab.types
   )
+).dependsOn(
+  ndarray
 )
+lazy val `zarr.jvm` = zarr.jvm
+lazy val `zarr.js`  = zarr.js
+lazy val `zarr-x`   = parent(`zarr.jvm`, `zarr.js`)
 
 lazy val `hdf5-java-cloud` = root(
   `ndarray-x`,
-  netcdf,
-  singlecell,
-  utils,
-  zarr
+   netcdf,
+   singlecell,
+   utils,
+  `zarr-x`
 )
 
 val `google-cloud-nio` = "org.lasersonlab" ^ "google-cloud-nio" ^ "0.55.2-alpha"

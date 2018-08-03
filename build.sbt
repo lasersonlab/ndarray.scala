@@ -7,16 +7,16 @@ default(
   )
 )
 
-lazy val ndarray = project.in(new File("ndarray/shared")).settings(
+lazy val ndarray = crossProject.settings(
   dep(
     hammerlab.shapeless_utils % "1.5.0" snapshot,
     shapeless
   ),
   addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.7" cross CrossVersion.binary)
 )
-//lazy val `ndarray.jvm` = ndarray.jvm
-//lazy val `ndarray.js`  = ndarray.js
-//lazy val `ndarray-x`   = parent(`ndarray.jvm`, `ndarray.js`)
+lazy val `ndarray.jvm` = ndarray.jvm
+lazy val `ndarray.js`  = ndarray.js
+lazy val `ndarray-x`   = parent(`ndarray.jvm`, `ndarray.js`)
 
 lazy val netcdf = project.settings(
   dep(
@@ -61,7 +61,7 @@ lazy val zarr = project.settings(
 )
 
 lazy val `hdf5-java-cloud` = root(
-  ndarray,
+  `ndarray-x`,
   netcdf,
   singlecell,
   utils,

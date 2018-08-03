@@ -68,47 +68,59 @@ object Zip {
     }
 }
 
-trait Map[InList <: TList] {
+trait Map[InList <: TList, Out] {
   type OutList <: TList
   type In
-  type Out
   def apply(in: InList, fn: In ⇒ Out): OutList
 }
-object Map {
-  type Aux[InList <: TList, _In, _Out, _OutList <: TList] =
-    Map[InList] {
+
+trait LowPriMap {
+  type Aux[InList <: TList, _In, Out, _OutList <: TList] =
+    Map[InList, Out] {
       type In = _In
-      type Out = _Out
       type OutList = _OutList
     }
 
-  implicit def tnil[_In, _Out]: Aux[TNil, _In, _Out, TNil] =
-    new Map[TNil] {
+  implicit def tnilFlex[InList <: TNil, _In, Out]: Aux[InList, _In, Out, TNil] =
+    new Map[InList, Out] {
       type In = _In
-      type Out = _Out
       type OutList = TNil
-      override def apply(in: TNil, fn: _In ⇒ _Out): TNil = TNil
+      override def apply(in: InList, fn: In ⇒ Out): TNil = TNil
+    }
+}
+object Map
+  extends LowPriMap {
+
+  type Ax[InList <: TList, _In, Out] =
+    Map[InList, Out] {
+      type In = _In
+    }
+
+  implicit def tnilSpecialCase[InList <: TNil, Out]: Aux[InList, Out, Out, TNil] =
+    new Map[InList, Out] {
+      type In = Out
+      type OutList = TNil
+      override def apply(in: InList, fn: In ⇒ Out): TNil = TNil
     }
 
   implicit def cons[
      InList <: TList,
     _In,
-    _Out,
+     Out,
     _OutList <: TList
   ](
     implicit
-    ev: Aux[InList, _In, _Out, _OutList]
+    ev: Aux[InList, _In, Out, _OutList]
   ):
     Aux[
       _In :: InList,
       _In,
-      _Out,
-      _Out :: _OutList
+      Out,
+      Out :: _OutList
     ] =
-    new Map[_In :: InList] {
+    new Map[_In :: InList, Out] {
       type In = _In
-      type Out = _Out
-      type OutList = _Out :: _OutList
+      type OutList = Out :: _OutList
       def apply(in: _In :: InList, fn: In ⇒ Out): OutList =
         in match {
           case h :: t ⇒
@@ -116,7 +128,20 @@ object Map {
         }
     }
 
-  implicit class Ops[InList <: TList](val in: InList) extends AnyVal {
-    def map[In, Out, OutList <: TList](fn: In ⇒ Out)(implicit ev: Aux[InList, In, Out, OutList]): OutList = ev(in, fn)
+  trait Fn[In] {
+    type Out
+    def apply(in: In): Out
+  }
+  object Fn {
+    type Aux[In, _O] = Fn[In] { type Out = _O }
+    implicit def make[In, _Out](fn: In ⇒ _Out): Aux[In, _Out] =
+      new Fn[In] {
+        type Out = _Out
+        def apply(in: In): _Out = fn(in)
+      }
+  }
+
+  implicit class Ops[InList <: TList](in: InList) {
+    def map[In, Out](fn: In ⇒ Out)(implicit ev: Ax[InList, In, Out]): ev.OutList = ev(in, fn)
   }
 }

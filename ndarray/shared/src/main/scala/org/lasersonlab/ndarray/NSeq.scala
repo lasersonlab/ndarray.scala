@@ -3,7 +3,7 @@ package org.lasersonlab.ndarray
 import shapeless._
 import nat._
 import Array.Idx
-import TList.{ Base, Cons }
+import hammerlab.shapeless.TList.{ Base, Cons }
 
 /**
  * Given an [[N]]-element [[Idx index]] structure ([[N]] integer coordinates), index into an [[N]]-nested [[Seq]] to
@@ -14,7 +14,7 @@ import TList.{ Base, Cons }
  */
 trait NSeq[T, N <: Nat] {
   type Out
-  def apply(idx: Idx[N], seqs: Out): T
+  def apply(idx: Idx[N], seq: Out): T
 }
 
 object NSeq {

@@ -9,7 +9,7 @@ default(
 
 lazy val ndarray = project.in(new File("ndarray/shared")).settings(
   dep(
-    hammerlab.shapeless_utils % "1.4.0",
+    hammerlab.shapeless_utils % "1.5.0" snapshot,
     shapeless
   ),
   addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.7" cross CrossVersion.binary)

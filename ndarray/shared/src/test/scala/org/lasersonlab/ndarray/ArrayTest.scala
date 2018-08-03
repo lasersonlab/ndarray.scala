@@ -1,14 +1,10 @@
 package org.lasersonlab.ndarray
 
 import hammerlab.shapeless._
-import shapeless._
-import nat._
 import shapeless.test.illTyped
 
 class ArrayTest
   extends hammerlab.Suite {
-
-  implicit val __0 = _0
 
   test("one") {
     val a = Array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)

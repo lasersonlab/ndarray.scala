@@ -1,6 +1,7 @@
 package org.lasersonlab.ndarray
 
 import Array.Idx
+import hammerlab.shapeless._
 import shapeless._
 import shapeless.ops.nat.ToInt
 
@@ -38,8 +39,8 @@ object Array {
   sealed case class Arg[Out, N <: Nat](out: Out)
   object Arg {
     /**
-     * If an [[In input type]] can be represented as [[N]] levels of [[Seq]] (cf. [[Repd]] evidence `r` below), perform
-     * that conversion, and wrap the output in an [[Arg]] instance.
+     * If an [[In input type]] can be represented as [[N]] levels of [[Seq]] (cf. [[Nested]] evidence `r` below),
+     * perform that conversion, and wrap the output in an [[Arg]] instance.
      *
      * @param in input instance; [[N]]-nested [[Seq]]-like structure (each level may be a more specific [[Seq]]-subtype)
      * @param r evidence that [[In]] is equivalent to an [[N]]-nested [[Seq]]
@@ -57,7 +58,7 @@ object Array {
       in: In
     )(
       implicit
-      r: Repd.Aux[In, N, Out]
+      r: Nested.Aux[In, N, Out]
     ):
       Arg[
         Out,
@@ -94,7 +95,7 @@ object Array {
     args: Arg[S, ArgN]*
   )(
     implicit
-    unroll: Unroll.Aux[Seq[S], N, T],
+    unroll: Unroll.Aux[Seq[S], Seq, N, T],
     nseq: NSeq.Aux[T, N, Seq[S]],
     toInt: ToInt[N]
   ):

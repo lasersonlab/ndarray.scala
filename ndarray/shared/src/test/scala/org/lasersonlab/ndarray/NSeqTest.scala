@@ -1,7 +1,7 @@
 package org.lasersonlab.ndarray
 
 import NSeq.succ
-import TList.Base
+import hammerlab.shapeless.TList, TList.Base
 import shapeless._, nat._
 
 class NSeqTest

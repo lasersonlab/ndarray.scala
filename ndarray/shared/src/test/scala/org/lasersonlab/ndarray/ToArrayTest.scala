@@ -57,10 +57,20 @@ class ToArrayTest
         )
       )
 
-    Array(s)
+    val arr: Array.Aux[Int, Int :: Int :: Int :: TNil] = Array(s)
+
+    !![ToList[Int, arr.Idx]]
+    !![ToList[Int, Int :: TNil]]
+    !![ToList[Int, Int :: Int :: TNil]]
+    !![ToList[Int, Int :: Int :: Int :: TNil]]
+
     s: Array[Int]
 
-    a.shape(s) should be(2 :: 3 :: 11 :: TNil)
+    {
+      import ToArray.Ops
+      s.shape should be(2 :: 3 :: 11 :: TNil)
+      a.shape(s) should be(2 :: 3 :: 11 :: TNil)
+    }
 
     for {
       x ← 0 to  1
@@ -68,6 +78,22 @@ class ToArrayTest
       z ← 0 to 10
     } {
       a(s, x :: y :: z :: TNil) should be(10 + 40*x + 20*y + z)
+    }
+
+    import Write.Ops
+
+    val bs = arr.write
+
+    val bytes = Bytes[Int](s.write)(arr.shape)
+    bytes.bytes.length should be(2 * 3 * 11 * 4)
+    bytes.shape should be(arr.shape)
+
+    for {
+      x ← 0 to  1
+      y ← 0 to  2
+      z ← 0 to 10
+    } {
+      bytes(x :: y :: z :: TNil) should be(10 + 40*x + 20*y + z)
     }
   }
 }

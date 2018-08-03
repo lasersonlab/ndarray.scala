@@ -101,6 +101,20 @@ object ToArray
       _(_)
     )
 
+  implicit def ndarray[
+    Elem,
+    _Idx
+  ]:
+    Aux[
+      Array.Aux[Elem, _Idx],
+      Elem,
+      _Idx
+    ] =
+    apply(
+      _.shape,
+      _(_)
+    )
+
   implicit class Ops[T](val t: T) extends AnyVal {
     @inline def shape(implicit ev: ToArray[T]): ev.Idx = ev.shape(t)
   }

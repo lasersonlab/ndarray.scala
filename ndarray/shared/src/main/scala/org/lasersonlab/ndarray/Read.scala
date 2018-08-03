@@ -55,4 +55,8 @@ object Write {
         baos.toByteArray
       }
     }
+
+  implicit class Ops[T](val t: T) extends AnyVal {
+    def write(implicit ev: Write[T]): scala.Array[Byte] = ev(t)
+  }
 }

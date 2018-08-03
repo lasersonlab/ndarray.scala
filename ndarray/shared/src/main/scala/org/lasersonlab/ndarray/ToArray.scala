@@ -38,16 +38,24 @@ trait LowPriToArray {
 
 object ToArray
   extends LowPriToArray {
+
+  implicit def range[R <: Range]: Aux[R, Int, Int :: TNil] =
+    apply(
+      _.size :: TNil,
+      (r, idx) ⇒ r(idx.head)
+    )
+
   implicit def seq[
     T,
     Elem,
-    _Idx <: TList
+    _Idx <: TList,
+    I[U] <: Seq[U]
   ](
     implicit
     prev: Aux[T, Elem, _Idx]
   ):
     Aux[
-      Seq[T],
+      I[T],
       Elem,
       Int :: _Idx
     ] =
@@ -92,4 +100,8 @@ object ToArray
       _.shape,
       _(_)
     )
+
+  implicit class Ops[T](val t: T) extends AnyVal {
+    @inline def shape(implicit ev: ToArray[T]): ev.Idx = ev.shape(t)
+  }
 }

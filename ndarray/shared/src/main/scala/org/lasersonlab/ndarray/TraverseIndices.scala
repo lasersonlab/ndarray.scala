@@ -5,7 +5,11 @@ trait TraverseIndices[Shape <: TList] {
 }
 
 object TraverseIndices {
-  implicit val zero: TraverseIndices[TNil] = _ ⇒ Iterator()
+  implicit val zero: TraverseIndices[TNil] =
+    new TraverseIndices[TNil] {
+      def apply(shape: TNil): Iterator[TNil] = Iterator()
+    }
+
   implicit val one: TraverseIndices[Int :: TNil] =
     new TraverseIndices[Int :: TNil] {
       def apply(shape: Int :: TNil): Iterator[Int :: TNil] =

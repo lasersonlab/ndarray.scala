@@ -29,9 +29,9 @@ trait LowPriToArray {
       @inline def apply(t: T, idx: Idx): Elem = _apply(t, idx)
     }
 
-  implicit def singleton[T]: Aux[T, T, HNil] =
-    apply[T, T, HNil](
-      t ⇒ HNil,
+  implicit def singleton[T]: Aux[T, T, TNil] =
+    apply[T, T, TNil](
+      t ⇒ TNil,
       (t, idx) ⇒ t
     )
 }
@@ -41,7 +41,7 @@ object ToArray
   implicit def seq[
     T,
     Elem,
-    _Idx <: HList
+    _Idx <: TList
   ](
     implicit
     prev: Aux[T, Elem, _Idx]
@@ -55,6 +55,7 @@ object ToArray
       t ⇒ {
         val head = prev.shape(t.head)
 
+        // verify all sizes are consistent
         t
           .iterator
           .drop(1)
@@ -69,7 +70,7 @@ object ToArray
               )
           }
 
-        t.size :: head
+        ::(t.size, head)
       },
       (t, idx) ⇒
         idx match {
@@ -77,4 +78,18 @@ object ToArray
             prev(t(head), tail)
         }
   )
+
+  implicit def bytes[
+    T,
+    Idx <: TList.Aux[Int]
+  ]:
+    Aux[
+      Bytes[T, Idx],
+      T,
+      Idx
+    ] =
+    apply(
+      _.shape,
+      _(_)
+    )
 }

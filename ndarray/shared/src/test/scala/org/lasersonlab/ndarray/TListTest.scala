@@ -70,13 +70,10 @@ class TListTest
     !![Map.Ax[TNil, Int, Int]]
     !![Map.Aux[TNil, Int, Int, TNil]]
 
-    import Map.Ops
     TNil.map((_: Int) * 2) should be(TNil)
-    TNil.map((_: Int).toString) should be(TNil)
+    TNil.map(_.toString) should be(TNil)
 
-//    l.map(_ * 2) should be(2 :: 4 :: 6 :: TNil)
-
-    l.map((_: Int) * 2) should be(2 :: 4 :: 6 :: TNil)
-    l.map((_: Int).toString) should be("1" :: "2" :: "3" :: TNil)
+    l.map(_ * 2) should be(2 :: 4 :: 6 :: TNil)
+    l.map(_.toString) should be("1" :: "2" :: "3" :: TNil)
   }
 }

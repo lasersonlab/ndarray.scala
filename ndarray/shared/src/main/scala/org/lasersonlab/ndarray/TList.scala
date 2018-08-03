@@ -4,7 +4,20 @@ import org.lasersonlab.ndarray
 
 sealed trait TList {
   type T
+
+  // putting this here instead of in an Ops wrapper allows not explicitly specifying the type of the parameter to `fn`
+  def map[
+    Out,
+    S >: this.type <: TList
+  ](
+    fn: T ⇒ Out
+  )(
+    implicit
+    map: Map.Ax[S, T, Out]
+  ) =
+    map(this, fn)
 }
+
 object TList {
   type Aux[_T] = TList { type T = _T }
   implicit class Ops[L <: TList](val l: L) extends AnyVal {
@@ -127,21 +140,4 @@ object Map
             ::(fn(h), ev(t, fn))
         }
     }
-
-  trait Fn[In] {
-    type Out
-    def apply(in: In): Out
-  }
-  object Fn {
-    type Aux[In, _O] = Fn[In] { type Out = _O }
-    implicit def make[In, _Out](fn: In ⇒ _Out): Aux[In, _Out] =
-      new Fn[In] {
-        type Out = _Out
-        def apply(in: In): _Out = fn(in)
-      }
-  }
-
-  implicit class Ops[InList <: TList](in: InList) {
-    def map[In, Out](fn: In ⇒ Out)(implicit ev: Ax[InList, In, Out]): ev.OutList = ev(in, fn)
-  }
 }

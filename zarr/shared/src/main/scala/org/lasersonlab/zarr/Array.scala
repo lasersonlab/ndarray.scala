@@ -1,9 +1,9 @@
 package org.lasersonlab.zarr
 
-import org.lasersonlab.ndarray
 import hammerlab.option._
-import org.lasersonlab.ndarray.{ Bytes, TList, ToArray, ToList, Zip }
-
+import hammerlab.shapeless.tlist._
+import org.lasersonlab.ndarray
+import org.lasersonlab.ndarray.{ Bytes, ToArray }
 
 case class Chunk[T, Shape](
   override val bytes: scala.Array[Byte],
@@ -60,7 +60,7 @@ object Array {
   ](
     implicit
     zip: Zip.Aux[Shape, Shape, Zipped],
-    map: ndarray.Map.Aux[Zipped, (Int, Int), Int, Shape]
+    map: Map.Aux[Zipped, (Int, Int), Int, Shape]
   ):
     ToArray.Aux[
       Array[T, Shape],
@@ -72,7 +72,6 @@ object Array {
       (arr, idx) ⇒ {
         val metadata = arr.metadata
         val zipped = {
-          import Zip.Ops
           metadata.shape.zip(metadata.chunks)
         }
 

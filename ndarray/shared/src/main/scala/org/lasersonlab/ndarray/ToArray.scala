@@ -1,6 +1,6 @@
 package org.lasersonlab.ndarray
 
-import shapeless._
+import hammerlab.shapeless.tlist._
 
 trait ToArray[T] {
   type Elem

@@ -2,6 +2,7 @@ package org.lasersonlab.ndarray
 
 import java.nio.ByteBuffer
 
+import hammerlab.shapeless.tlist._
 import org.lasersonlab.ndarray
 
 abstract class Bytes[

@@ -1,5 +1,7 @@
 package org.lasersonlab.ndarray
 
+import hammerlab.shapeless.tlist._
+
 trait Traverse[T, Elem] {
   def apply(t: T): Iterator[Elem]
 }

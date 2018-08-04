@@ -1,5 +1,7 @@
 package org.lasersonlab.ndarray
 
+import hammerlab.shapeless.tlist._
+
 class ToArrayTest
   extends hammerlab.Suite {
   val !! = shapeless.the

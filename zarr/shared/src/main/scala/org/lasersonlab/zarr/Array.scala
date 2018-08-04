@@ -2,7 +2,7 @@ package org.lasersonlab.zarr
 
 import org.lasersonlab.ndarray
 import hammerlab.option._
-import org.lasersonlab.ndarray.{ Bytes, ToArray, ToList, Zip }
+import org.lasersonlab.ndarray.{ Bytes, TList, ToArray, ToList, Zip }
 
 
 case class Chunk[T, Shape](
@@ -38,10 +38,11 @@ extends Bytes[T, Shape](bytes, shape)
 
 case class Array[T, Shape](
   metadata: Metadata[T, Shape],
-  chunks: ndarray.Array[Chunk[T, Shape]],
+  chunks: ndarray.Array.Aux[Chunk[T, Shape], Shape],
   attrs: Opt[Attrs] = None
 )(
-  implicit val toList: ToList[Int, Shape]
+  implicit
+  val toList: ToList[Int, Shape]
 ) {
 //  def apply(idx: List[Int], pos: Int = 0): Chunk[T] =
 //    idx match {
@@ -51,37 +52,34 @@ case class Array[T, Shape](
 }
 
 object Array {
-//  type Chunk[T, Shape] = Bytes[T, Shape]
 
-  implicit def toArray[T, Shape](implicit zip: Zip[Shape, Shape]): ToArray.Aux[Array[T, Shape], T, Shape] =
+  implicit def toArray[
+    T,
+    Shape <: TList.Aux[Int],
+    Zipped <: TList.Aux[(Int, Int)]
+  ](
+    implicit
+    zip: Zip.Aux[Shape, Shape, Zipped],
+    map: ndarray.Map.Aux[Zipped, (Int, Int), Int, Shape]
+  ):
+    ToArray.Aux[
+      Array[T, Shape],
+      T,
+      Shape
+    ] =
     ToArray[Array[T, Shape], T, Shape](
       _.metadata.shape,
       (arr, idx) ⇒ {
         val metadata = arr.metadata
-        val zipped = zip(metadata.shape, metadata.chunks)
+        val zipped = {
+          import Zip.Ops
+          metadata.shape.zip(metadata.chunks)
+        }
 
-        val (chunkIdx, elemIdx) =
-          arr
-            .toList(
-              arr.metadata.shape
-            )
-            //.iterator
-            .zip(
-              arr
-                .toList(
-                  arr.metadata.chunks
-                )
-                //.iterator
-            )
-            .map {
-              case (arr, chunk) ⇒
-                (
-                  arr / chunk,
-                  arr % chunk
-                )
-            }
-            .unzip
-        arr.chunks(idx)
+        val chunkIdx = zipped.map { case (arr, chunk) ⇒ arr / chunk }
+        val elemIdx = zipped.map { case (arr, chunk) ⇒ arr % chunk }
+
+        arr.chunks(chunkIdx)(elemIdx)
       }
     )
 }

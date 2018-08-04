@@ -1,6 +1,6 @@
 package org.lasersonlab.ndarray
 
-import java.io.{ ByteArrayOutputStream, DataOutputStream, OutputStream }
+import java.io.{ ByteArrayOutputStream, DataOutputStream }
 import java.nio.ByteBuffer
 
 trait Read[T] {

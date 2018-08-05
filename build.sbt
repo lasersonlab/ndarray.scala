@@ -54,23 +54,28 @@ lazy val utils = project.settings(
   )
 )
 
-lazy val zarr = crossProject.settings(
+lazy val zarr = project.in(new File("zarr/shared")).settings(
   dep(
+    circe,
+    circe.generic,
+    circe.parser,
+    hammerlab.paths % "1.5.0",
     hammerlab.types
-  )
+  ),
+  addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.7" cross CrossVersion.binary)
 ).dependsOn(
-  ndarray
+  `ndarray.jvm`
 )
-lazy val `zarr.jvm` = zarr.jvm
-lazy val `zarr.js`  = zarr.js
-lazy val `zarr-x`   = parent(`zarr.jvm`, `zarr.js`)
+//lazy val `zarr.jvm` = zarr.jvm
+//lazy val `zarr.js`  = zarr.js
+//lazy val `zarr-x`   = parent(`zarr.jvm`, `zarr.js`)
 
 lazy val `hdf5-java-cloud` = root(
   `ndarray-x`,
    netcdf,
    singlecell,
    utils,
-  `zarr-x`
+   zarr
 )
 
 val `google-cloud-nio` = "org.lasersonlab" ^ "google-cloud-nio" ^ "0.55.2-alpha"

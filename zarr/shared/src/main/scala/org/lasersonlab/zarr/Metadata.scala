@@ -1,16 +1,13 @@
 package org.lasersonlab.zarr
 
-import hammerlab.option._
-import Format._
-//import org.lasersonlab.ndarray.TList
-//import org.lasersonlab.zarr.Metadata.Shape
+import java.io.FileNotFoundException
 
-//case class Shape(dimensions: Seq[Int]) {
-//  val product =
-//    dimensions
-//      .scanRight(1) { _ * _ }
-//      .drop(1)
-//}
+import hammerlab.option._
+import hammerlab.path._
+import io.circe.Decoder
+import io.circe.generic.auto._
+import io.circe.parser._
+import org.lasersonlab.zarr.Format._
 
 case class Metadata[T, Shape](
   shape: Shape,
@@ -24,5 +21,31 @@ case class Metadata[T, Shape](
 )
 
 object Metadata {
-//  type Shape = TList.Aux[Int]
+  val basename = ".zarray"
+  def apply[
+    T : Decoder,
+    Shape : Decoder
+  ](
+    dir: Path
+  ):
+    Either[
+      Exception,
+      Metadata[T, Shape]
+    ] = {
+    val path = dir / basename
+    implicitly[Decoder[DataType[T]]]
+    implicitly[Decoder[Compressor]]
+    implicitly[Decoder[Order]]
+    implicitly[Decoder[Opt[T]]]
+    implicitly[Decoder[Seq[Filter]]]
+    implicitly[Decoder[Metadata[T, Shape]]]
+    if (!path.exists)
+      Left(
+        new FileNotFoundException(
+          path.toString
+        )
+      )
+    else
+      decode[Metadata[T, Shape]](path.read)
+  }
 }

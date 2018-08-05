@@ -5,6 +5,11 @@ import hammerlab.shapeless.tlist._
 class ToArrayTest
   extends hammerlab.Suite {
 
+  test("empty") {
+    val a = Array()
+    a.shape should be(TNil)
+  }
+
   test("1-D") {
 
     val a = !![ToArray[Seq[Int]]]

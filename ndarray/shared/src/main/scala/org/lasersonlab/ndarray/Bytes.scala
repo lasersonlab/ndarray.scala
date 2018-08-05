@@ -5,57 +5,83 @@ import java.nio.ByteBuffer
 import hammerlab.shapeless.tlist._
 import org.lasersonlab.ndarray
 
+//trait ScanRight[In, InElem, OutElem, Out] {
+//  def apply(
+//    in: In,
+//    init: OutElem,
+//    fn: (InElem, OutElem) ⇒ OutElem
+//  ):
+//    (
+//      OutElem,
+//      Out
+//    )
+//}
+
+trait FoldLeft[T, Elem, Out] {
+  def apply(t: T, init: Out, fn: (Out, Elem) ⇒ Out): Out
+}
+
+trait Sum[T] {
+  type Out
+  def apply(t: T): Out
+}
+object Sum {
+  type Aux[T, _O] = Sum[T] { type Out = _O }
+}
+
 abstract class Bytes[
   T,
-  Shape
+  Shape: Arithmetic.Id
 ](
   val bytes: scala.Array[Byte],
   val shape: Shape
 )(
   implicit
   read: Read[T],
-  toList: ToList[Int, Shape]
+  val scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
+  sum: Sum.Aux[Shape, Int],
 ) {
-  val buff = ByteBuffer.wrap(bytes)
-  val shapeList = toList(shape)
-  import scala.::
-  val total :: sizeProducts = shapeList.scanRight(1)(_ * _)
-  def apply(idx: Shape): T = {
-    val offset =
-      toList(idx)
-        .iterator
-        .zip(
-          sizeProducts.iterator
-        )
-        .foldLeft(0) {
-          case (idx, (offset, stepSize)) ⇒
-            idx + offset * stepSize
-        }
+  import Arithmetic.Ops
 
-    read(buff, offset)
-  }
+  val buff = ByteBuffer.wrap(bytes)
+
+  val (total, sizeProducts) = scanRight(shape, 1, _ * _)
+
+  def apply(idx: Shape): T =
+    read(
+      buff,
+      sum(
+        idx * sizeProducts
+      )
+    )
 }
 
 object Bytes {
   case class Bytes[
     T,
-    Shape
+    Shape: Arithmetic.Id
   ](
     override val bytes: scala.Array[Byte],
     override val shape: Shape
   )(
     implicit
     read: Read[T],
-    toList: ToList[Int, Shape]
+    scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
+    sum: Sum.Aux[Shape, Int]
   )
   extends ndarray.Bytes[T, Shape](bytes, shape)
 
 
   case class Builder[T](bytes: scala.Array[Byte]) {
-    def apply[Shape](shape: Shape)(
+    def apply[
+      Shape: Arithmetic.Id
+    ](
+      shape: Shape
+    )(
       implicit
       read: Read[T],
-      toList: ToList[Int, Shape]
+      scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
+      sum: Sum.Aux[Shape, Int]
     ):
       Bytes[T, Shape] =
       Bytes[T, Shape](

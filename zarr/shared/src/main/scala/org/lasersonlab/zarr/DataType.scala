@@ -2,6 +2,7 @@ package org.lasersonlab.zarr
 
 import java.nio.ByteBuffer
 
+import io.circe.Decoder
 import org.lasersonlab.ndarray.Read
 
 sealed abstract class ByteOrder(override val toString: String)
@@ -75,4 +76,6 @@ object DataType {
     buf.get(arr, size * idx, size)
     arr.map(_.toChar).mkString
   })
+
+  implicit def decoder[T]: Decoder[DataType[T]] = ???
 }

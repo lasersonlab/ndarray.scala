@@ -35,7 +35,8 @@ object Array {
   ):
     Array[Elem] =
     apply(
-      Seq(s1, s2) ++ rest
+      Seq(s1, s2) ++
+      rest
     )
 
   def apply[T](): Aux[T, TNil] =

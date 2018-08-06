@@ -1,5 +1,6 @@
 package org.lasersonlab.ndarray
 
+import cats.Monoid
 import hammerlab.shapeless.tlist._
 
 class ToArrayTest
@@ -90,6 +91,8 @@ class ToArrayTest
     import Write.Ops
 
     val bs = arr.write
+
+    import cats.implicits.catsKernelStdGroupForInt
 
     val bytes = Bytes[Int](s.write)(arr.shape)
     bytes.bytes.length should be(2 * 3 * 11 * 4)

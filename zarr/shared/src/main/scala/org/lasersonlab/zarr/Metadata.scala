@@ -12,7 +12,7 @@ import org.lasersonlab.zarr.Format._
 case class Metadata[T, Shape](
   shape: Shape,
   chunks: Shape,
-  dtype: DataType[T],
+  dtype: DataType.Aux[T],
   compressor: Compressor,
   order: Order,
   fill_value: Opt[T] = None,
@@ -27,13 +27,15 @@ object Metadata {
     Shape : Decoder
   ](
     dir: Path
+  )(
+    implicit d: Decoder[DataType.Aux[T]]
   ):
     Either[
       Exception,
       Metadata[T, Shape]
     ] = {
     val path = dir / basename
-    implicitly[Decoder[DataType[T]]]
+    implicitly[Decoder[DataType.Aux[T]]]
     implicitly[Decoder[Compressor]]
     implicitly[Decoder[Order]]
     implicitly[Decoder[Opt[T]]]

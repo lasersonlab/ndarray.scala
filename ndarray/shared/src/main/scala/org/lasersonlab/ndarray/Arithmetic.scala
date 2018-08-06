@@ -35,27 +35,26 @@ object Arithmetic {
 
   implicit def cons[
     H,
-    T <: TList,
-    R
+    T <: TList
   ](
     implicit
-    headArithmetic: Lazy[Arithmetic[H, R]],
-    tailArithmetic: Lazy[Arithmetic[T, R]],
+
+    headArithmetic: Lazy[Id[H]],
+    tailArithmetic: Lazy[Id[T]],
     pp: Prepend[H, T]
   ):
-    Arithmetic[
-      H :: T,
-      R
+    Id[
+      H :: T
     ] =
-    new Arithmetic[H :: T, R] {
+    new Arithmetic[H :: T, H :: T] {
       implicit val head = headArithmetic.value
       implicit val tail = tailArithmetic.value
-      def  +  (l: H :: T, r: R): H :: T = ( l.head  +  r ) :: ( l.tail  +  r )
-      def  -  (l: H :: T, r: R): H :: T = ( l.head  -  r ) :: ( l.tail  -  r )
-      def  *  (l: H :: T, r: R): H :: T = ( l.head  *  r ) :: ( l.tail  *  r )
-      def  /  (l: H :: T, r: R): H :: T = ( l.head  /  r ) :: ( l.tail  /  r )
-      def  %  (l: H :: T, r: R): H :: T = ( l.head  %  r ) :: ( l.tail  %  r )
-      def min (l: H :: T, r: R): H :: T = ( l.head min r ) :: ( l.tail min r )
+      def  +  (l: H :: T, r: H :: T): H :: T = ( l.head  +  r.head ) :: ( l.tail  +  r.tail )
+      def  -  (l: H :: T, r: H :: T): H :: T = ( l.head  -  r.head ) :: ( l.tail  -  r.tail )
+      def  *  (l: H :: T, r: H :: T): H :: T = ( l.head  *  r.head ) :: ( l.tail  *  r.tail )
+      def  /  (l: H :: T, r: H :: T): H :: T = ( l.head  /  r.head ) :: ( l.tail  /  r.tail )
+      def  %  (l: H :: T, r: H :: T): H :: T = ( l.head  %  r.head ) :: ( l.tail  %  r.tail )
+      def min (l: H :: T, r: H :: T): H :: T = ( l.head min r.head ) :: ( l.tail min r.tail )
     }
 
   implicit class Ops[L](val l: L) extends AnyVal {

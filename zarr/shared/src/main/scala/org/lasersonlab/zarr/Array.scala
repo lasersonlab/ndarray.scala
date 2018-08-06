@@ -9,6 +9,7 @@ import hammerlab.shapeless.tlist._
 import io.circe.Decoder
 import org.lasersonlab.ndarray
 import org.lasersonlab.ndarray.{ Arithmetic, Bytes, ScanRight, Sum, ToArray, TraverseIndices }
+import DataType.read
 
 case class Chunk[
   T,
@@ -21,7 +22,7 @@ case class Chunk[
                  end: Shape
 )(
   implicit
-  dtype: DataType[T],
+  dtype: DataType.Aux[T],
   scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
   sum: Sum.Aux[Shape, Int]
 )
@@ -40,7 +41,7 @@ object Chunk {
     compressor: Compressor
   )(
     implicit
-    dt: DataType[T],
+    dt: DataType.Aux[T],
     scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
     sum: Sum.Aux[Shape, Int]
   ):
@@ -107,12 +108,19 @@ object Array {
       }
     )
 
-  //type Arr[_] = λ[A ⇒ ndarray.Array.Aux[A, Shape]]
+//  type ArrS[S] = ndarray.Array.Aux[?, S]
+//  type ArrS[S] = λ[A ⇒ ndarray.Array.Aux[A, S]]
+
+  implicitly[Traverse[List]].sequence
 
   implicit def traverse[Shape]: Traverse[λ[A ⇒ ndarray.Array.Aux[A, Shape]]] =
     new Traverse[λ[A ⇒ ndarray.Array.Aux[A, Shape]]] {
       type Arr[T] = ndarray.Array.Aux[T, Shape]
-      override def traverse[G[_], A, B](fa: Arr[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[Arr[B]] = ???
+      override def traverse[G[_], A, B](fa: Arr[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[Arr[B]] = {
+        foldRight()
+        fa.map(f): Arr[G[B]]
+        ???
+      }
 
       override def foldLeft[A, B](fa: Arr[A], b: B)(f: (B, A) ⇒ B): B = ???
 
@@ -120,7 +128,7 @@ object Array {
     }
 
   def chunks[
-     T : DataType,
+     T : DataType.Aux,
      Shape: Arithmetic.Id,
   ](
     dir: Path,
@@ -184,21 +192,21 @@ object Array {
 
     type Eith[U] = Either[Exception, U]
 
-    val app: Applicative[Eith] = implicitly
+//    val app: Applicative[Eith] = implicitly
 
     trv.sequence[Eith, Chunk[T, Shape]](chunks)
-    //traverse.sequence[λ[A ⇒ Either[Exception, A]], Chunk[T, Shape]]
 
-    ???
+//    chunks.sequence[Eith, Chunk[T, Shape]]
   }
 
   def apply[
-    T : DataType : Decoder,
+    T : DataType.Aux : Decoder,
     Shape : Arithmetic.Id : Indices : Key : Decoder
   ](
     dir: Path
   )(
     implicit
+    d: Decoder[DataType.Aux[T]],
     ai: Arithmetic[Shape, Int],
     scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
     sum: Sum.Aux[Shape, Int]

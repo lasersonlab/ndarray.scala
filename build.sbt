@@ -9,10 +9,12 @@ default(
 
 lazy val ndarray = crossProject.settings(
   dep(
+    cats,
     hammerlab.shapeless_utils % "1.5.0" snapshot,
     shapeless
   ),
-  addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.7" cross CrossVersion.binary)
+  addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.7" cross CrossVersion.binary),
+  scalacOptions += "-Ypartial-unification"
 )
 lazy val `ndarray.jvm` = ndarray.jvm
 lazy val `ndarray.js`  = ndarray.js
@@ -62,7 +64,8 @@ lazy val zarr = project.in(new File("zarr/shared")).settings(
     hammerlab.paths % "1.5.0",
     hammerlab.types
   ),
-  addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.7" cross CrossVersion.binary)
+  addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.7" cross CrossVersion.binary),
+  scalacOptions += "-Ypartial-unification"
 ).dependsOn(
   `ndarray.jvm`
 )

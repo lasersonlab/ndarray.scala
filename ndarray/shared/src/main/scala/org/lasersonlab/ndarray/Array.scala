@@ -1,24 +1,12 @@
 package org.lasersonlab.ndarray
 
+import cats.Functor
 import hammerlab.shapeless.tlist._
-import org.lasersonlab.ndarray.Array.Aux
 
 trait Array[T] {
   type Idx
   def shape: Idx
   def apply(idx: Idx): T
-
-  def map[B](f: T ⇒ B): Aux[B, Idx] = {
-    val self = this
-    type I = Idx
-    val s = shape
-    def a = apply _
-    new Array[B] {
-      type Idx = I
-      val shape = s
-      def apply(idx: Idx): B = f(a(idx))
-    }
-  }
 }
 
 object Array {
@@ -62,5 +50,17 @@ object Array {
       type Idx = _Idx
       val shape: Idx = ev.shape(t)
       def apply(idx: Idx): Elem = ev(t, idx)
+    }
+
+  implicit def functor[Shape]: Functor[Aux[?, Shape]] =
+    new Functor[Aux[?, Shape]] {
+      override def map[A, B](fa: Aux[A, Shape])(f: A ⇒ B): Aux[B, Shape] = {
+        type I = Shape
+        new Array[B] {
+          type Idx = I
+          val shape = fa.shape
+          def apply(idx: Idx): B = f(fa(idx))
+        }
+      }
     }
 }

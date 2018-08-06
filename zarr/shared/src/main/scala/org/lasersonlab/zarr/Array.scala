@@ -2,14 +2,13 @@ package org.lasersonlab.zarr
 
 import java.io.FileNotFoundException
 
-import cats.{ Applicative, Eval, Traverse }
+import cats.Traverse
 import hammerlab.option._
 import hammerlab.path._
-import hammerlab.shapeless.tlist._
 import io.circe.Decoder
 import org.lasersonlab.ndarray
-import org.lasersonlab.ndarray.{ Arithmetic, Bytes, ScanRight, Sum, ToArray, TraverseIndices }
-import DataType.read
+import org.lasersonlab.ndarray.{ Arithmetic, Bytes, ScanRight, Sum, ToArray }
+import org.lasersonlab.zarr.DataType.read
 
 case class Chunk[
   T,
@@ -108,36 +107,33 @@ object Array {
       }
     )
 
-//  type ArrS[S] = ndarray.Array.Aux[?, S]
-//  type ArrS[S] = λ[A ⇒ ndarray.Array.Aux[A, S]]
-
-  implicitly[Traverse[List]].sequence
-
-  implicit def traverse[Shape]: Traverse[λ[A ⇒ ndarray.Array.Aux[A, Shape]]] =
-    new Traverse[λ[A ⇒ ndarray.Array.Aux[A, Shape]]] {
-      type Arr[T] = ndarray.Array.Aux[T, Shape]
-      override def traverse[G[_], A, B](fa: Arr[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[Arr[B]] = {
-        foldRight()
-        fa.map(f): Arr[G[B]]
-        ???
+  trait Rows[In, Rows[_]] {
+    type Row
+    def apply(in: In): Rows[Row]
+    def apply(in: In, idx: Int): Row
+  }
+  object Rows {
+    type Aux[In, Rs[_], _Row] =
+      Rows[In, Rs] {
+        type Row = _Row
       }
+  }
 
-      override def foldLeft[A, B](fa: Arr[A], b: B)(f: (B, A) ⇒ B): B = ???
-
-      override def foldRight[A, B](fa: Arr[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = ???
-    }
+  import ndarray.Array.Aux
 
   def chunks[
-     T : DataType.Aux,
-     Shape: Arithmetic.Id,
+    T : DataType.Aux,
+    Shape: Arithmetic.Id,
+    A[U] <: Aux[U, Shape]
   ](
-    dir: Path,
-    arrShape: Shape,
+           dir: Path,
+      arrShape: Shape,
     chunkShape: Shape,
     compressor: Compressor
   )(
     implicit
-    ti: Indices[Shape],
+    ti: Indices[Shape, A[Shape]],
+    traverse: Traverse[A],
     ai: Arithmetic[Shape, Int],
     k: Key[Shape],
     scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
@@ -145,31 +141,17 @@ object Array {
   ):
     Either[
       Exception,
-      ndarray.Array.Aux[
-        Chunk[T, Shape],
-        Shape
+      A[
+        Chunk[T, Shape]
       ]
     ] = {
 
     import Arithmetic.Ops
 
-    // ops:
-    // {+,-,*,/,min,%} (shape,int)
-
     val chunkRanges = (arrShape + chunkShape - 1) / chunkShape
 
-//    val chunkRanges =
-//      arrShape
-//        .zip(chunkShape)
-//        .map {
-//          case (arrSize, chunkSize) ⇒
-//            (arrSize + chunkSize - 1) / chunkSize
-//        }
-
+    // Either Traverse, Either Applicative, Functor syntax
     import cats.implicits._
-
-    //val trv = implicitly[Traverse[λ[A ⇒ ndarray.Array.Aux[A, Shape]]]]
-    val trv: Traverse[λ[A ⇒ ndarray.Array.Aux[A, Shape]]] = traverse[Shape]
 
     val chunks =
       ti(chunkRanges)
@@ -192,21 +174,23 @@ object Array {
 
     type Eith[U] = Either[Exception, U]
 
+    traverse.sequence[Eith, Chunk[T, Shape]](chunks)
+
 //    val app: Applicative[Eith] = implicitly
-
-    trv.sequence[Eith, Chunk[T, Shape]](chunks)
-
 //    chunks.sequence[Eith, Chunk[T, Shape]]
   }
 
   def apply[
     T : DataType.Aux : Decoder,
-    Shape : Arithmetic.Id : Indices : Key : Decoder
+    Shape : Arithmetic.Id : Key : Decoder,
+    A[U] <: Aux[U, Shape]
   ](
     dir: Path
   )(
     implicit
     d: Decoder[DataType.Aux[T]],
+    ti: Indices[Shape, A[Shape]],
+    traverse: Traverse[A],
     ai: Arithmetic[Shape, Int],
     scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
     sum: Sum.Aux[Shape, Int]
@@ -223,7 +207,7 @@ object Array {
       metadata ← Metadata[T, Shape](dir)
       attrs ← Attrs(dir)
       chunks ←
-        chunks[T, Shape](
+        chunks[T, Shape, A](
           dir,
           metadata.shape,
           metadata.chunks,

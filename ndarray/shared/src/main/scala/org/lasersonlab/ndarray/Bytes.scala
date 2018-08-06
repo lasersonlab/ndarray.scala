@@ -7,18 +7,6 @@ import hammerlab.shapeless.tlist._
 import org.lasersonlab.ndarray
 import shapeless.Lazy
 
-//trait ScanRight[In, InElem, OutElem, Out] {
-//  def apply(
-//    in: In,
-//    init: OutElem,
-//    fn: (InElem, OutElem) ⇒ OutElem
-//  ):
-//    (
-//      OutElem,
-//      Out
-//    )
-//}
-
 trait FoldLeft[T, Elem, Out] {
   def apply(t: T, init: Out, fn: (Out, Elem) ⇒ Out): Out
 }
@@ -83,7 +71,6 @@ object Bytes {
     sum: Sum.Aux[Shape, Int]
   )
   extends ndarray.Bytes[T, Shape](bytes, shape)
-
 
   case class Builder[T](bytes: scala.Array[Byte]) {
     def apply[

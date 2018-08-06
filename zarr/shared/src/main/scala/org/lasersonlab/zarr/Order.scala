@@ -15,22 +15,20 @@ object Order {
 
   implicit val decoder: Decoder[Order] =
     new Decoder[Order] {
-      def apply(c: HCursor): Result[Order] = {
-        for {
-          s ←
-            c
-              .value
-              .as[String]
-              .filterOrElse(
-                _ == "c",
+      def apply(c: HCursor): Result[Order] =
+        c
+          .value
+          .as[String]
+          .flatMap {
+            case "C" ⇒ Right(C)
+            case o ⇒
+              Left(
                 DecodingFailure(
-                  "Unexpected order",
+                  s"Unexpected order: $o",
                   c.history
                 )
               )
-        } yield
-          C
-      }
+          }
     }
 
   // column-major order not implemented (yet?)

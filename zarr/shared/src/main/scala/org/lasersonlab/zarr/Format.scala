@@ -13,9 +13,9 @@ object Format {
   implicit val decoder: Decoder[Format] =
     new Decoder[Format] {
       override def apply(c: HCursor): Result[Format] =
-        c.value.as[String].flatMap {
-          case "2" ⇒ Right(`2`)
-          case "1" ⇒
+        c.value.as[Int].flatMap {
+          case 2 ⇒ Right(`2`)
+          case 1 ⇒
             Left(
               DecodingFailure(
                 s"Zarr version 1 not supported",

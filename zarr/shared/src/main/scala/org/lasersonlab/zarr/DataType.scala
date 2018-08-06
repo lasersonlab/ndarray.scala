@@ -147,18 +147,6 @@ object DataType {
       @inline def apply(buff: ByteBuffer, idx: Int): T = read(buff, idx)
     }
 
-//  val datatypes =
-//    for {
-//      order ← Instances[Endianness]()
-//      datatype ← Seq(
-//        i32(order),
-//        i64(order),
-//        float(order),
-//        double(order)
-//      )
-//    } yield
-//      datatype
-
   case class    i32(order: Endianness) extends DataType(order, int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getInt   (4 * idx) } }
   case class    i64(order: Endianness) extends DataType(order, int,    8) { type T =   Long; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getLong  (8 * idx) } }
   case class  float(order: Endianness) extends DataType(order,   f,    4) { type T =  Float; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getFloat (4 * idx) } }
@@ -173,11 +161,11 @@ object DataType {
 
   def get(order: ByteOrder, dtype: DType, size: Int): Either[String, DataType] =
     (order, dtype, size) match {
-      case (e: Endianness, int,    4) ⇒ Right(   i32(   e))
-      case (e: Endianness, int,    8) ⇒ Right(   i64(   e))
-      case (e: Endianness,   f,    4) ⇒ Right( float(   e))
-      case (e: Endianness,   f,    8) ⇒ Right(double(   e))
-      case (         None, str, size) ⇒ Right(string(size))
+      case (e: Endianness, _: int.type,    4) ⇒ Right(   i32(   e))
+      case (e: Endianness, _: int.type,    8) ⇒ Right(   i64(   e))
+      case (e: Endianness, _:   f.type,    4) ⇒ Right( float(   e))
+      case (e: Endianness, _:   f.type,    8) ⇒ Right(double(   e))
+      case (         None, _: str.type, size) ⇒ Right(string(size))
       case _ ⇒
         Left(
           s"Unrecognized data type: $order$dtype$size"

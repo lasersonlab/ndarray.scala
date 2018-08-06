@@ -56,9 +56,9 @@ object Metadata {
       dtype: DataType,
       compressor: Compressor,
       order: Order,
-      fill_value: Opt[String] = None,
+      fill_value: Opt[Double] = None,
       zarr_format: Format = `2`,
-      filters: Seq[Filter] = Nil
+      filters: Opt[Seq[Filter]] = None
     )
   }
 }

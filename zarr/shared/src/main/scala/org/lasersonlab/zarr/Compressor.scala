@@ -1,23 +1,31 @@
 package org.lasersonlab.zarr
 
+import java.io.ByteArrayOutputStream
+import java.util.zip.InflaterInputStream
+
 import hammerlab.path._
 import io.circe.Decoder.Result
 import io.circe.{ Decoder, HCursor }
+import org.apache.commons.io.IOUtils
 
 sealed trait Compressor {
   def apply(path: Path): scala.Array[Byte]
 }
 object Compressor {
 
-  import Blosc._
-
   case class ZLib(level: Int) extends Compressor {
-    def apply(path: Path): scala.Array[Byte] = ???
+    def apply(path: Path): scala.Array[Byte] = {
+      val baos = new ByteArrayOutputStream()
+      IOUtils.copy(new InflaterInputStream(path.inputStream), baos)
+      baos.toByteArray
+    }
   }
 
   case object None extends Compressor {
     def apply(path: Path): scala.Array[Byte] = path.readBytes
   }
+
+  import Blosc._
 
   case class Blosc(
     cname: CName,
@@ -29,8 +37,6 @@ object Compressor {
     def apply(path: Path): scala.Array[Byte] = ???
   }
 
-  // TODO: others
-
   object Blosc {
     sealed trait CName
     object CName {
@@ -38,6 +44,8 @@ object Compressor {
       // TODO: others
     }
   }
+
+  // TODO: add other Compressors
 
   implicit val decoder: Decoder[Compressor] =
     new Decoder[Compressor] {

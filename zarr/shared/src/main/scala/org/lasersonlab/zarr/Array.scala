@@ -54,18 +54,16 @@ object Chunk {
           path.toString
         )
       )
-    else {
-      val bytes = compressor(path)
+    else
       Right(
         Chunk(
-          bytes,
+          compressor(path),
           shape,
           idx,
           start,
           end
         )
       )
-    }
 }
 
 trait Key[T] {
@@ -203,21 +201,21 @@ object Array {
         )
       )
     else
-    for {
-      metadata ← Metadata[T, Shape](dir)
-      attrs ← Attrs(dir)
-      chunks ←
-        chunks[T, Shape, A](
-          dir,
-          metadata.shape,
-          metadata.chunks,
-          metadata.compressor
+      for {
+        metadata ← Metadata[T, Shape](dir)
+        attrs ← Attrs(dir)
+        chunks ←
+          chunks[T, Shape, A](
+            dir,
+            metadata.shape,
+            metadata.chunks,
+            metadata.compressor
+          )
+      } yield
+        new Array[T, Shape](
+          metadata,
+          chunks,
+          attrs
         )
-    } yield
-      Array[T, Shape](
-        metadata,
-        chunks,
-        attrs
-      )
   }
 }

@@ -1,5 +1,6 @@
 package org.lasersonlab.zarr
 
+import org.lasersonlab.zarr
 import java.io.FileNotFoundException
 
 import hammerlab.option._
@@ -22,8 +23,9 @@ case class Metadata[T, Shape](
 
 object Metadata {
   val basename = ".zarray"
+
   def apply[
-    T : Decoder,
+        T : Decoder,
     Shape : Decoder
   ](
     dir: Path
@@ -35,12 +37,6 @@ object Metadata {
       Metadata[T, Shape]
     ] = {
     val path = dir / basename
-    implicitly[Decoder[DataType.Aux[T]]]
-    implicitly[Decoder[Compressor]]
-    implicitly[Decoder[Order]]
-    implicitly[Decoder[Opt[T]]]
-    implicitly[Decoder[Seq[Filter]]]
-    implicitly[Decoder[Metadata[T, Shape]]]
     if (!path.exists)
       Left(
         new FileNotFoundException(
@@ -49,5 +45,20 @@ object Metadata {
       )
     else
       decode[Metadata[T, Shape]](path.read)
+  }
+
+  implicit def compressor(implicit m: Metadata[_, _]): Compressor = m.compressor
+
+  object untyped {
+    case class Metadata(
+      shape: Seq[Int],
+      chunks: Seq[Int],
+      dtype: DataType,
+      compressor: Compressor,
+      order: Order,
+      fill_value: Opt[String] = None,
+      zarr_format: Format = `2`,
+      filters: Seq[Filter] = Nil
+    )
   }
 }

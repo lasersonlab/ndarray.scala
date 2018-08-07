@@ -7,68 +7,7 @@ import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder
 import org.lasersonlab.ndarray
-import org.lasersonlab.ndarray.{ Arithmetic, Bytes, ScanRight, Sum, ToArray }
-import org.lasersonlab.zarr.DataType.read
-
-case class Chunk[
-  T,
-  Shape: Arithmetic.Id
-](
-  override val bytes: scala.Array[Byte],
-  override val shape: Shape,
-                 idx: Shape,
-               start: Shape,
-                 end: Shape
-)(
-  implicit
-  dtype: DataType.Aux[T],
-  scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
-  sum: Sum.Aux[Shape, Int]
-)
-extends Bytes[T, Shape](bytes, shape)
-
-object Chunk {
-  def apply[
-    T,
-    Shape: Arithmetic.Id
-  ](
-          path: Path,
-         shape: Shape,
-           idx: Shape,
-         start: Shape,
-           end: Shape,
-    compressor: Compressor
-  )(
-    implicit
-    dt: DataType.Aux[T],
-    scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
-    sum: Sum.Aux[Shape, Int]
-  ):
-    Either[
-      Exception,
-      Chunk[T, Shape]
-    ] =
-    if (!path.exists)
-      Left(
-        new FileNotFoundException(
-          path.toString
-        )
-      )
-    else
-      Right(
-        Chunk(
-          compressor(path),
-          shape,
-          idx,
-          start,
-          end
-        )
-      )
-}
-
-trait Key[T] {
-  def apply(t: T): String
-}
+import org.lasersonlab.ndarray.{ Arithmetic, ScanRight, Sum, ToArray }
 
 case class Array[T, Shape](
   metadata: Metadata[T, Shape],
@@ -104,18 +43,6 @@ object Array {
         arr.chunks(chunkIdx)(elemIdx)
       }
     )
-
-  trait Rows[In, Rows[_]] {
-    type Row
-    def apply(in: In): Rows[Row]
-    def apply(in: In, idx: Int): Row
-  }
-  object Rows {
-    type Aux[In, Rs[_], _Row] =
-      Rows[In, Rs] {
-        type Row = _Row
-      }
-  }
 
   import ndarray.Array.Aux
 
@@ -174,8 +101,9 @@ object Array {
 
     traverse.sequence[Eith, Chunk[T, Shape]](chunks)
 
-//    val app: Applicative[Eith] = implicitly
-//    chunks.sequence[Eith, Chunk[T, Shape]]
+    // TODO: nit: sequence syntax should be able to work here
+    //    val app: Applicative[Eith] = implicitly
+    //    chunks.sequence[Eith, Chunk[T, Shape]]
   }
 
   def apply[

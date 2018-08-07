@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import io.circe.Decoder.Result
 import io.circe.{ Decoder, DecodingFailure, HCursor }
 import org.hammerlab.shapeless.instances.Instances
-import org.lasersonlab.ndarray.Read
+import org.lasersonlab.ndarray.io.Read
 import shapeless.{ HList, the }
 import shapeless.ops.hlist.ToTraversable
 

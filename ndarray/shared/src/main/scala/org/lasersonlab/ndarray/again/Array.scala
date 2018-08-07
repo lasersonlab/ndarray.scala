@@ -1,7 +1,6 @@
 package org.lasersonlab.ndarray.again
 
 import cats.{ Applicative, Eval, Functor, Traverse }
-import org.lasersonlab.ndarray.again.Cns.Aux
 import shapeless.Lazy
 
 sealed trait Array[T]
@@ -54,6 +53,46 @@ object Cons {
   implicit val vectorFunctor: Functor[Vector] =
     new Functor[Vector] {
       override def map[A, B](fa: Vector[A])(f: A ⇒ B): Vector[B] = fa.map(f)
+    }
+
+  import cats.implicits._
+  implicit def traverse[
+    Row[U] <: Array[U]
+  ](
+    implicit
+    traverseRow: Traverse[Row]
+  ):
+    Traverse[
+      Cons[?, Row]
+    ] =
+    new Traverse[Cons[?, Row]] {
+      type C[T] = Cons[T, Row]
+      override def traverse[G[_], A, B](fa: C[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[C[B]] =
+        fa
+          .rows
+          .map {
+            _
+              .map(f)
+              .sequence
+          }
+          .sequence
+          .map { Cons(_) }
+
+      override def foldLeft[A, B](fa: C[A], b: B)(f: (B, A) ⇒ B): B =
+        fa
+          .rows
+          .foldLeft(b) {
+            (b, row) ⇒
+              row.foldLeft(b)(f)
+          }
+
+      override def foldRight[A, B](fa: C[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] =
+        fa
+          .rows
+          .foldRight(lb) {
+            (row, lb) ⇒
+              row.foldRight(lb)(f)
+          }
     }
 }
 
@@ -151,13 +190,11 @@ object Array {
         Vector[Prev],
         T,
         Cons[?, prev.value.A]
-        //λ[A ⇒ Cons[A, R]]
       ] =
       make[
         Vector[Prev],
         T,
         Cons[?, prev.value.A]
-        //λ[A ⇒ Cons[A, R]]
       ] {
         rows ⇒
           val converted =

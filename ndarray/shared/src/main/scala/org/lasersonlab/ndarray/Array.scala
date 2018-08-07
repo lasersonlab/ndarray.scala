@@ -1,6 +1,6 @@
 package org.lasersonlab.ndarray
 
-import cats.Functor
+import cats.{ Functor, Traverse }
 import hammerlab.shapeless.tlist._
 
 trait Array[T] {
@@ -63,4 +63,7 @@ object Array {
         }
       }
     }
+
+//  implicit val traverse: Traverse[Array] = ???
+//  implicit def traverseShape[Shape]: Traverse[Aux[?, Shape]] = ???
 }

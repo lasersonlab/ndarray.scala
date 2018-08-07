@@ -2,8 +2,8 @@
 default(
   group("org.lasersonlab"),
   versions(
-    hammerlab.types → "1.3.0",
-    hammerlab.io → "5.2.0"
+    hammerlab.types → "1.3.1",
+    hammerlab.   io → "5.2.0"
   )
 )
 
@@ -61,6 +61,7 @@ lazy val zarr = project.in(new File("zarr/shared")).settings(
     circe,
     circe.generic,
     circe.parser,
+    hammerlab.io,
     hammerlab.paths % "1.5.0",
     hammerlab.types
   ),

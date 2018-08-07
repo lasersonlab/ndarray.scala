@@ -147,11 +147,13 @@ object DataType {
       @inline def apply(buff: ByteBuffer, idx: Int): T = read(buff, idx)
     }
 
-  case class    i32(order: Endianness) extends DataType(order, int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getInt   (4 * idx) } }
-  case class    i64(order: Endianness) extends DataType(order, int,    8) { type T =   Long; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getLong  (8 * idx) } }
-  case class  float(order: Endianness) extends DataType(order,   f,    4) { type T =  Float; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getFloat (4 * idx) } }
-  case class double(order: Endianness) extends DataType(order,   f,    8) { type T = Double; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getDouble(8 * idx) } }
-  case class string( size:        Int) extends DataType( None, str, size) { type T = String
+  // TODO: setting the buffer's order every time seems suboptimal; some different design that streamlines that would be nice
+  case object   char                    extends DataType( None, int,    1) { type T =   Char; @inline def apply(buf: ByteBuffer, idx: Int): T = {                   buf.getChar  (    idx) } }
+  case  class    i32(order: Endianness) extends DataType(order, int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getInt   (4 * idx) } }
+  case  class    i64(order: Endianness) extends DataType(order, int,    8) { type T =   Long; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getLong  (8 * idx) } }
+  case  class  float(order: Endianness) extends DataType(order,   f,    4) { type T =  Float; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getFloat (4 * idx) } }
+  case  class double(order: Endianness) extends DataType(order,   f,    8) { type T = Double; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getDouble(8 * idx) } }
+  case  class string( size:        Int) extends DataType( None, str, size) { type T = String
     @inline def apply(buf: ByteBuffer, idx: Int): T = {
       val arr = fill(size)(0.toByte)
       buf.get(arr, size * idx, size)
@@ -163,6 +165,7 @@ object DataType {
     (order, dtype, size) match {
       case (e: Endianness, _: int.type,    4) ⇒ Right(   i32(   e))
       case (e: Endianness, _: int.type,    8) ⇒ Right(   i64(   e))
+      case (e: Endianness, _: int.type,    1) ⇒ Right(  char      )
       case (e: Endianness, _:   f.type,    4) ⇒ Right( float(   e))
       case (e: Endianness, _:   f.type,    8) ⇒ Right(double(   e))
       case (         None, _: str.type, size) ⇒ Right(string(size))
@@ -171,6 +174,30 @@ object DataType {
           s"Unrecognized data type: $order$dtype$size"
         )
     }
+
+  import org.hammerlab.lines.Name
+  def makeDecoder[DT <: Aux[T], T](implicit name: Name[DT]): Decoder[DataType.Aux[T]] =
+    new Decoder[Aux[T]] {
+      override def apply(c: HCursor): Result[Aux[T]] =
+        decoder(c)
+        .flatMap {
+          case dt: DT ⇒ Right(dt)
+          case o ⇒
+            Left(
+              DecodingFailure(
+                s"Expected $name data type, found $o",
+                c.history
+              )
+            )
+        }
+    }
+
+  implicit val stringDecoder: Decoder[DataType.Aux[String]] = makeDecoder[   string, String]
+  implicit val   charDecoder: Decoder[DataType.Aux[  Char]] = makeDecoder[char.type,   Char]
+  implicit val doubleDecoder: Decoder[DataType.Aux[Double]] = makeDecoder[   double, Double]
+  implicit val  floatDecoder: Decoder[DataType.Aux[ Float]] = makeDecoder[    float,  Float]
+  implicit val    intDecoder: Decoder[DataType.Aux[   Int]] = makeDecoder[      i32,    Int]
+  implicit val   longDecoder: Decoder[DataType.Aux[  Long]] = makeDecoder[      i64,   Long]
 
   val regex = """(.)(.)(\d+)""".r
   implicit val decoder: Decoder[DataType] =

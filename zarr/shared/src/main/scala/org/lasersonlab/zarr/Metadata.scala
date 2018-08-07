@@ -18,7 +18,7 @@ case class Metadata[T, Shape](
   order: Order,
   fill_value: Opt[T] = None,
   zarr_format: Format = `2`,
-  filters: Seq[Filter] = Nil
+  filters: Opt[Seq[Filter]] = None
 )
 
 object Metadata {
@@ -47,6 +47,7 @@ object Metadata {
       decode[Metadata[T, Shape]](path.read)
   }
 
+  // A metadata can be implicitly converted to the compressor it contains
   implicit def compressor(implicit m: Metadata[_, _]): Compressor = m.compressor
 
   object untyped {

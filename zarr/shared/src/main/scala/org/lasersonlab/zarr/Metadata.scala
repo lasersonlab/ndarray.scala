@@ -5,7 +5,7 @@ import java.io.FileNotFoundException
 
 import hammerlab.option._
 import hammerlab.path._
-import io.circe.Decoder
+import io.circe.{ Decoder, Json }
 import io.circe.generic.auto._
 import io.circe.parser._
 import org.lasersonlab.zarr.Format._
@@ -57,7 +57,7 @@ object Metadata {
       dtype: DataType,
       compressor: Compressor,
       order: Order,
-      fill_value: Opt[Double] = None,
+      fill_value: Opt[Json] = None,
       zarr_format: Format = `2`,
       filters: Opt[Seq[Filter]] = None
     )

@@ -1,5 +1,6 @@
 package org.lasersonlab.ndarray.again
 
+import cats.Traverse, cats.implicits._
 import org.lasersonlab.ndarray.again.Array.Arg
 
 class ArrayTest
@@ -8,6 +9,15 @@ class ArrayTest
     val a = Array(1 to 10 toVector)
 
     a should be(Cons((1 to 10 toVector) map(Atom(_))))
+
+//    a.foldl(0)(_ + _) should be(55)
+
+    val t = !![Traverse[Cons[?, Atom]]]
+
+    t.foldLeft(a, 0)(_ + _) should be(55)
+
+    !![Traverse[Cons[?, Cons[?, Atom]]]]
+    !![Traverse[λ[A ⇒ Cons[A, λ[B ⇒ Cons[B, Atom]]]]]]
   }
 
   test("2-D") {
@@ -61,6 +71,8 @@ class ArrayTest
         )*/
       )
     )
+
+//    t.foldLeft(a, 0)(_ + _) should be(55)
   }
 
   test("3-D") {

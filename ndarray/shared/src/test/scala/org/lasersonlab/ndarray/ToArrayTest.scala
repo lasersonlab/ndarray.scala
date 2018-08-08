@@ -89,28 +89,28 @@ class ToArrayTest
       a(s, x :: y :: z :: TNil) should be(10 + 40*x + 20*y + z)
     }
 
-    import org.lasersonlab.ndarray.io.Write.Ops
+//    import org.lasersonlab.ndarray.io.Write.Ops
 
-    !![Write[Array[Int]]]
-
-    !![Write[Array.Aux[Int, Int :: Int :: Int :: TNil]]]
-
-    Write.array[Int, Int :: Int :: Int :: TNil, Array.Aux[?, Int :: Int :: Int :: TNil]]
-
-    val bs = arr.write[Array[Int]]
-
-    import cats.implicits.catsKernelStdGroupForInt
-
-    val bytes = Bytes[Int](s.write[Array[Int]])(arr.shape)
-    bytes.bytes.length should be(2 * 3 * 11 * 4)
-    bytes.shape should be(arr.shape)
-
-    for {
-      x ← 0 to  1
-      y ← 0 to  2
-      z ← 0 to 10
-    } {
-      bytes(x :: y :: z :: TNil) should be(10 + 40*x + 20*y + z)
-    }
+//    !![Write[Array[Int]]]
+//
+//    !![Write[Array.Aux[Int, Int :: Int :: Int :: TNil]]]
+//
+//    Write.array[Int, Int :: Int :: Int :: TNil, Array.Aux[?, Int :: Int :: Int :: TNil]]
+//
+//    val bs = (arr: Array[Int]).write
+//
+//    import cats.implicits.catsKernelStdGroupForInt
+//
+//    val bytes = Bytes[Int]((s: Array[Int]).write)(arr.shape)
+//    bytes.bytes.length should be(2 * 3 * 11 * 4)
+//    bytes.shape should be(arr.shape)
+//
+//    for {
+//      x ← 0 to  1
+//      y ← 0 to  2
+//      z ← 0 to 10
+//    } {
+//      bytes(x :: y :: z :: TNil) should be(10 + 40*x + 20*y + z)
+//    }
   }
 }

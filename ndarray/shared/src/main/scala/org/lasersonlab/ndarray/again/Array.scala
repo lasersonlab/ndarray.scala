@@ -60,13 +60,14 @@ object Cons {
     Row[U] <: Array[U]
   ](
     implicit
-    traverseRow: Traverse[Row]
+    traverseRow: Lazy[Traverse[Row]]
   ):
     Traverse[
       Cons[?, Row]
     ] =
     new Traverse[Cons[?, Row]] {
       type C[T] = Cons[T, Row]
+      implicit val tr = traverseRow.value
       override def traverse[G[_], A, B](fa: C[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[C[B]] =
         fa
           .rows

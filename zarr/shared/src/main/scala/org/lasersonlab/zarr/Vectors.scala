@@ -130,11 +130,6 @@ object Vctrs {
         type Row[U] = _R[U]
       }
 
-    type Ax[In, _E] =
-      Arg[In] {
-        type Elem = _E
-      }
-
     def make[In, _E, _R[_]](fn: In ⇒ Vctrs.Aux[_E, _R])(implicit _traverseRow: Traverse[_R]) =
       new Arg[In] {
         type Elem = _E
@@ -144,36 +139,39 @@ object Vctrs {
       }
 
     implicit def base[T]: Aux[Vector[T], T, Id] = make[Vector[T], T, Id](Vctrs.make[T, Id](_))
+
+    implicit def range[R <: Range]: Aux[R, Int, Id] = make[R, Int, Id](r ⇒ Vctrs.make[Int, Id](r.toVector))
   }
 
   object Arg
     extends LowPriArg {
     implicit def cons[
       Prev,
-      Elem
+      I[U] <: Seq[U]
     ](
       implicit
-      prev: Lazy[Ax[Prev, Elem]]
+      prev: Lazy[Arg[Prev]]
     ):
       Aux[
-        Vector[Prev],
-        Elem,
+        I[Prev],
+        prev.value.Elem,
         Vctrs.Aux[?, prev.value.Row]
       ] =
       make[
-        Vector[Prev],
-        Elem,
+        I[Prev],
+        prev.value.Elem,
         Vctrs.Aux[?, prev.value.Row]
       ](
         rows ⇒ {
-          val converted: Vector[Vctrs.Aux[Elem, prev.value.Row]] =
+          val converted: Vector[Vctrs.Aux[prev.value.Elem, prev.value.Row]] =
             rows
               .map(
                 prev.value(_)
               )
+              .toVector
 
           Vctrs.make[
-            Elem,
+            prev.value.Elem,
             Vctrs.Aux[?, prev.value.Row]
           ](
             converted

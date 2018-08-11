@@ -7,10 +7,10 @@ class VectorsTest
   test("1-D") {
     val arr =
       Vctrs(
-        10 to 20 toVector,
-        30 to 40 toVector,
-        50 to 60 toVector,
-        70 to 80 toVector
+        10 to 20,
+        30 to 40,
+        50 to 60,
+        70 to 80
       )
 
     arr.foldLeft(0)(_ + _) should be(1980)
@@ -21,13 +21,13 @@ class VectorsTest
   test("2-D") {
     val arr =
       Vctrs(
-        Vector(
-          10 to 20 toVector,
-          30 to 40 toVector
+        Seq(
+          10 to 20,
+          30 to 40
         ),
-        Vector(
-          50 to 60 toVector,
-          70 to 80 toVector
+        Seq(
+          50 to 60,
+          70 to 80
         )
       )
 
@@ -39,28 +39,28 @@ class VectorsTest
   test("3-D") {
     val arr =
       Vctrs(
-        Vector(
-          Vector(
-              0 until  10 toVector,
-             10 until  20 toVector,
-             20 until  30 toVector
+        Seq(
+          Seq(
+              0 until  10,
+             10 until  20,
+             20 until  30
           ),
-          Vector(
-             30 until  40 toVector,
-             40 until  50 toVector,
-             50 until  60 toVector
+          Seq(
+             30 until  40,
+             40 until  50,
+             50 until  60
           )
         ),
-        Vector(
-          Vector(
-             60 until  70 toVector,
-             70 until  80 toVector,
-             80 until  90 toVector
+        Seq(
+          Seq(
+             60 until  70,
+             70 until  80,
+             80 until  90
           ),
-          Vector(
-             90 until 100 toVector,
-            100 until 110 toVector,
-            110 until 120 toVector
+          Seq(
+             90 until 100,
+            100 until 110,
+            110 until 120
           )
         )
       )

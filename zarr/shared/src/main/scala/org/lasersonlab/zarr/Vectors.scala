@@ -1,82 +1,154 @@
 package org.lasersonlab.zarr
 
 import cats.{ Applicative, Eval, Traverse }
-import shapeless.Lazy
-import shapeless.Id
+import cats.implicits._
+import org.lasersonlab.zarr.Vectors.Arg
+import shapeless.{ Id, Lazy }
 
-case class Vectors[T, Row[U]](rows: Vector[Row[T]]) {
-  type Rows = Vector[Row[T]]
-  val size = rows.length
-  def apply(idx: Int): Row[T] = rows(idx)
+trait Vctrs[T] {
+  type Row[U]
+  def rows: Vector[Row[T]]
+  implicit def traverseRow: Traverse[Row]
 }
-object Vectors {
-//  implicit def unwrap[T, Row[U]](v: Vectors[T, Row]): v.Rows = v.rows
 
-  def apply[In](args: In*)(implicit arg: Arg[In]): Vectors[arg.Elem, Vectors[?, arg.Row]] =
-    new Vectors[
-      arg.Elem,
-      Vectors[?, arg.Row]
-    ](
-      args
-        .map(arg(_))
-        .toVector
-    )
+object Vctrs {
+  type Aux[T, _R[_]] = Vctrs[T] { type Row[U] = _R[U] }
 
-  import shapeless.{ Lazy, the }
-  sealed trait IsSeqs[R[T]]
-  object IsSeqs {
-    implicit val id: IsSeqs[Id] = new IsSeqs[Id] {}
-    implicit def rec[R[T]](implicit r: Lazy[IsSeqs[R]]): IsSeqs[λ[A ⇒ Seq[R[A]]]] = new IsSeqs[λ[A ⇒ Seq[R[A]]]] {}
-  }
-  the[IsSeqs[Id]]  // compiles
-  IsSeqs.rec[Id]   // compiles
-//  the[IsSeqs[Seq]]  // could not find implicit value for parameter t: IsSeqs[Seq]
-//  the[IsSeqs[λ[X ⇒ Seq[Id[X]]]]]  // could not find implicit value for parameter t: IsSeqs[[A]Seq[A]]
+  def make[T, _Row[U]](_rows: Vector[_Row[T]])(implicit _traverseRow: Traverse[_Row]): Aux[T, _Row] =
+    new Vctrs[T] {
+      type Row[U] = _Row[U]
+      val rows = _rows
+      val traverseRow = _traverseRow
+    }
 
-  import cats.implicits._
-  implicit def traverse[
-    Row[U]
-  ](
-    implicit
-    traverseRow: Traverse[Row]
-  ):
-    Traverse[
-      Vectors[?, Row]
-    ] =
-    new Traverse[Vectors[?, Row]] {
-      type C[T] = Vectors[T, Row]
-      override def traverse[G[_], A, B](fa: C[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[C[B]] =
+  def apply[In](args: In*)(implicit arg: Arg[In]): Vctrs[arg.Elem] =
+    new Vctrs[arg.Elem] {
+      type Row[U] = Aux[U, arg.Row]
+      implicit val traverseRow: Traverse[Row] = Vectors.makeTraverse[arg.Row]
+      val rows: Vector[Row[arg.Elem]] =
+        args
+          .map(arg(_))
+          .toVector
+    }
+
+  implicit val traverse: Traverse[Vctrs] =
+    new Traverse[Vctrs] {
+      override def traverse[G[_], A, B](fa: Vctrs[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[Vctrs[B]] = {
+        implicit val traverseRow = fa.traverseRow
         fa
           .rows
           .map {
-            _
-              .map(f)
-              .sequence
+            row ⇒
+              traverseRow.sequence(
+                traverseRow.map(row)(f)
+              )
           }
           .sequence
-          .map { Vectors(_) }
+          .map {
+//            v ⇒
+            make[B, fa.Row](_)(traverseRow)
+//              new Vctrs[B] {
+//                override type Row[U] = fa.Row[U]
+//                override implicit val traverseRow: Traverse[Row] = fa.traverseRow
+//                override def rows: Vector[Row[B]] = v
+//              }
+          }
+      }
 
-      override def foldLeft[A, B](fa: C[A], b: B)(f: (B, A) ⇒ B): B =
+      override def foldLeft[A, B](fa: Vctrs[A], b: B)(f: (B, A) ⇒ B): B = {
+        implicit val traverseRow = fa.traverseRow
         fa
           .rows
           .foldLeft(b) {
             (b, row) ⇒
-              row.foldLeft(b)(f)
+              traverseRow.foldLeft(row, b)(f)
           }
+      }
 
-      override def foldRight[A, B](fa: C[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] =
+      override def foldRight[A, B](fa: Vctrs[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = {
+        implicit val traverseRow = fa.traverseRow
         fa
           .rows
           .foldRight(lb) {
             (row, lb) ⇒
-              row.foldRight(lb)(f)
+              traverseRow.foldRight(row, lb)(f)
           }
+      }
+    }
+}
+
+//case class Vectors[T, _Row[U]](rows: Vector[_Row[T]])(implicit val traverseRow: Traverse[_Row])
+//  extends Vctrs[T] {
+//  type Row[U] = _Row[U]
+//  type Rows = Vector[_Row[T]]
+//  val size = rows.length
+//  def apply(idx: Int): _Row[T] = rows(idx)
+//}
+
+object Vectors {
+//  implicit def unwrap[T, Row[U]](v: Vectors[T, Row]): v.Rows = v.rows
+
+  def apply[In](args: In*)(implicit arg: Arg[In]): Vctrs.Aux[arg.Elem, Vctrs.Aux[?, arg.Row]] =
+    Vctrs.make[
+      arg.Elem,
+      Vctrs.Aux[?, arg.Row]
+    ](
+      args
+        .map(arg(_))
+        .toVector
+    )(
+      makeTraverse[arg.Row]
+      //arg.traverseRow
+    )
+
+  def makeTraverse[
+    Row[U]
+  ]:
+    Traverse[
+      Vctrs.Aux[?, Row]
+    ] =
+    new Traverse[Vctrs.Aux[?, Row]] {
+      type C[T] = Vctrs.Aux[T, Row]
+      override def traverse[G[_], A, B](fa: C[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[C[B]] = {
+        implicit val tr = fa.traverseRow
+        fa
+          .rows
+          .map {
+            row ⇒
+              tr.sequence(
+                tr.map(row)(f)
+              )
+          }
+          .sequence
+          .map { Vctrs.make[B, fa.Row](_)(tr) }
+      }
+
+      override def foldLeft[A, B](fa: C[A], b: B)(f: (B, A) ⇒ B): B = {
+        implicit val tr = fa.traverseRow
+        fa
+          .rows
+          .foldLeft(b) {
+            (b, row) ⇒
+              tr.foldLeft(row, b)(f)
+          }
+      }
+
+      override def foldRight[A, B](fa: C[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = {
+        implicit val tr = fa.traverseRow
+        fa
+          .rows
+          .foldRight(lb) {
+            (row, lb) ⇒
+              tr.foldRight(row, lb)(f)
+          }
+      }
     }
 
   trait Arg[In] {
     type Elem
     type Row[_]
-    def apply(in: In): Vectors[Elem, Row]
+    implicit def traverseRow: Traverse[Row]
+    def apply(in: In): Vctrs.Aux[Elem, Row]
   }
   trait LowPriArg {
 
@@ -91,17 +163,17 @@ object Vectors {
         type Elem = _E
       }
 
-    def make[In, _E, _R[_]](fn: In ⇒ Vectors[_E, _R]) =
+    def make[In, _E, _R[_]](fn: In ⇒ Vctrs.Aux[_E, _R])(implicit _traverseRow: Traverse[_R]) =
       new Arg[In] {
         type Elem = _E
         type Row[U] = _R[U]
-        @inline def apply(in: In): Vectors[_E, _R] = fn(in)
+        implicit val traverseRow: Traverse[_R] = _traverseRow
+        @inline def apply(in: In): Vctrs.Aux[_E, _R] = fn(in)
       }
 
-    //type Id[T] = T
-//    class Id[T](val t: T) extends AnyVal
-    implicit def base[T]: Aux[Vector[T], T, Id] = make[Vector[T], T, Id](new Vectors[T, Id](_))
+    implicit def base[T]: Aux[Vector[T], T, Id] = make[Vector[T], T, Id](Vctrs.make[T, Id](_))
   }
+
   object Arg
     extends LowPriArg {
     implicit def cons[
@@ -114,25 +186,31 @@ object Vectors {
       Aux[
         Vector[Prev],
         Elem,
-        Vectors[?, prev.value.Row]
+        Vctrs.Aux[?, prev.value.Row]
       ] =
       make[
         Vector[Prev],
         Elem,
-        Vectors[?, prev.value.Row]
-      ] {
-        rows ⇒
-          val converted =
+        Vctrs.Aux[?, prev.value.Row]
+      ](
+        rows ⇒ {
+          val converted: Vector[Vctrs.Aux[Elem, prev.value.Row]] =
             rows
               .map(
                 prev.value(_)
               )
-          new Vectors[
+
+          Vctrs.make[
             Elem,
-            Vectors[?, prev.value.Row]
+            Vctrs.Aux[?, prev.value.Row]
           ](
             converted
+          )(
+            makeTraverse[prev.value.Row]
           )
-      }
+        }
+      )(
+        makeTraverse[prev.value.Row]
+      )
   }
 }

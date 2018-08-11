@@ -1,13 +1,24 @@
 package org.lasersonlab.zarr
 
-import cats.{ Foldable, Id, Traverse }
 import cats.implicits._
-import cats.syntax.foldable
-//import org.lasersonlab.zarr.Vectors.IsVectors
 
 class VectorsTest
   extends hammerlab.Suite {
-  test("indices") {
+  test("1-D") {
+    val arr =
+      Vctrs(
+        10 to 20 toVector,
+        30 to 40 toVector,
+        50 to 60 toVector,
+        70 to 80 toVector
+      )
+
+    arr.foldLeft(0)(_ + _) should be(1980)
+
+    arr.map(_ * 2).foldLeft(0)(_ + _) should be(3960)
+  }
+
+  test("2-D") {
     val arr =
       Vctrs(
         Vector(
@@ -20,51 +31,42 @@ class VectorsTest
         )
       )
 
-
-
-//    !![Traverse[Id]]
-//
-//    import Vectors.traverse
-//
-//    Vectors.traverse
-//    Vectors.traverse[Id]
-//
-//    !![Traverse[λ[A ⇒ Vectors[A, Id]]]]
-//    !![Traverse[Vectors[?, Id]]]
-//    !![Foldable[Vectors[?, Id]]]
-//
-//    Vectors.traverse[Vector]
-//
-//    !![Traverse[λ[A ⇒ Vectors[A, Vector]]]]
-//    !![Traverse[Vectors[?, Vector]]]
-//    !![Foldable[Vectors[?, Vector]]]
-
-//    !![Traverse[Vctrs.Aux[?, Id]]]
-//    !![Traverse[Vctrs.Aux[?, Vector]]]
-//    !![Traverse[Vctrs.Aux[?, λ[A ⇒ Vctrs.Aux[A, Id]]]]]
-//    !![Traverse[Vctrs.Aux[?, Vctrs.Aux[?, λ[A ⇒ Vctrs.Aux[A, Id]]]]]]
-
-    !![Traverse[Vctrs]]
-
     arr.foldLeft(0)(_ + _) should be(1980)
 
     arr.map(_ * 2).foldLeft(0)(_ + _) should be(3960)
+  }
 
-    //implicit val t = Vectors.traverse[Vectors[?, λ[A ⇒ Vectors[A, Id]]]]
+  test("3-D") {
+    val arr =
+      Vctrs(
+        Vector(
+          Vector(
+              0 until  10 toVector,
+             10 until  20 toVector,
+             20 until  30 toVector
+          ),
+          Vector(
+             30 until  40 toVector,
+             40 until  50 toVector,
+             50 until  60 toVector
+          )
+        ),
+        Vector(
+          Vector(
+             60 until  70 toVector,
+             70 until  80 toVector,
+             80 until  90 toVector
+          ),
+          Vector(
+             90 until 100 toVector,
+            100 until 110 toVector,
+            110 until 120 toVector
+          )
+        )
+      )
 
-//    toFoldableOps[Vectors[?, Vectors[?, λ[A ⇒ Vectors[A, Id]]]], Int](arr).foldLeft(0)(_ + _) should be(1980)
+    arr.foldLeft(0)(_ + _) should be(7140)
 
-//    val doubled = t.traverse[Id, Int, Int](arr)(_ * 2)
-
-//    t.foldLeft(arr, 0)(_ + _) should be(1980)
-
-//    t.foldLeft(doubled, 0)(_ + _) should be(3960)
-//    (arr: Vectors[Int, Vectors[?, Vectors[?, Id]]])
-
-//    arr.traverse
-
-    //arr.traverseRow
-
-//    arr.foldl(0)(_ + _) should be(0)
+    arr.map(_ * 2).foldLeft(0)(_ + _) should be(14280)
   }
 }

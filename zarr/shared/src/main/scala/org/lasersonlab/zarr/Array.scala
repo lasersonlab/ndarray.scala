@@ -9,25 +9,37 @@ import io.circe.Decoder
 import org.lasersonlab.ndarray
 import org.lasersonlab.ndarray.{ Arithmetic, ScanRight, Sum, ToArray }
 
-case class Array[T, Shape](
+case class Array[T, Shape, A[_]](
   metadata: Metadata[T, Shape],
-  chunks: ndarray.Array.Aux[Chunk[T, Shape], Shape],
+  chunks: A[Chunk[T, Shape]],
   attrs: Opt[Attrs] = None
 )
+
+trait Index[A[_]] {
+  type Idx
+  def apply[T](a: A[T], idx: Idx): T
+}
+object Index {
+  type Aux[A[_], _Idx] = Index[A] { type Idx = _Idx }
+}
 
 object Array {
 
   implicit def toArray[
     T,
-    Shape: Arithmetic.Id
-  ]:
+    Shape: Arithmetic.Id,
+    A[_]
+  ](
+    implicit
+    index: Index.Aux[A, Shape]
+  ):
     ToArray.Aux[
-      Array[T, Shape],
+      Array[T, Shape, A],
       T,
       Shape
     ] =
     ToArray[
-      Array[T, Shape],
+      Array[T, Shape, A],
       T,
       Shape
     ](
@@ -40,7 +52,7 @@ object Array {
         val chunkIdx = idx / chunkShape
         val  elemIdx = idx % chunkShape
 
-        arr.chunks(chunkIdx)(elemIdx)
+        index(arr.chunks, chunkIdx)(elemIdx)
       }
     )
 
@@ -49,7 +61,7 @@ object Array {
   def chunks[
     T : DataType.Aux,
     Shape: Arithmetic.Id,
-    A[U] <: Aux[U, Shape]
+    A[U]
   ](
            dir: Path,
       arrShape: Shape,
@@ -57,7 +69,7 @@ object Array {
     compressor: Compressor
   )(
     implicit
-    ti: Indices[Shape, A[Shape]],
+    ti: Indices[Shape, A],
     traverse: Traverse[A],
     ai: Arithmetic[Shape, Int],
     k: Key[Shape],
@@ -75,7 +87,7 @@ object Array {
 
     val chunkRanges = (arrShape + chunkShape - 1) / chunkShape
 
-    // Either Traverse, Either Applicative, Functor syntax
+    // We use Traverse and Applicative instances for Either, and Functor syntax
     import cats.implicits._
 
     val chunks =
@@ -107,21 +119,26 @@ object Array {
   }
 
   def apply[
-    T : DataType.Aux : Decoder,
-    Shape : Arithmetic.Id : Key : Decoder,
-    A[U] <: Aux[U, Shape]
+    T, //: DataType.Aux : Decoder,
+    Shape, //: Arithmetic.Id : Key : Decoder,
+    A[U]
   ](
     dir: Path
   )(
     implicit
     d: Decoder[DataType.Aux[T]],
-    ti: Indices[Shape, A[Shape]],
+    ti: Indices[Shape, A],
     traverse: Traverse[A],
     ai: Arithmetic[Shape, Int],
     scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
-    sum: Sum.Aux[Shape, Int]
+    sum: Sum.Aux[Shape, Int],
+    dt: DataType.Aux[T],
+    dect: Decoder[T],
+    arith: Arithmetic.Id[Shape],
+    key: Key[Shape],
+    shDec: Decoder[Shape]
   ):
-    Either[Exception, Array[T, Shape]] = {
+    Either[Exception, Array[T, Shape, A]] = {
     if (!dir.exists)
       Left(
         new FileNotFoundException(
@@ -140,7 +157,7 @@ object Array {
             metadata.compressor
           )
       } yield
-        new Array[T, Shape](
+        new Array[T, Shape, A](
           metadata,
           chunks,
           attrs

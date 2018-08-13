@@ -6,7 +6,7 @@ class VectorsTest
   extends hammerlab.Suite {
   test("1-D") {
     val arr =
-      Vctrs(
+      Vectors(
         10 to 20,
         30 to 40,
         50 to 60,
@@ -20,7 +20,7 @@ class VectorsTest
 
   test("2-D") {
     val arr =
-      Vctrs(
+      Vectors(
         Seq(
           10 to 20,
           30 to 40
@@ -38,7 +38,7 @@ class VectorsTest
 
   test("3-D") {
     val arr =
-      Vctrs(
+      Vectors(
         Seq(
           Seq(
               0 until  10,

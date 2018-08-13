@@ -4,7 +4,7 @@ import cats.{ Applicative, Eval, Traverse }
 import cats.implicits._
 import shapeless.{ Id, Lazy }
 
-trait Vctrs[T] {
+trait Vectors[T] {
   type Row[U]
   def rows: Vector[Row[T]]
   def size = rows.length
@@ -12,51 +12,51 @@ trait Vctrs[T] {
   def apply(idx: Int): Row[T] = rows(idx)
 }
 
-object Vctrs {
-  type Aux[T, _R[_]] = Vctrs[T] { type Row[U] = _R[U] }
+object Vectors {
+  type Aux[T, _R[_]] = Vectors[T] { type Row[U] = _R[U] }
 
   def make[T, _Row[U]](_rows: Vector[_Row[T]])(implicit _traverseRow: Traverse[_Row]): Aux[T, _Row] =
-    new Vctrs[T] {
+    new Vectors[T] {
       type Row[U] = _Row[U]
       val rows = _rows
       val traverseRow = _traverseRow
     }
 
-  implicit val traverse: Traverse[Vctrs] =
-    new Traverse[Vctrs] {
-      override def traverse[G[_], A, B](fa: Vctrs[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[Vctrs[B]] = {
-        implicit val traverseRow = fa.traverseRow
+  implicit val traverse: Traverse[Vectors] =
+    new Traverse[Vectors] {
+      override def traverse[G[_], A, B](fa: Vectors[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[Vectors[B]] = {
+        implicit val tr = fa.traverseRow
         fa
           .rows
           .map {
             row ⇒
-              traverseRow.sequence(
-                traverseRow.map(row)(f)
+              tr.sequence(
+                tr.map(row)(f)
               )
           }
           .sequence
           .map {
-            make[B, fa.Row](_)(traverseRow)
+            make[B, fa.Row](_)(tr)
           }
       }
 
-      override def foldLeft[A, B](fa: Vctrs[A], b: B)(f: (B, A) ⇒ B): B = {
-        implicit val traverseRow = fa.traverseRow
+      override def foldLeft[A, B](fa: Vectors[A], b: B)(f: (B, A) ⇒ B): B = {
+        implicit val tr = fa.traverseRow
         fa
           .rows
           .foldLeft(b) {
             (b, row) ⇒
-              traverseRow.foldLeft(row, b)(f)
+              tr.foldLeft(row, b)(f)
           }
       }
 
-      override def foldRight[A, B](fa: Vctrs[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = {
-        implicit val traverseRow = fa.traverseRow
+      override def foldRight[A, B](fa: Vectors[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = {
+        implicit val tr = fa.traverseRow
         fa
           .rows
           .foldRight(lb) {
             (row, lb) ⇒
-              traverseRow.foldRight(row, lb)(f)
+              tr.foldRight(row, lb)(f)
           }
       }
     }
@@ -73,6 +73,10 @@ object Vctrs {
       makeTraverse[arg.Row]
     )
 
+  /**
+   * Non-implicit version of [[traverse]] that makes [[Row]]-type explicit; necessary in some cases (in this file) to
+   * make the compiler happy
+   */
   def makeTraverse[
     Row[U]
   ]:
@@ -130,17 +134,17 @@ object Vctrs {
         type Row[U] = _R[U]
       }
 
-    def make[In, _E, _R[_]](fn: In ⇒ Vctrs.Aux[_E, _R])(implicit _traverseRow: Traverse[_R]) =
+    def make[In, _E, _R[_]](fn: In ⇒ Vectors.Aux[_E, _R])(implicit _traverseRow: Traverse[_R]) =
       new Arg[In] {
         type Elem = _E
         type Row[U] = _R[U]
         implicit val traverseRow: Traverse[_R] = _traverseRow
-        @inline def apply(in: In): Vctrs.Aux[_E, _R] = fn(in)
+        @inline def apply(in: In): Vectors.Aux[_E, _R] = fn(in)
       }
 
-    implicit def base[T]: Aux[Vector[T], T, Id] = make[Vector[T], T, Id](Vctrs.make[T, Id](_))
+    implicit def base[T]: Aux[Vector[T], T, Id] = make[Vector[T], T, Id](Vectors.make[T, Id](_))
 
-    implicit def range[R <: Range]: Aux[R, Int, Id] = make[R, Int, Id](r ⇒ Vctrs.make[Int, Id](r.toVector))
+    implicit def range[R <: Range]: Aux[R, Int, Id] = make[R, Int, Id](r ⇒ Vectors.make[Int, Id](r.toVector))
   }
 
   object Arg
@@ -155,24 +159,24 @@ object Vctrs {
       Aux[
         I[Prev],
         prev.value.Elem,
-        Vctrs.Aux[?, prev.value.Row]
+        Vectors.Aux[?, prev.value.Row]
       ] =
       make[
         I[Prev],
         prev.value.Elem,
-        Vctrs.Aux[?, prev.value.Row]
+        Vectors.Aux[?, prev.value.Row]
       ](
         rows ⇒ {
-          val converted: Vector[Vctrs.Aux[prev.value.Elem, prev.value.Row]] =
+          val converted: Vector[Vectors.Aux[prev.value.Elem, prev.value.Row]] =
             rows
               .map(
                 prev.value(_)
               )
               .toVector
 
-          Vctrs.make[
+          Vectors.make[
             prev.value.Elem,
-            Vctrs.Aux[?, prev.value.Row]
+            Vectors.Aux[?, prev.value.Row]
           ](
             converted
           )(

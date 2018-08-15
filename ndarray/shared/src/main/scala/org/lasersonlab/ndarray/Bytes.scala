@@ -16,14 +16,11 @@ abstract class Bytes[
 )(
   implicit
   read: Read[T],
-//  val scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
   sum: Sum.Aux[Shape, Int],
 ) {
   import Arithmetic.Ops
 
   val buff = ByteBuffer.wrap(bytes.toArray)
-
-//  val (size, sizeProducts) = scanRight(shape, 1, _ * _)
 
   @inline def apply(idx: Int): T = read(buff, idx)
 
@@ -51,28 +48,4 @@ object Bytes {
     sum: Sum.Aux[Shape, Int]
   )
   extends ndarray.Bytes[T, Shape](bytes, shape, size, sizeProducts)
-
-  case class Builder[T](bytes: scala.Array[Byte]) {
-    def apply[
-      Shape: Arithmetic.Id
-    ](
-      shape: Shape
-    )(
-      implicit
-      read: Read[T],
-      scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
-      sum: Sum.Aux[Shape, Int]
-    ):
-      Bytes[T, Shape] = {
-      val (size, sizeProducts) = scanRight(shape, 1, _ * _)
-      Bytes[T, Shape](
-        bytes,
-        shape,
-        size,
-        sizeProducts
-      )
-    }
-  }
-
-  def apply[T](bytes: scala.Array[Byte]): Builder[T] = Builder(bytes)
 }

@@ -27,7 +27,7 @@ class ArrayTest
 
     val arr: Array[T, Shape, Arr] =
       Array[
-        Float,
+        T,
         Shape,
         Arr
       ](
@@ -119,5 +119,77 @@ class ArrayTest
         36142
       )
     )
+  }
+
+  test("1-D longs") {
+    val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/row_attrs/_Valid")
+    type T = Long
+    type Shape = Int :: TNil
+    type Arr[T] = Vector1[T]
+
+    implicit val long = DataType.i64(LittleEndian)
+
+    val arr: Array[T, Shape, Arr] =
+      Array[
+        T,
+        Shape,
+        Arr
+      ](
+        path
+      )
+      .right
+      .get
+
+    val metadata = arr.metadata
+
+    metadata should be(
+      Metadata(
+         shape = 27998 :: TNil,
+        chunks = 27998 :: TNil,
+        dtype = long,
+        compressor =
+          Blosc(
+            cname = CName.lz4,
+            clevel = 5,
+            shuffle = 1,
+            blocksize = 0
+          ),
+        order = C,
+        fill_value = 0L,
+        zarr_format = `2`,
+        filters = None
+      )
+    )
+
+    ==(arr.attrs, None)
+
+    val chunkPath = path / "0"
+    val compressor =
+      Blosc(
+        cname = CName.lz4,
+        clevel = 5,
+        shuffle = 1,
+        blocksize = 0
+      )
+
+    arr.chunks.size should be(1)
+    val chunk: Chunk[T, Shape] = arr.chunks(0)
+    val bytes = chunk.bytes
+    bytes.length should be(223984)
+
+    chunk.size should be(27998)
+
+    implicit val chunkFold = !![Foldable[Chunk[?, Shape]]]
+
+    val nonzeros =
+      toFoldableOps[Chunk[?, Shape], Long](chunk).foldLeft(0) {
+        (sum, n) ⇒
+          if (n > 0)
+            sum + 1
+          else
+            sum
+      }
+
+    nonzeros should be(11717)
   }
 }

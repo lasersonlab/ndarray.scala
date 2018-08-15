@@ -4,7 +4,6 @@ import java.io.FileNotFoundException
 
 import cats.{ Eval, Foldable }
 import hammerlab.path._
-import hammerlab.shapeless
 import hammerlab.shapeless.tlist._
 import org.lasersonlab.ndarray.{ Arithmetic, Bytes, ScanRight, Sum }
 import org.lasersonlab.zarr.DataType.read
@@ -96,32 +95,4 @@ object Chunk {
       def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = ???
     }
   }
-}
-
-trait TraverseIndices[TL <: TList] {
-  def apply(tl: TL): Iterator[TL]
-}
-object TraverseIndices {
-  implicit val tnil: TraverseIndices[TNil] =
-    new TraverseIndices[TNil] {
-      override def apply(tl: TNil): Iterator[TNil] = Iterator(TNil)
-    }
-
-  implicit def cons[TL <: TList](
-    implicit
-    ti: TraverseIndices[TL],
-    pp: Prepend[Int, TL]
-  ):
-    TraverseIndices[Int :: TL] =
-    new TraverseIndices[Int :: TL] {
-      def apply(tl: Int :: TL): Iterator[Int :: TL] =
-        tl match {
-          case h :: t ⇒
-            for {
-              r ← (0 until h).iterator
-              rest ← ti(t)
-            } yield
-              r :: rest
-        }
-    }
 }

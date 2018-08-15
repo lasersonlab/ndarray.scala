@@ -1,4 +1,4 @@
-package org.lasersonlab.zarr
+package org.lasersonlab.ndarray
 
 import cats.{ Applicative, Eval, Traverse }
 import cats.implicits._
@@ -119,6 +119,15 @@ object Vectors {
           }
       }
     }
+
+  type Vector0[T] = Id[T]
+  type Vector1[T] = Vectors.Aux[T, Id]
+  type Vector2[T] = Vectors.Aux[T, Vector1]
+  type Vector3[T] = Vectors.Aux[T, Vector2]
+
+  implicit val traverseV1: Traverse[Vector1] = makeTraverse[Id]
+  implicit val traverseV2: Traverse[Vector2] = makeTraverse[Vector1]
+  implicit val traverseV3: Traverse[Vector3] = makeTraverse[Vector2]
 
   trait Arg[In] {
     type Elem

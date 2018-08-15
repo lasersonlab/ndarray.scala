@@ -6,7 +6,6 @@ import cats.Traverse
 import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder
-import org.lasersonlab.ndarray
 import org.lasersonlab.ndarray.{ Arithmetic, ScanRight, Sum, ToArray }
 
 case class Array[T, Shape, A[_]](
@@ -56,8 +55,6 @@ object Array {
       }
     )
 
-  import ndarray.Array.Aux
-
   def chunks[
     T : DataType.Aux,
     Shape: Arithmetic.Id,
@@ -69,7 +66,7 @@ object Array {
     compressor: Compressor
   )(
     implicit
-    ti: Indices[Shape, A],
+    ti: Indices.Aux[A, Shape],
     traverse: Traverse[A],
     ai: Arithmetic[Shape, Int],
     k: Key[Shape],
@@ -95,9 +92,8 @@ object Array {
         .map {
           idx ⇒
             val key = k(idx)
-
             val start = idx * chunkShape
-            val end = arrShape min (idx * (chunkShape + 1))
+            val end = arrShape min ((idx + 1) * chunkShape)
             val shape = end - start
             Chunk(
               dir / key,
@@ -111,11 +107,7 @@ object Array {
 
     type Eith[U] = Either[Exception, U]
 
-    traverse.sequence[Eith, Chunk[T, Shape]](chunks)
-
-    // TODO: nit: sequence syntax should be able to work here
-    //    val app: Applicative[Eith] = implicitly
-    //    chunks.sequence[Eith, Chunk[T, Shape]]
+    chunks.sequence[Eith, Chunk[T, Shape]]
   }
 
   def apply[
@@ -127,7 +119,7 @@ object Array {
   )(
     implicit
     d: Decoder[DataType.Aux[T]],
-    ti: Indices[Shape, A],
+    ti: Indices.Aux[A, Shape],
     traverse: Traverse[A],
     ai: Arithmetic[Shape, Int],
     scanRight: ScanRight.Aux[Shape, Int, Int, Shape],

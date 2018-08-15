@@ -1,54 +1,152 @@
 package org.lasersonlab.zarr
 
-import cats.Functor
+import cats.implicits._
+import cats.{ Id, Traverse }
 import hammerlab.shapeless.tlist._
+import org.lasersonlab.ndarray.Vectors
+import org.lasersonlab.ndarray.Vectors.{ Vector1, Vector2 }
+import shapeless.Lazy
 
-trait Indices[Shape, A[_]] {
-  def apply(shape: Shape): A[Shape]
+trait Test {
+  type A[_]
+  type B
+}
+object Test {
+  type Aux[_A[_], _B] = Test { type A[U] = _A[U]; type B = _B }
+  type WithA[_A[_]] = Test { type A[U] = _A[U] }
+  type WithB[_B] = Test { type B = _B }
+
+  implicit def cons[A[_]](
+    implicit
+    withA: Lazy[WithA[A]]
+  ):
+  Aux[
+    withA.value.A,
+    A[Int]
+  ] = ???
+
+//  implicitly[WithA[Id]]
+//  implicitly[Lazy[WithA[Id]]]
+
 }
 
-trait Empty[A[_]] {
-  def apply[T](): A[T]
-}
-
-trait FromRows[A[_]] {
+trait FromRows {
+  type A[_]
   type Row[_]
   def apply[T](rows: Seq[Row[T]]): A[T]
 }
 object FromRows {
-  type Aux[A[_], _R[_]] = FromRows[A] { type Row[U] = _R[U] }
-}
+  type Aux[_A[_], R[_]] = FromRows { type A[U] = _A[U]; type Row[U] = R[U] }
+  type A[_A[_]] = FromRows { type   A[U] = _A[U] }
+  type R[ R[_]] = FromRows { type Row[U] =  R[U] }
 
-object Indices {
-
-  implicit def tnil[A[_]](implicit empty: Empty[A]): Indices[TNil, A] =
-    new Indices[TNil, A] {
-      override def apply(shape: TNil): A[TNil] = empty()
+  implicit val fromId: Aux[Vectors.Aux[?, Id], Id] =
+    new FromRows {
+      type A[U] = Vectors.Aux[U, Id]
+      type Row[U] = Id[U]
+      def apply[T](rows: Seq[Id[T]]): A[T] = Vectors.make[T, Id](rows.toVector)
     }
 
-  implicit def cons[TL <: TList, A[_], Row[_]](
+  implicit def cons[Arr[_], Row[_]](
     implicit
-    e: Indices[TL, Row],
-    f: Functor[Row],
-    pp: Prepend[Int, TL],
-    fromRows: FromRows.Aux[A, Row]
+    row: Lazy[Aux[Arr, Row]]
+    //traverse: Traverse[Arr]
   ):
-    Indices[Int :: TL, A] =
-    new Indices[Int :: TL, A] {
-      def apply(shape: Int :: TL): A[Int :: TL] =
+    Aux[
+      Vectors.Aux[?, Arr],
+      Arr
+    ] =
+    new FromRows {
+      type A[U] = Vectors.Aux[U, Arr]
+      type Row[U] = Arr[U]
+      def apply[T](rows: Seq[Arr[T]]): A[T] = ??? //Vectors.make[T, Arr](rows.toVector)
+    }
+}
+
+/**
+ * Iterate over an N-dimensional range of integers (provided as a `Shape`), stored as an [[A]]
+ */
+trait Indices[A[_]] {
+  type Shape
+  def apply(shape: Shape): A[Shape]
+}
+object Indices {
+
+  type Aux[A[_], _Shape] = Indices[A] { type Shape = _Shape }
+
+  implicit val tnil: Aux[Id, TNil] =
+    new Indices[Id] {
+      type Shape = TNil
+      def apply(tnil: TNil): Id[TNil] = tnil
+    }
+
+  // NOTE: the compiler doesn't use this to derive instances for `Vectors` types
+  implicit def cons[TL <: TList, Row[_]](
+    implicit
+    e: Lazy[Aux[Row, TL]],
+    f: Traverse[Row],
+    pp: Prepend[Int, TL]
+  ):
+  Aux[
+    Vectors.Aux[?, Row],
+    Int :: TL
+  ] =
+    new Indices[Vectors.Aux[?, Row]] {
+      type Shape = Int :: TL
+      def apply(shape: Shape): Vectors.Aux[Shape, Row] =
         shape match {
           case h :: t ⇒
-            fromRows(
+            Vectors.make[Shape, Row](
               (0 until h)
                 .map {
                   i ⇒
                     f.map(
-                      e(t)
+                      e.value(t)
                     ) {
                       i :: _
                     }
                 }
+                .toVector
             )
         }
     }
+
+  // This crashes the compiler if it is searched for via `cons` above
+  implicit val lazyIndices1: Lazy[Indices.Aux[Vector1,       Int :: TNil]] = Lazy(indices1)
+
+  implicit val     indices1:      Indices.Aux[Vector1,       Int :: TNil]  = Indices.cons[      TNil,      Id]
+  implicit val     indices2:      Indices.Aux[Vector2, Int:: Int :: TNil]  = Indices.cons[Int :: TNil, Vector1]
+
+
+
+
+//  implicit def cons[TL <: TList, Row[_]](
+//    implicit
+//    e: Lazy[Aux[Row, TL]],
+//    f: Functor[Row],
+//    pp: Prepend[Int, TL],
+//    fromRows: FromRows.R[Row]
+//  ):
+//    Aux[
+//      fromRows.A,
+//      Int :: TL
+//    ] =
+//    new Indices[fromRows.A] {
+//      type Shape = Int :: TL
+//      def apply(shape: Shape): fromRows.A[Shape] =
+//        shape match {
+//          case h :: t ⇒
+//            fromRows(
+//              (0 until h)
+//                .map {
+//                  i ⇒
+//                    f.map(
+//                      e.value(t)
+//                    ) {
+//                      i :: _
+//                    }
+//                }
+//            )
+//        }
+//    }
 }

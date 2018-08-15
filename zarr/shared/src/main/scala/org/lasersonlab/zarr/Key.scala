@@ -11,6 +11,8 @@ trait Key[T] {
 }
 
 object Key {
+  def apply[T](t: T)(implicit key: Key[T]): String = key(t)
+
   implicit def base[T]: Key[T :: TNil] =
     new Key[T :: TNil] {
       override def builder(builder: StringBuilder, t: T :: TNil): StringBuilder =
@@ -19,10 +21,9 @@ object Key {
 
   implicit def cons[T, TL <: TList.Aux[T]](implicit tl: Key[TL]): Key[T :: TL] =
     new Key[T :: TL] {
-      override def builder(builder: StringBuilder, t: T :: TL): StringBuilder =
-        builder           ++=
-          t.head.toString  +=
-          '.'             ++=
-          tl.builder(builder, t.tail)
+      override def builder(builder: StringBuilder, t: T :: TL): StringBuilder = {
+        builder ++= t.head.toString += '.'
+        tl.builder(builder, t.tail)
+      }
     }
 }

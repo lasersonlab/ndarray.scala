@@ -63,7 +63,9 @@ lazy val zarr = project.in(new File("zarr/shared")).settings(
     circe.parser,
     hammerlab.io,
     hammerlab.paths % "1.5.0",
-    hammerlab.types
+    hammerlab.types,
+
+    "org.blosc" ^ "jblosc" ^ "1.0.1" snapshot
   ),
   addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.7" cross CrossVersion.binary),
   scalacOptions += "-Ypartial-unification"

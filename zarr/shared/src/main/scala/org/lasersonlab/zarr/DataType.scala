@@ -108,9 +108,9 @@ object DType {
 }
 
 sealed abstract class DataType(
-  order: ByteOrder,
-  dType: DType,
-  size: Int
+  val order: ByteOrder,
+  val dType: DType,
+  val size: Int
 ) {
   override val toString = s"$order$dType$size"
   type T
@@ -148,12 +148,12 @@ object DataType {
     }
 
   // TODO: setting the buffer's order every time seems suboptimal; some different design that streamlines that would be nice
-  case object   char                    extends DataType( None, int,    1) { type T =   Char; @inline def apply(buf: ByteBuffer, idx: Int): T = {                   buf.getChar  (    idx) } }
-  case  class    i32(order: Endianness) extends DataType(order, int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getInt   (4 * idx) } }
-  case  class    i64(order: Endianness) extends DataType(order, int,    8) { type T =   Long; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getLong  (8 * idx) } }
-  case  class  float(order: Endianness) extends DataType(order,   f,    4) { type T =  Float; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getFloat (4 * idx) } }
-  case  class double(order: Endianness) extends DataType(order,   f,    8) { type T = Double; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getDouble(8 * idx) } }
-  case  class string( size:        Int) extends DataType( None, str, size) { type T = String
+  case object   char                                 extends DataType( None, int,    1) { type T =   Char; @inline def apply(buf: ByteBuffer, idx: Int): T = {                   buf.getChar  (    idx) } }
+  case  class    i32(override val order: Endianness) extends DataType(order, int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getInt   (4 * idx) } }
+  case  class    i64(override val order: Endianness) extends DataType(order, int,    8) { type T =   Long; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getLong  (8 * idx) } }
+  case  class  float(override val order: Endianness) extends DataType(order,   f,    4) { type T =  Float; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getFloat (4 * idx) } }
+  case  class double(override val order: Endianness) extends DataType(order,   f,    8) { type T = Double; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getDouble(8 * idx) } }
+  case  class string(override val  size:        Int) extends DataType( None, str, size) { type T = String
     @inline def apply(buf: ByteBuffer, idx: Int): T = {
       val arr = fill(size)(0.toByte)
       buf.get(arr, size * idx, size)

@@ -38,7 +38,6 @@ object Arithmetic {
     T <: TList
   ](
     implicit
-
     headArithmetic: Lazy[Id[H]],
     tailArithmetic: Lazy[Id[T]],
     pp: Prepend[H, T]
@@ -55,6 +54,30 @@ object Arithmetic {
       def  /  (l: H :: T, r: H :: T): H :: T = ( l.head  /  r.head ) :: ( l.tail  /  r.tail )
       def  %  (l: H :: T, r: H :: T): H :: T = ( l.head  %  r.head ) :: ( l.tail  %  r.tail )
       def min (l: H :: T, r: H :: T): H :: T = ( l.head min r.head ) :: ( l.tail min r.tail )
+    }
+
+  implicit def rightElem[
+    T,
+    TL <: TList,
+  ](
+    implicit
+    headArithmetic: Lazy[Id[T]],
+    tailArithmetic: Lazy[Arithmetic[TL, T]],
+    pp: Prepend[T, TL]
+  ):
+    Arithmetic[
+      T :: TL,
+      T
+    ] =
+    new Arithmetic[T :: TL, T] {
+      implicit val head = headArithmetic.value
+      implicit val tail = tailArithmetic.value
+      def  +  (l: T :: TL, r: T): T :: TL = ( l.head  +  r ) :: ( l.tail  +  r )
+      def  -  (l: T :: TL, r: T): T :: TL = ( l.head  -  r ) :: ( l.tail  -  r )
+      def  *  (l: T :: TL, r: T): T :: TL = ( l.head  *  r ) :: ( l.tail  *  r )
+      def  /  (l: T :: TL, r: T): T :: TL = ( l.head  /  r ) :: ( l.tail  /  r )
+      def  %  (l: T :: TL, r: T): T :: TL = ( l.head  %  r ) :: ( l.tail  %  r )
+      def min (l: T :: TL, r: T): T :: TL = ( l.head min r ) :: ( l.tail min r )
     }
 
   implicit class Ops[L](val l: L) extends AnyVal {

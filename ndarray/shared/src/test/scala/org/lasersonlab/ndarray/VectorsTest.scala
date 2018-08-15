@@ -1,4 +1,4 @@
-package org.lasersonlab.zarr
+package org.lasersonlab.ndarray
 
 import cats.implicits._
 

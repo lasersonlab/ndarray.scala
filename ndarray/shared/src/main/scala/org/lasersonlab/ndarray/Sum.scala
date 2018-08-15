@@ -16,9 +16,27 @@ object Sum {
       def apply(t: TNil): T = m.empty
     }
 
-  implicit def cons[E, T <: TList](implicit p: Lazy[Aux[T, E]], m: Monoid[E], pp: Prepend[E, T]): Aux[E :: T, E] =
+  implicit def cons[
+    E,
+    T <: TList
+  ](
+    implicit
+    p: Lazy[Aux[T, E]],
+    m: Monoid[E],
+    pp: Prepend[E, T]
+  ):
+    Aux[
+      E :: T,
+      E
+    ] =
     new Sum[E :: T] {
       type Out = E
-      def apply(in: E :: T): E = m.combine(in.head, p.value(in.tail))
+      def apply(in: E :: T): E =
+        m.combine(
+          in.head,
+          p.value(
+            in.tail
+          )
+        )
     }
 }

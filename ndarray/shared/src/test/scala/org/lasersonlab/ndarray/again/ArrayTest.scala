@@ -16,8 +16,8 @@ class ArrayTest
 
     t.foldLeft(a, 0)(_ + _) should be(55)
 
-    !![Traverse[Cons[?, Cons[?, Atom]]]]
-    !![Traverse[λ[A ⇒ Cons[A, λ[B ⇒ Cons[B, Atom]]]]]]
+//    !![Traverse[Cons[?, Cons[?, Atom]]]]
+//    !![Traverse[λ[A ⇒ Cons[A, λ[B ⇒ Cons[B, Atom]]]]]]
   }
 
   test("2-D") {

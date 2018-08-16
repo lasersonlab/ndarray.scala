@@ -1,12 +1,8 @@
 package org.lasersonlab.zarr
 
-import java.nio.ByteBuffer
-
-import cats.Foldable
 import cats.implicits._
 import hammerlab.path._
 import hammerlab.shapeless.tlist._
-import org.blosc.{ JBlosc, PrimitiveSizes, Shuffle }
 import org.lasersonlab.ndarray.Bytes
 import org.lasersonlab.ndarray.Vectors.{ Vector1, Vector2 }
 import org.lasersonlab.zarr.ByteOrder.LittleEndian
@@ -26,7 +22,7 @@ class ArrayTest
 
     implicit val float = DataType.float(LittleEndian)
 
-    val arr: Array[T, Shape, Arr] =
+    val arr: Array[T, Shape, Arr, Bytes] =
       Array[
         T,
         Shape,
@@ -128,7 +124,7 @@ class ArrayTest
 
     implicit val long = DataType.i64(LittleEndian)
 
-    val arr: Array[T, Shape, Arr] =
+    val arr: Array[T, Shape, Arr, Bytes] =
       Array[
         T,
         Shape,

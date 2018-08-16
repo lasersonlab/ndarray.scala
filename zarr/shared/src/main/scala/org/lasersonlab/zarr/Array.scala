@@ -6,11 +6,11 @@ import cats.Traverse
 import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder
-import org.lasersonlab.ndarray.{ Arithmetic, Bytes, ScanRight, Sum, ToArray }
+import org.lasersonlab.ndarray.{ Arithmetic, Bytes, ScanRight, Sum }
 
-case class Array[T, Shape, A[_]](
+case class Array[T, Shape, A[_], Chunk[_]](
   metadata: Metadata[T, Shape],
-  chunks: A[Bytes[T]],
+  chunks: A[Chunk[T]],
   attrs: Opt[Attrs] = None
 )
 
@@ -23,38 +23,6 @@ object Index {
 }
 
 object Array {
-
-//  implicit def toArray[
-//    T,
-//    Shape: Arithmetic.Id,
-//    A[_]
-//  ](
-//    implicit
-//    index: Index.Aux[A, Shape]
-//  ):
-//    ToArray.Aux[
-//      Array[T, Shape, A],
-//      T,
-//      Shape
-//    ] =
-//    ToArray[
-//      Array[T, Shape, A],
-//      T,
-//      Shape
-//    ](
-//      _.metadata.shape,
-//      {
-//        (arr, idx) ⇒
-//          val chunkShape = arr.metadata.chunks
-//
-//          import Arithmetic.Ops
-//
-//          val chunkIdx = idx / chunkShape
-//          val  elemIdx = idx % chunkShape
-//
-//          index(arr.chunks, chunkIdx).apply(elemIdx)
-//      }
-//    )
 
   def chunks[
     T : DataType.Aux,
@@ -112,8 +80,8 @@ object Array {
   }
 
   def apply[
-    T, //: DataType.Aux : Decoder,
-    Shape, //: Arithmetic.Id : Key : Decoder,
+    T: DataType.Aux : Decoder,
+    Shape: Arithmetic.Id : Key : Decoder,
     A[U]
   ](
     dir: Path
@@ -125,13 +93,8 @@ object Array {
     ai: Arithmetic[Shape, Int],
     scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
     sum: Sum.Aux[Shape, Int],
-    dt: DataType.Aux[T],
-    dect: Decoder[T],
-    arith: Arithmetic.Id[Shape],
-    key: Key[Shape],
-    shDec: Decoder[Shape]
   ):
-    Either[Exception, Array[T, Shape, A]] = {
+    Either[Exception, Array[T, Shape, A, Bytes]] = {
     if (!dir.exists)
       Left(
         new FileNotFoundException(
@@ -150,7 +113,7 @@ object Array {
             metadata.compressor
           )
       } yield
-        new Array[T, Shape, A](
+        new Array[T, Shape, A, Bytes](
           metadata,
           chunks,
           attrs

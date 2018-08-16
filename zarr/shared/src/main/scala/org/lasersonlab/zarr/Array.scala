@@ -6,11 +6,11 @@ import cats.Traverse
 import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder
-import org.lasersonlab.ndarray.{ Arithmetic, ScanRight, Sum, ToArray }
+import org.lasersonlab.ndarray.{ Arithmetic, Bytes, ScanRight, Sum, ToArray }
 
 case class Array[T, Shape, A[_]](
   metadata: Metadata[T, Shape],
-  chunks: A[Chunk[T, Shape]],
+  chunks: A[Bytes[T]],
   attrs: Opt[Attrs] = None
 )
 
@@ -24,36 +24,37 @@ object Index {
 
 object Array {
 
-  implicit def toArray[
-    T,
-    Shape: Arithmetic.Id,
-    A[_]
-  ](
-    implicit
-    index: Index.Aux[A, Shape]
-  ):
-    ToArray.Aux[
-      Array[T, Shape, A],
-      T,
-      Shape
-    ] =
-    ToArray[
-      Array[T, Shape, A],
-      T,
-      Shape
-    ](
-      _.metadata.shape,
-      (arr, idx) ⇒ {
-        val chunkShape = arr.metadata.chunks
-
-        import Arithmetic.Ops
-
-        val chunkIdx = idx / chunkShape
-        val  elemIdx = idx % chunkShape
-
-        index(arr.chunks, chunkIdx)(elemIdx)
-      }
-    )
+//  implicit def toArray[
+//    T,
+//    Shape: Arithmetic.Id,
+//    A[_]
+//  ](
+//    implicit
+//    index: Index.Aux[A, Shape]
+//  ):
+//    ToArray.Aux[
+//      Array[T, Shape, A],
+//      T,
+//      Shape
+//    ] =
+//    ToArray[
+//      Array[T, Shape, A],
+//      T,
+//      Shape
+//    ](
+//      _.metadata.shape,
+//      {
+//        (arr, idx) ⇒
+//          val chunkShape = arr.metadata.chunks
+//
+//          import Arithmetic.Ops
+//
+//          val chunkIdx = idx / chunkShape
+//          val  elemIdx = idx % chunkShape
+//
+//          index(arr.chunks, chunkIdx).apply(elemIdx)
+//      }
+//    )
 
   def chunks[
     T : DataType.Aux,
@@ -76,7 +77,7 @@ object Array {
     Either[
       Exception,
       A[
-        Chunk[T, Shape]
+        Bytes[T]
       ]
     ] = {
 
@@ -107,7 +108,7 @@ object Array {
 
     type Eith[U] = Either[Exception, U]
 
-    chunks.sequence[Eith, Chunk[T, Shape]]
+    chunks.sequence[Eith, Bytes[T]]
   }
 
   def apply[

@@ -7,6 +7,7 @@ import cats.implicits._
 import hammerlab.path._
 import hammerlab.shapeless.tlist._
 import org.blosc.{ JBlosc, PrimitiveSizes, Shuffle }
+import org.lasersonlab.ndarray.Bytes
 import org.lasersonlab.ndarray.Vectors.{ Vector1, Vector2 }
 import org.lasersonlab.zarr.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.Compressor.Blosc
@@ -63,7 +64,7 @@ class ArrayTest
     arr.chunks.size should be(10)
     rows.length should be(10)
     rows.foreach(_.size should be(1))
-    val chunks = rows.map(_.rows.head)
+    val chunks = rows.map(_.head)
 
     val unchecked = scala.Array.fill(1 << 26)(0.toByte)
 
@@ -84,19 +85,17 @@ class ArrayTest
     chunks
       .zip(expected)
       .foreach {
-        case (actual, expected) ⇒
+        case (actual: Chunk[T, Shape], expected) ⇒
           ==(actual.start, expected.start)
           ==(actual.end, expected.end)
           ==(actual.idx, expected.idx)
           ==(actual.shape, expected.shape)
       }
 
-    implicit val chunkFold = !![Foldable[Chunk[?, Shape]]]
-
     val chunkNonzeroCounts =
       chunks
         .map {
-          chunkFold.foldLeft(_, 0) {
+          _.foldLeft(0) {
             (sum, n) ⇒
               if (n > 0)
                 sum + 1
@@ -173,16 +172,14 @@ class ArrayTest
       )
 
     arr.chunks.size should be(1)
-    val chunk: Chunk[T, Shape] = arr.chunks(0)
+    val chunk = arr.chunks(0)
     val bytes = chunk.bytes
     bytes.length should be(223984)
 
     chunk.size should be(27998)
 
-    implicit val chunkFold = !![Foldable[Chunk[?, Shape]]]
-
     val nonzeros =
-      toFoldableOps[Chunk[?, Shape], Long](chunk).foldLeft(0) {
+      chunk.foldLeft(0) {
         (sum, n) ⇒
           if (n > 0)
             sum + 1

@@ -1,8 +1,8 @@
 package org.lasersonlab.ndarray
 
-import cats.{ Applicative, Eval, Traverse }
 import cats.implicits._
-import shapeless.{ Id, Lazy }
+import cats.{ Applicative, Eval, Id, Traverse }
+import shapeless.Lazy
 
 trait Vectors[T] {
   type Row[U]
@@ -73,6 +73,23 @@ object Vectors {
       makeTraverse[arg.Row]
     )
 
+  type Nested[A, Row[_]] = Vector[Row[A]]
+
+  def makeVectorTraverse[Row[U]](implicit tr: Traverse[Row]): Traverse[Nested[?, Row]] = {
+    type V[A] = Nested[A, Row]
+    new Traverse[V] {
+      def traverse[G[_], A, B](fa: V[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[V[B]] =
+        fa
+          .map {
+            row ⇒
+              tr.traverse(row)(f)
+          }
+          .sequence
+      def foldLeft[A, B](fa: V[A], b: B)(f: (B, A) ⇒ B): B = ???
+      def foldRight[A, B](fa: V[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = ???
+    }
+  }
+
   /**
    * Non-implicit version of [[traverse]] that makes [[Row]]-type explicit; necessary in some cases (in this file) to
    * make the compiler happy
@@ -120,14 +137,35 @@ object Vectors {
       }
     }
 
-  type Vector0[T] = Id[T]
-  type Vector1[T] = Vectors.Aux[T, Id]
+  implicit val vector1Traverse: Traverse[Vector] =
+    new Traverse[Vector] {
+      def traverse[G[_], A, B](fa: Vector[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[Vector[B]] = {
+        var builder = ev.pure { Vector.newBuilder[B] }
+        var idx = 0
+        while (idx < fa.length) {
+          ev.map2(builder, f(fa(idx))) { _ += _ }
+          idx += 1
+        }
+        ev.map(builder) { _.result() }
+      }
+      @inline def foldLeft[A, B](fa: Vector[A], b: B)(f: (B, A) ⇒ B): B = fa.foldLeft(b)(f)
+      @inline def foldRight[A, B](fa: Vector[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.foldRight(lb)(f)
+    }
+
+//  type Vector0[T] = Id[T]
+  type Vector1[T] = Vector[T] //Vectors.Aux[T, Id]
   type Vector2[T] = Vectors.Aux[T, Vector1]
   type Vector3[T] = Vectors.Aux[T, Vector2]
+  type Vector4[T] = Vectors.Aux[T, Vector3]
+  type Vector5[T] = Vectors.Aux[T, Vector4]
+  type Vector6[T] = Vectors.Aux[T, Vector5]
 
-  implicit val traverseV1: Traverse[Vector1] = makeTraverse[Id]
+//  implicit val traverseV1: Traverse[Vector1] = makeVectorTraverse[Id]
   implicit val traverseV2: Traverse[Vector2] = makeTraverse[Vector1]
   implicit val traverseV3: Traverse[Vector3] = makeTraverse[Vector2]
+  implicit val traverseV4: Traverse[Vector4] = makeTraverse[Vector3]
+  implicit val traverseV5: Traverse[Vector5] = makeTraverse[Vector4]
+  implicit val traverseV6: Traverse[Vector6] = makeTraverse[Vector5]
 
   trait Arg[In] {
     type Elem

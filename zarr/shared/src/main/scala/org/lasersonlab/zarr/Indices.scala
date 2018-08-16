@@ -6,6 +6,7 @@ import hammerlab.shapeless.tlist._
 import org.lasersonlab.ndarray.Vectors
 import org.lasersonlab.ndarray.Vectors.{ Vector1, Vector2 }
 import shapeless.Lazy
+import hammerlab.shapeless
 
 trait Test {
   type A[_]
@@ -114,7 +115,17 @@ object Indices {
   // This crashes the compiler if it is searched for via `cons` above
   implicit val lazyIndices1: Lazy[Indices.Aux[Vector1,       Int :: TNil]] = Lazy(indices1)
 
-  implicit val     indices1:      Indices.Aux[Vector1,       Int :: TNil]  = Indices.cons[      TNil,      Id]
+  import hammerlab.collection._
+
+  implicit val     indices1:      Indices.Aux[Vector1,       Int :: TNil]  = //Indices.cons[      TNil,      Id]
+  new Indices[Vector1] {
+    type Shape = Int :: TNil
+    def apply(shape: Shape): Vector1[Shape] =
+      shape match {
+        case n :: TNil ⇒
+          (0 until n).map[Shape, Vector[Shape]]{ _ :: TNil }
+      }
+  }
   implicit val     indices2:      Indices.Aux[Vector2, Int:: Int :: TNil]  = Indices.cons[Int :: TNil, Vector1]
 
 

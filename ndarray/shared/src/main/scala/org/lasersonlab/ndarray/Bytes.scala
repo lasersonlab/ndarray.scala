@@ -2,25 +2,25 @@ package org.lasersonlab.ndarray
 
 import java.nio.ByteBuffer
 
+import cats.{ Eval, Foldable }
 import org.lasersonlab.ndarray
 import org.lasersonlab.ndarray.io.Read
 
-abstract class Bytes[
-  T,
-  Shape: Arithmetic.Id
-](
-  val bytes: Seq[Byte],
-  val shape: Shape,
-  val size: Int,
-  val sizeProducts: Shape
-)(
-  implicit
-  read: Read[T],
-  sum: Sum.Aux[Shape, Int],
-) {
+trait Bytes[T] {
+  type Shape
+
+  def bytes: Seq[Byte]
+  def shape: Shape
+  def size: Int
+  def sizeProducts: Shape
+
+  implicit def arithmetic: Arithmetic.Id[Shape]
+  implicit def read: Read[T]
+  implicit def sum: Sum.Aux[Shape, Int]
+
   import Arithmetic.Ops
 
-  val buff = ByteBuffer.wrap(bytes.toArray)
+  lazy val buff = ByteBuffer.wrap(bytes.toArray)
 
   @inline def apply(idx: Int): T = read(buff, idx)
 
@@ -34,18 +34,39 @@ abstract class Bytes[
 }
 
 object Bytes {
+  type Aux[T, _Shape] = ndarray.Bytes[T] { type Shape = _Shape }
+
   case class Bytes[
     T,
-    Shape: Arithmetic.Id
+    _Shape
   ](
-    override val bytes: Seq[Byte],
-    override val shape: Shape,
-    override val size: Int,
-    override val sizeProducts: Shape
+    bytes: Seq[Byte],
+    shape: _Shape,
+    size: Int,
+    sizeProducts: _Shape
   )(
     implicit
-    read: Read[T],
-    sum: Sum.Aux[Shape, Int]
+    val read: Read[T],
+    val arithmetic: Arithmetic.Id[_Shape],
+    val sum: Sum.Aux[_Shape, Int]
   )
-  extends ndarray.Bytes[T, Shape](bytes, shape, size, sizeProducts)
+  extends ndarray.Bytes[T] {
+    type Shape = _Shape
+  }
+
+  implicit val consFoldable: Foldable[ndarray.Bytes] =
+    new Foldable[ndarray.Bytes] {
+      type F[A] = ndarray.Bytes[A]
+      def foldLeft[A, B](fa: F[A], b: B)(f: (B, A) ⇒ B): B = {
+        var ret = b
+        var idx = 0
+        while (idx < fa.size) {
+          ret = f(ret, fa(idx))
+          idx += 1
+        }
+        ret
+      }
+      def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = ???
+    }
+
 }

@@ -5,34 +5,41 @@ import java.io.FileNotFoundException
 import cats.{ Eval, Foldable }
 import hammerlab.path._
 import hammerlab.shapeless.tlist._
+import org.lasersonlab.ndarray.io.Read
 import org.lasersonlab.ndarray.{ Arithmetic, Bytes, ScanRight, Sum }
 import org.lasersonlab.zarr.DataType.read
 
 case class Chunk[
   T,
-  Shape: Arithmetic.Id
+  _Shape
 ](
   override val bytes: Seq[Byte],
-  override val shape: Shape,
-                 idx: Shape,
-               start: Shape,
-                 end: Shape,
+  override val shape: _Shape,
+                 idx: _Shape,
+               start: _Shape,
+                 end: _Shape,
   override val  size: Int,
-  override val  sizeProducts: Shape
+  override val  sizeProducts: _Shape
 )(
   implicit
   dtype: DataType.Aux[T],
-  scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
-  sum: Sum.Aux[Shape, Int]
+  val arithmetic: Arithmetic.Id[_Shape],
+  scanRight: ScanRight.Aux[_Shape, Int, Int, _Shape],
+  val sum: Sum.Aux[_Shape, Int]
 )
-extends Bytes[T, Shape](bytes, shape, size, sizeProducts) {
+extends Bytes[T] {
+  type Shape = _Shape
+
   require(
     size * dtype.size <= bytes.length,
     s"Unexpected bytes size in chunk $idx (shape: $shape): ${bytes.length} instead of ${size * dtype.size} ($size * ${dtype.size})"
   )
+
+  override implicit def read: Read[T] = DataType.read(dtype)
 }
 
 object Chunk {
+
   def apply[
     T,
     Shape: Arithmetic.Id
@@ -73,26 +80,4 @@ object Chunk {
         )
       )
     }
-
-  implicit def consFoldable[
-    TL <: TList.Aux[Int]
-  ]:
-    Foldable[
-      Chunk[?, TL]
-    ] = {
-    type Shape = TL
-    new Foldable[Chunk[?, Shape]] {
-      type F[A] = Chunk[A, Shape]
-      def foldLeft[A, B](fa: F[A], b: B)(f: (B, A) ⇒ B): B = {
-        var ret = b
-        var idx = 0
-        while (idx < fa.size) {
-          ret = f(ret, fa(idx))
-          idx += 1
-        }
-        ret
-      }
-      def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = ???
-    }
-  }
 }

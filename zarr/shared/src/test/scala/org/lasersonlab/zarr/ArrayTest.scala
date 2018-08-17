@@ -14,9 +14,8 @@ import shapeless.nat._
 
 class ArrayTest
   extends hammerlab.Suite {
-  val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/matrix")
   test("2-D floats") {
-
+    val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/matrix")
 
     val arr =
       Array[Float, _2](path)
@@ -56,18 +55,20 @@ class ArrayTest
 
     implicit val _float = float(LittleEndian)
 
+//    Chunk(unchecked, 3092 :: 5425 :: TNil, 0 :: 0 :: TNil,     0 :: 0:: TNil,  3092 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil)
+
     val expected =
       Seq(
-        Chunk(unchecked, 3092 :: 5425 :: TNil, 0 :: 0 :: TNil,     0 :: 0:: TNil,  3092 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-        Chunk(unchecked, 3092 :: 5425 :: TNil, 1 :: 0 :: TNil,  3092 :: 0:: TNil,  6184 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-        Chunk(unchecked, 3092 :: 5425 :: TNil, 2 :: 0 :: TNil,  6184 :: 0:: TNil,  9276 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-        Chunk(unchecked, 3092 :: 5425 :: TNil, 3 :: 0 :: TNil,  9276 :: 0:: TNil, 12368 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-        Chunk(unchecked, 3092 :: 5425 :: TNil, 4 :: 0 :: TNil, 12368 :: 0:: TNil, 15460 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-        Chunk(unchecked, 3092 :: 5425 :: TNil, 5 :: 0 :: TNil, 15460 :: 0:: TNil, 18552 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-        Chunk(unchecked, 3092 :: 5425 :: TNil, 6 :: 0 :: TNil, 18552 :: 0:: TNil, 21644 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-        Chunk(unchecked, 3092 :: 5425 :: TNil, 7 :: 0 :: TNil, 21644 :: 0:: TNil, 24736 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-        Chunk(unchecked, 3092 :: 5425 :: TNil, 8 :: 0 :: TNil, 24736 :: 0:: TNil, 27828 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-        Chunk(unchecked,  170 :: 5425 :: TNil, 9 :: 0 :: TNil, 27828 :: 0:: TNil, 27998 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil)
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 0 :: 0 :: TNil,     0 :: 0:: TNil,  3092 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 1 :: 0 :: TNil,  3092 :: 0:: TNil,  6184 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 2 :: 0 :: TNil,  6184 :: 0:: TNil,  9276 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 3 :: 0 :: TNil,  9276 :: 0:: TNil, 12368 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 4 :: 0 :: TNil, 12368 :: 0:: TNil, 15460 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 5 :: 0 :: TNil, 15460 :: 0:: TNil, 18552 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 6 :: 0 :: TNil, 18552 :: 0:: TNil, 21644 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 7 :: 0 :: TNil, 21644 :: 0:: TNil, 24736 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 8 :: 0 :: TNil, 24736 :: 0:: TNil, 27828 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked,  170 :: 5425 :: TNil, 9 :: 0 :: TNil, 27828 :: 0:: TNil, 27998 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil)
       )
 
     chunks
@@ -204,5 +205,10 @@ class ArrayTest
         "M"
       )
     )
+  }
+
+  test("1-D structs") {
+    val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr/var")
+
   }
 }

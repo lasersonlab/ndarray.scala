@@ -4,67 +4,12 @@ import java.nio.ByteBuffer
 
 import io.circe.Decoder.Result
 import io.circe.{ Decoder, DecodingFailure, HCursor }
-import org.hammerlab.shapeless.instances.Instances
+import org.hammerlab.lines.Name
 import org.lasersonlab.ndarray.io.Read
-import shapeless.{ HList, the }
-import shapeless.ops.hlist.ToTraversable
+import org.lasersonlab.zarr.ByteOrder.Endianness
 
-import scala.reflect.ClassTag
+import PartialFunction.condOpt
 import scala.util.Try
-
-trait InstanceMap[T] {
-  def apply(): Map[String, Either[String, T]]
-}
-object InstanceMap {
-
-  def apply[T]()(implicit i: InstanceMap[T]) = i()
-
-  implicit def instances[T, L <: HList](
-    implicit
-    i: Instances.Aux[T, L],
-    ct: ClassTag[T],
-    t: ToTraversable.Aux[L, List, T]
-  ):
-    InstanceMap[T] =
-    new InstanceMap[T] {
-      def apply(): Map[String, Either[String, T]] =
-        i()
-          .toList
-          .map {
-            o ⇒
-              o.toString →
-                Right(o)
-          }
-          .toMap
-          .withDefault {
-            k ⇒
-              Left(
-                s"Unrecognized ${ct.runtimeClass.getName}: $k"
-              )
-          }
-    }
-}
-
-abstract class HasInstanceMap[T]()(
-  implicit
-  i: InstanceMap[T]
-) {
-  val byString: Map[String, Either[String, T]] = i()
-//    i()
-//      .toList
-//      .map {
-//        o ⇒
-//          o.toString →
-//            Right(o)
-//      }
-//      .toMap
-//      .withDefault {
-//        k ⇒
-//          Left(
-//            s"Unrecognized ${ct.runtimeClass.getName}: $k"
-//          )
-//      }
-}
 
 sealed abstract class ByteOrder(override val toString: String)
 object ByteOrder {
@@ -83,6 +28,12 @@ object ByteOrder {
         case LittleEndian ⇒ java.nio.ByteOrder.LITTLE_ENDIAN
         case    BigEndian ⇒ java.nio.ByteOrder.BIG_ENDIAN
       }
+
+    def unapply(char: Char): Option[Endianness] =
+      condOpt(char) {
+        case '<' ⇒ LittleEndian
+        case '>' ⇒ BigEndian
+      }
   }
 
   val get = InstanceMap[ByteOrder]()
@@ -94,7 +45,6 @@ object DType {
   case object    bool extends DType("b")
   case object   float extends DType("f")
   case object  string extends DType("S")
-  case object unicode extends DType("U")
 
   // not implemented (yet?):
   // - V: void *
@@ -120,6 +70,49 @@ object DataType {
 
   type Aux[_T] = DataType { type T = _T }
 
+  trait Parser[T] {
+    import Parser.Return
+    def apply(str: String): Return[T]
+  }
+  object Parser {
+    type Return[T] = Either[String, DataType.Aux[T]]
+    def make[T](fn: PartialFunction[List[Char], DataType.Aux[T]])(implicit name: Name[T]): Parser[T] =
+      new Parser[T] {
+        @inline def apply(str: String): Return[T] =
+          fn
+            .andThen(Right(_))
+            .applyOrElse[List[Char], Return[T]](
+              str.toList,
+              (str: List[Char]) ⇒ Left(s"Unrecognized $name dtype: $str")
+            )
+      }
+
+    object Int {
+      def unapply(s: List[Char]): Option[Int] = Some( s.mkString.toInt )
+    }
+
+    implicit val   _char: Parser[  Char] = make { case           '|' :: 'i' :: Int(   1) ⇒   char       }
+    implicit val     int: Parser[   Int] = make { case Endianness(e) :: 'i' :: Int(   4) ⇒    i32(   e) }
+    implicit val    long: Parser[  Long] = make { case Endianness(e) :: 'i' :: Int(   8) ⇒    i64(   e) }
+    implicit val  _float: Parser[ Float] = make { case Endianness(e) :: 'f' :: Int(   4) ⇒  float(   e) }
+    implicit val _double: Parser[Double] = make { case Endianness(e) :: 'f' :: Int(   8) ⇒ double(   e) }
+    implicit val _string: Parser[String] = make { case           '|' :: 'S' :: Int(size) ⇒ string(size) }
+  }
+
+  implicit def dataTypeDecoder[T](implicit parser: Parser[T]): Decoder[Aux[T]] =
+    new Decoder[Aux[T]] {
+      override def apply(c: HCursor): Result[Aux[T]] =
+        c
+          .value
+          .as[String]
+          .flatMap {
+            parser(_)
+              .left
+              .map { DecodingFailure(_, c.history) }
+          }
+    }
+
+
   implicit def read[T](implicit dataType: DataType.Aux[T]): Read[T] =
     new Read[T] {
       @inline def apply(buff: ByteBuffer, idx: Int): T = dataType(buff, idx)
@@ -128,24 +121,7 @@ object DataType {
   import ByteOrder._
   type Order = ByteOrder
 
-  import DType.{
-    float ⇒ f,
-    string ⇒ str,
-    _
-  }
-
-  import scala.Array.fill
-
-  def make[_T](
-    order: ByteOrder,
-    dType: DType,
-    size: Int,
-    read: (ByteBuffer, Int) ⇒ _T
-  ): Aux[_T] =
-    new DataType(order, dType, size) {
-      type T = _T
-      @inline def apply(buff: ByteBuffer, idx: Int): T = read(buff, idx)
-    }
+  import DType.{ float ⇒ flt, string ⇒ str, _ }
 
   val `0` = 0.toByte
 
@@ -153,17 +129,23 @@ object DataType {
   case object   char                                 extends DataType( None, int,    1) { type T =   Char; @inline def apply(buf: ByteBuffer, idx: Int): T = {                   buf.getChar  (    idx) } }
   case  class    i32(override val order: Endianness) extends DataType(order, int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getInt   (4 * idx) } }
   case  class    i64(override val order: Endianness) extends DataType(order, int,    8) { type T =   Long; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getLong  (8 * idx) } }
-  case  class  float(override val order: Endianness) extends DataType(order,   f,    4) { type T =  Float; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getFloat (4 * idx) } }
-  case  class double(override val order: Endianness) extends DataType(order,   f,    8) { type T = Double; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getDouble(8 * idx) } }
+  case  class  float(override val order: Endianness) extends DataType(order, flt,    4) { type T =  Float; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getFloat (4 * idx) } }
+  case  class double(override val order: Endianness) extends DataType(order, flt,    8) { type T = Double; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getDouble(8 * idx) } }
   case  class string(override val  size:        Int) extends DataType( None, str, size) { type T = String
-    @inline def apply(buf: ByteBuffer, idx: Int): T = {
-      val arr = fill(size)(`0`)
+    import scala.Array.fill
+    val arr = fill(size)(`0`)
+    def apply(buf: ByteBuffer, idx: Int): T = {
       buf.position(size * idx)
       buf.get(arr)
-      arr
-        .takeWhile { _ != `0` }
-        .map { _.toChar }
-        .mkString
+      val builder = new StringBuilder
+      var i = 0
+      while (i < size) {
+        val char = arr(i)
+        if (char != `0`) builder += char.toChar
+        else return builder.result()
+        i += 1
+      }
+      builder.result()
     }
   }
 
@@ -172,38 +154,14 @@ object DataType {
       case (e: Endianness, _: int.type,    4) ⇒ Right(   i32(   e))
       case (e: Endianness, _: int.type,    8) ⇒ Right(   i64(   e))
       case (e: Endianness, _: int.type,    1) ⇒ Right(  char      )
-      case (e: Endianness, _:   f.type,    4) ⇒ Right( float(   e))
-      case (e: Endianness, _:   f.type,    8) ⇒ Right(double(   e))
+      case (e: Endianness, _: flt.type,    4) ⇒ Right( float(   e))
+      case (e: Endianness, _: flt.type,    8) ⇒ Right(double(   e))
       case (         None, _: str.type, size) ⇒ Right(string(size))
       case _ ⇒
         Left(
           s"Unrecognized data type: $order$dtype$size"
         )
     }
-
-  import org.hammerlab.lines.Name
-  def makeDecoder[DT <: Aux[T], T](implicit name: Name[DT]): Decoder[DataType.Aux[T]] =
-    new Decoder[Aux[T]] {
-      override def apply(c: HCursor): Result[Aux[T]] =
-        decoder(c)
-        .flatMap {
-          case dt: DT ⇒ Right(dt)
-          case o ⇒
-            Left(
-              DecodingFailure(
-                s"Expected $name data type, found $o",
-                c.history
-              )
-            )
-        }
-    }
-
-  implicit val stringDecoder: Decoder[DataType.Aux[String]] = makeDecoder[   string, String]
-  implicit val   charDecoder: Decoder[DataType.Aux[  Char]] = makeDecoder[char.type,   Char]
-  implicit val doubleDecoder: Decoder[DataType.Aux[Double]] = makeDecoder[   double, Double]
-  implicit val  floatDecoder: Decoder[DataType.Aux[ Float]] = makeDecoder[    float,  Float]
-  implicit val    intDecoder: Decoder[DataType.Aux[   Int]] = makeDecoder[      i32,    Int]
-  implicit val   longDecoder: Decoder[DataType.Aux[  Long]] = makeDecoder[      i64,   Long]
 
   val regex = """(.)(.)(\d+)""".r
   implicit val decoder: Decoder[DataType] =
@@ -222,10 +180,10 @@ object DataType {
               DecodingFailure.fromThrowable(_, c.history)
             )
           (order, tpe, size) = t
-          order ← ByteOrder.get(order).left.map(DecodingFailure(_, c.history))
-          tpe ← DType.get(tpe).left.map(DecodingFailure(_, c.history))
-          size ← Try(size.toInt).toEither.left.map(DecodingFailure.fromThrowable(_, c.history))
-          datatype ← get(order, tpe, size).left.map(DecodingFailure(_, c.history))
+             order ←     ByteOrder.get(order).left.map(DecodingFailure              (_, c.history))
+               tpe ←         DType.get(  tpe).left.map(DecodingFailure              (_, c.history))
+              size ← Try(size.toInt).toEither.left.map(DecodingFailure.fromThrowable(_, c.history))
+          datatype ←    get(order, tpe, size).left.map(DecodingFailure              (_, c.history))
         } yield
           datatype
     }

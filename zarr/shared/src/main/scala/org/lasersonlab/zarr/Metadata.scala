@@ -24,6 +24,10 @@ case class Metadata[T, Shape](
 object Metadata {
   val basename = ".zarray"
 
+  // Implicit unwrappers for some fields
+  implicit def _compressor[T, Shape](implicit md: Metadata[_, _]): Compressor = md.compressor
+  implicit def   _datatype[T, Shape](implicit md: Metadata[T, _]): DataType.Aux[T] = md.dtype
+
   def apply[
         T : Decoder,
     Shape : Decoder
@@ -46,9 +50,6 @@ object Metadata {
     else
       decode[Metadata[T, Shape]](path.read)
   }
-
-  // A metadata can be implicitly converted to the compressor it contains
-  implicit def compressor(implicit m: Metadata[_, _]): Compressor = m.compressor
 
   object untyped {
     case class Metadata(

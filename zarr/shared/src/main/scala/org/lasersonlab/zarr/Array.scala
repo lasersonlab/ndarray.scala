@@ -113,14 +113,13 @@ object Index {
 object Array {
 
   def chunks[
-    T : DataType.Aux,
+    T,
     Shape: Arithmetic.Id,
     A[U]
   ](
            dir: Path,
       arrShape: Shape,
-    chunkShape: Shape,
-    compressor: Compressor
+    chunkShape: Shape
   )(
     implicit
     ti: Indices.Aux[A, Shape],
@@ -128,7 +127,9 @@ object Array {
     ai: Arithmetic[Shape, Int],
     k: Key[Shape],
     scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
-    sum: Sum.Aux[Shape, Int]
+    sum: Sum.Aux[Shape, Int],
+    compressor: Compressor,
+    datatype: DataType.Aux[T]
   ):
     Either[
       Exception,
@@ -174,7 +175,6 @@ object Array {
     implicit
     v: VectorInts[N],
     d: Decoder[DataType.Aux[T]],
-    dd: DataType.Aux[T],
     dt: Decoder[T],
   ):
     Either[
@@ -182,16 +182,14 @@ object Array {
       Array[T, v.Shape, v.A, Bytes]
   ] = {
     import v._
-    implicitly[Indices.Aux[v.A, v.Shape]](ti)
     apply[T, v.Shape, v.A](dir)(
-      // shouldn't have to do this; https://github.com/scala/bug/issues/11086
+      // shouldn't have to do this? https://github.com/scala/bug/issues/11086
       d = d,
       ti = ti,
       traverse = traverse,
       ai = ai,
       scanRight = scanRight,
       sum = sum,
-      dd = dd,
       dt = dt,
       arithmetic = arithmetic,
       key = key,
@@ -213,7 +211,6 @@ object Array {
     ai: Arithmetic[Shape, Int],
     scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
     sum: Sum.Aux[Shape, Int],
-    dd: DataType.Aux[T],
     dt: Decoder[T],
     arithmetic: Arithmetic.Id[Shape],
     key: Key[Shape],
@@ -230,13 +227,15 @@ object Array {
       for {
         metadata ← Metadata[T, Shape](dir)
         attrs ← Attrs(dir)
-        chunks ←
+        chunks ← {
+          implicit val _md = metadata
+          import Metadata._
           chunks[T, Shape, A](
             dir,
             metadata.shape,
-            metadata.chunks,
-            metadata.compressor
+            metadata.chunks
           )
+        }
       } yield
         new Array[T, Shape, A, Bytes](
           metadata,

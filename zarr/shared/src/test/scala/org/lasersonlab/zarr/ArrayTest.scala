@@ -12,13 +12,13 @@ import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.Ints.{ Ints1, Ints2 }
 import org.lasersonlab.zarr.Order.C
 import shapeless.nat._
+import DataType._
 
 class ArrayTest
   extends hammerlab.Suite {
   val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/matrix")
   test("2-D floats") {
 
-    implicit val float = DataType.float(LittleEndian)
 
     val arr =
       Array[Float, _2](path)
@@ -31,7 +31,7 @@ class ArrayTest
       Metadata(
         shape = 27998 :: 5425 :: TNil,
         chunks = 3092 :: 5425 :: TNil,
-        dtype = float,
+        dtype = float(LittleEndian),
         compressor =
           Blosc(
             cname = CName.lz4,
@@ -55,6 +55,8 @@ class ArrayTest
     val chunks = rows.map(_.head)
 
     val unchecked = scala.Array.fill(1 << 26)(0.toByte)
+
+    implicit val _float = float(LittleEndian)
 
     val expected =
       Seq(
@@ -111,8 +113,6 @@ class ArrayTest
   test("1-D longs") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/row_attrs/_Valid")
 
-    implicit val long = DataType.i64(LittleEndian)
-
     val arr =
       Array[Long, _1](path)
         .right
@@ -122,7 +122,7 @@ class ArrayTest
       Metadata(
          shape = 27998 :: TNil,
         chunks = 27998 :: TNil,
-        dtype = long,
+        dtype = i64(LittleEndian),
         compressor =
           Blosc(
             cname = CName.lz4,
@@ -161,15 +161,13 @@ class ArrayTest
   test("1-D strings") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/col_attrs/Sex")
 
-    implicit val string = DataType.string(5)
-
     val arr = Array[String, _1](path).right.get
 
     arr.metadata should be(
       Metadata(
          shape = 5425 :: TNil,
         chunks = 5425 :: TNil,
-        dtype = string,
+        dtype = string(5),
         compressor =
           Blosc(
             cname = CName.lz4,

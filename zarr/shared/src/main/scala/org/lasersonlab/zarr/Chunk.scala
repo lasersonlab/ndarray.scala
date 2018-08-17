@@ -2,12 +2,9 @@ package org.lasersonlab.zarr
 
 import java.io.FileNotFoundException
 
-import cats.{ Eval, Foldable }
 import hammerlab.path._
-import hammerlab.shapeless.tlist._
 import org.lasersonlab.ndarray.io.Read
 import org.lasersonlab.ndarray.{ Arithmetic, Bytes, ScanRight, Sum }
-import org.lasersonlab.zarr.DataType.read
 
 case class Chunk[
   T,

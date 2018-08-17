@@ -147,6 +147,8 @@ object DataType {
       @inline def apply(buff: ByteBuffer, idx: Int): T = read(buff, idx)
     }
 
+  val `0` = 0.toByte
+
   // TODO: setting the buffer's order every time seems suboptimal; some different design that streamlines that would be nice
   case object   char                                 extends DataType( None, int,    1) { type T =   Char; @inline def apply(buf: ByteBuffer, idx: Int): T = {                   buf.getChar  (    idx) } }
   case  class    i32(override val order: Endianness) extends DataType(order, int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getInt   (4 * idx) } }
@@ -155,9 +157,13 @@ object DataType {
   case  class double(override val order: Endianness) extends DataType(order,   f,    8) { type T = Double; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getDouble(8 * idx) } }
   case  class string(override val  size:        Int) extends DataType( None, str, size) { type T = String
     @inline def apply(buf: ByteBuffer, idx: Int): T = {
-      val arr = fill(size)(0.toByte)
-      buf.get(arr, size * idx, size)
-      arr.map(_.toChar).mkString
+      val arr = fill(size)(`0`)
+      buf.position(size * idx)
+      buf.get(arr)
+      arr
+        .takeWhile { _ != `0` }
+        .map { _.toChar }
+        .mkString
     }
   }
 

@@ -118,9 +118,7 @@ class ArrayTest
         .right
         .get
 
-    val metadata = arr.metadata
-
-    metadata should be(
+    arr.metadata should be(
       Metadata(
          shape = 27998 :: TNil,
         chunks = 27998 :: TNil,
@@ -158,5 +156,57 @@ class ArrayTest
       }
 
     nonzeros should be(11717)
+  }
+
+  test("1-D strings") {
+    val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/col_attrs/Sex")
+
+    implicit val string = DataType.string(5)
+
+    val arr = Array[String, _1](path).right.get
+
+    arr.metadata should be(
+      Metadata(
+         shape = 5425 :: TNil,
+        chunks = 5425 :: TNil,
+        dtype = string,
+        compressor =
+          Blosc(
+            cname = CName.lz4,
+            clevel = 5,
+            shuffle = 1,
+            blocksize = 0
+          ),
+        order = C,
+        fill_value = "",
+        zarr_format = `2`,
+        filters = None
+      )
+    )
+
+    ==(arr.attrs, None)
+
+    arr.chunks.size should be(1)
+    val chunk = arr.chunks(0)
+    val bytes = chunk.bytes
+    bytes.length should be(27125)
+
+    chunk.size should be(5425)
+    val elems = chunk.toList
+    elems.size should be(5425)
+    elems.take(10) should be(
+      List(
+        "1M",
+        "F",
+        "1F",
+        "F",
+        "1M 1F",
+        "1M 1F",
+        "F",
+        "1M 1F",
+        "F",
+        "M"
+      )
+    )
   }
 }

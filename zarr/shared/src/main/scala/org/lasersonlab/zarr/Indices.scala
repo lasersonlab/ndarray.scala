@@ -3,75 +3,10 @@ package org.lasersonlab.zarr
 import cats.implicits._
 import cats.{ Id, Traverse }
 import hammerlab.shapeless.tlist._
+import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.ndarray.Vectors
 import org.lasersonlab.ndarray.Vectors._
 import shapeless.Lazy
-import hammerlab.shapeless
-
-trait Test {
-  type A[_]
-  type B
-}
-object Test {
-  type Aux[_A[_], _B] = Test { type A[U] = _A[U]; type B = _B }
-  type WithA[_A[_]] = Test { type A[U] = _A[U] }
-  type WithB[_B] = Test { type B = _B }
-
-  implicit def cons[A[_]](
-    implicit
-    withA: Lazy[WithA[A]]
-  ):
-  Aux[
-    withA.value.A,
-    A[Int]
-  ] = ???
-
-//  implicitly[WithA[Id]]
-//  implicitly[Lazy[WithA[Id]]]
-
-}
-
-trait FromRows {
-  type A[_]
-  type Row[_]
-  def apply[T](rows: Seq[Row[T]]): A[T]
-}
-object FromRows {
-  type Aux[_A[_], R[_]] = FromRows { type A[U] = _A[U]; type Row[U] = R[U] }
-  type A[_A[_]] = FromRows { type   A[U] = _A[U] }
-  type R[ R[_]] = FromRows { type Row[U] =  R[U] }
-
-  implicit val fromId: Aux[Vectors.Aux[?, Id], Id] =
-    new FromRows {
-      type A[U] = Vectors.Aux[U, Id]
-      type Row[U] = Id[U]
-      def apply[T](rows: Seq[Id[T]]): A[T] = Vectors.make[T, Id](rows.toVector)
-    }
-
-  implicit def cons[Arr[_], Row[_]](
-    implicit
-    row: Lazy[Aux[Arr, Row]]
-    //traverse: Traverse[Arr]
-  ):
-    Aux[
-      Vectors.Aux[?, Arr],
-      Arr
-    ] =
-    new FromRows {
-      type A[U] = Vectors.Aux[U, Arr]
-      type Row[U] = Arr[U]
-      def apply[T](rows: Seq[Arr[T]]): A[T] = ??? //Vectors.make[T, Arr](rows.toVector)
-    }
-}
-
-object Ints {
-  type Ints1 =                                    Int :: TNil
-  type Ints2 =                             Int :: Int :: TNil
-  type Ints3 =                      Int :: Int :: Int :: TNil
-  type Ints4 =               Int :: Int :: Int :: Int :: TNil
-  type Ints5 =        Int :: Int :: Int :: Int :: Int :: TNil
-  type Ints6 = Int :: Int :: Int :: Int :: Int :: Int :: TNil
-}
 
 /**
  * Iterate over an N-dimensional range of integers (provided as a `Shape`), stored as an [[A]]
@@ -121,9 +56,8 @@ object Indices {
         }
     }
 
+  // Vector CanBuildFrom
   import hammerlab.collection._
-
-  import Ints._
 
   implicit val     indices1:      Indices.Aux[Vector1, Ints1]  =
   new Indices[Vector1] {
@@ -152,39 +86,4 @@ object Indices {
 
   implicit val     indices6:      Indices.Aux[Vector6, Ints6]  = Indices.cons[Ints5, Vector5]
   implicit val lazyIndices6: Lazy[Indices.Aux[Vector6, Ints6]] = Lazy(indices6)
-
-
-
-
-
-
-  //  implicit def cons[TL <: TList, Row[_]](
-//    implicit
-//    e: Lazy[Aux[Row, TL]],
-//    f: Functor[Row],
-//    pp: Prepend[Int, TL],
-//    fromRows: FromRows.R[Row]
-//  ):
-//    Aux[
-//      fromRows.A,
-//      Int :: TL
-//    ] =
-//    new Indices[fromRows.A] {
-//      type Shape = Int :: TL
-//      def apply(shape: Shape): fromRows.A[Shape] =
-//        shape match {
-//          case h :: t ⇒
-//            fromRows(
-//              (0 until h)
-//                .map {
-//                  i ⇒
-//                    f.map(
-//                      e.value(t)
-//                    ) {
-//                      i :: _
-//                    }
-//                }
-//            )
-//        }
-//    }
 }

@@ -31,6 +31,6 @@ object Order {
           }
     }
 
-  // column-major order not implemented (yet?)
+  // TODO: column-major order not implemented (yet?)
 //  case object F extends Order
 }

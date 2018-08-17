@@ -5,7 +5,7 @@ import shapeless.Lazy
 
 trait FromSeq[TL <: TList] {
   type Elem
-  def apply(ts: Seq[Elem]): Either[String, TL]
+  def apply(ts: Seq[Elem]): String | TL
 }
 object FromSeq {
   type Aux[E, TL <: TList] = FromSeq[TL] { type Elem = E }
@@ -13,7 +13,7 @@ object FromSeq {
   implicit def tnil[E]: Aux[E, TNil] =
     new FromSeq[TNil] {
       type Elem = E
-      override def apply(ts: Seq[Elem]): Either[String, TNil] =
+      override def apply(ts: Seq[Elem]): String | TNil =
         if (ts.isEmpty)
           Right(TNil)
         else
@@ -30,7 +30,7 @@ object FromSeq {
     Aux[T, T :: TL] =
     new FromSeq[T :: TL] {
       type Elem = T
-      override def apply(ts: Seq[T]): Either[String, T :: TL] =
+      override def apply(ts: Seq[T]): String | (T :: TL) =
         if (ts.isEmpty)
           Left(
             "Too few elements"

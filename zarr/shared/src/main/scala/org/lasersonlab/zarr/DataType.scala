@@ -75,8 +75,18 @@ object DataType {
     def apply(str: String): Return[T]
   }
   object Parser {
-    type Return[T] = Either[String, DataType.Aux[T]]
-    def make[T](fn: PartialFunction[List[Char], DataType.Aux[T]])(implicit name: Name[T]): Parser[T] =
+    type Return[T] = String | DataType.Aux[T]
+    def make[T](
+      fn:
+        PartialFunction[
+          List[Char],
+          DataType.Aux[T]
+        ]
+    )(
+      implicit
+      name: Name[T]
+    ):
+      Parser[T] =
       new Parser[T] {
         @inline def apply(str: String): Return[T] =
           fn
@@ -149,7 +159,7 @@ object DataType {
     }
   }
 
-  def get(order: ByteOrder, dtype: DType, size: Int): Either[String, DataType] =
+  def get(order: ByteOrder, dtype: DType, size: Int): String | DataType =
     (order, dtype, size) match {
       case (e: Endianness, _: int.type,    4) ⇒ Right(   i32(   e))
       case (e: Endianness, _: int.type,    8) ⇒ Right(   i64(   e))
@@ -163,6 +173,7 @@ object DataType {
         )
     }
 
+  import DecodingFailure.fromThrowable
   val regex = """(.)(.)(\d+)""".r
   implicit val decoder: Decoder[DataType] =
     new Decoder[DataType] {
@@ -177,13 +188,13 @@ object DataType {
             .toEither
             .left
             .map(
-              DecodingFailure.fromThrowable(_, c.history)
+              fromThrowable(_, c.history)
             )
           (order, tpe, size) = t
-             order ←     ByteOrder.get(order).left.map(DecodingFailure              (_, c.history))
-               tpe ←         DType.get(  tpe).left.map(DecodingFailure              (_, c.history))
-              size ← Try(size.toInt).toEither.left.map(DecodingFailure.fromThrowable(_, c.history))
-          datatype ←    get(order, tpe, size).left.map(DecodingFailure              (_, c.history))
+             order ←     ByteOrder.get(order).left.map(DecodingFailure(_, c.history))
+               tpe ←         DType.get(  tpe).left.map(DecodingFailure(_, c.history))
+              size ← Try(size.toInt).toEither.left.map(  fromThrowable(_, c.history))
+          datatype ←    get(order, tpe, size).left.map(DecodingFailure(_, c.history))
         } yield
           datatype
     }

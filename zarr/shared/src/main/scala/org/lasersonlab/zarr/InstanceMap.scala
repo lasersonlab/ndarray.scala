@@ -7,7 +7,7 @@ import shapeless.ops.hlist.ToTraversable
 import scala.reflect.ClassTag
 
 trait InstanceMap[T] {
-  def apply(): Map[String, Either[String, T]]
+  def apply(): Map[String, String | T]
 }
 object InstanceMap {
 
@@ -21,7 +21,7 @@ object InstanceMap {
   ):
     InstanceMap[T] =
     new InstanceMap[T] {
-      def apply(): Map[String, Either[String, T]] =
+      def apply(): Map[String, String | T] =
         i()
           .toList
           .map {
@@ -43,5 +43,5 @@ abstract class HasInstanceMap[T]()(
   implicit
   i: InstanceMap[T]
 ) {
-  val byString: Map[String, Either[String, T]] = i()
+  val byString: Map[String, String | T] = i()
 }

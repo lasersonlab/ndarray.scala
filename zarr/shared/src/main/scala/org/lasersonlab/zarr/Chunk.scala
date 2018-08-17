@@ -53,10 +53,9 @@ object Chunk {
     scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
     sum: Sum.Aux[Shape, Int]
   ):
-    Either[
-      Exception,
-      Chunk[T, Shape]
-    ] =
+    Exception |
+    Chunk[T, Shape]
+  =
     if (!path.exists)
       Left(
         new FileNotFoundException(

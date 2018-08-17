@@ -33,12 +33,12 @@ object Metadata {
   ](
     dir: Path
   )(
-    implicit d: Decoder[DataType.Aux[T]]
+    implicit
+    d: Decoder[DataType.Aux[T]]
   ):
-    Either[
-      Exception,
-      Metadata[T, Shape]
-    ] = {
+    Exception |
+    Metadata[T, Shape]
+  = {
     val path = dir / basename
     if (!path.exists)
       Left(
@@ -47,12 +47,19 @@ object Metadata {
         )
       )
     else
-      decode[Metadata[T, Shape]](path.read)
+      decode[
+        Metadata[
+          T,
+          Shape
+        ]
+      ](
+        path.read
+      )
   }
 
   object untyped {
     case class Metadata(
-      shape: Seq[Int],
+       shape: Seq[Int],
       chunks: Seq[Int],
       dtype: DataType,
       compressor: Compressor,

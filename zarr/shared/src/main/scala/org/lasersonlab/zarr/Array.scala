@@ -50,10 +50,9 @@ object Array {
      sum: Sum.Aux[Shape, Int],
      compressor: Compressor,
   ):
-    Either[
-      Exception,
-      A[Bytes[T]]
-    ] = {
+    Exception |
+    A[Bytes[T]]
+  = {
 
     val chunkRanges = (arrShape + chunkShape - 1) / chunkShape
 
@@ -80,10 +79,10 @@ object Array {
               )
           }
 
-    // A[Either[Err, Chunk]] -> Either[Err, A[Chunk]]
+    // A[Err | Chunk] -> Err | A[Chunk]
     chunks
       .sequence[
-        Either[Exception, ?],
+        Exception | ?,
         Bytes[T]
       ]
   }
@@ -105,10 +104,9 @@ object Array {
     d: Decoder[DataType.Aux[T]],
     dt: Decoder[T],
   ):
-    Either[
-      Exception,
-      Array[T, v.Shape, v.A, Bytes]
-  ] = {
+    Exception |
+    Array[T, v.Shape, v.A, Bytes]
+  = {
     import v._
     apply[T, v.Shape, v.A](dir)(
       // shouldn't have to do list all these explicitly: https://github.com/scala/bug/issues/11086
@@ -144,7 +142,9 @@ object Array {
     key: Key[Shape],
     ds: Decoder[Shape],
   ):
-    Either[Exception, Array[T, Shape, A, Bytes]] = {
+    Exception |
+    Array[T, Shape, A, Bytes]
+  = {
     if (!dir.exists)
       Left(
         new FileNotFoundException(

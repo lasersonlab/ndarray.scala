@@ -3,16 +3,14 @@ package org.lasersonlab.zarr
 import cats.implicits._
 import hammerlab.path._
 import hammerlab.shapeless.tlist._
-import org.lasersonlab.ndarray.Bytes
-import org.lasersonlab.ndarray.Vectors.{ Vector1, Vector2 }
+import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.zarr.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.Compressor.Blosc.CName
+import org.lasersonlab.zarr.DataType._
 import org.lasersonlab.zarr.Format.`2`
-import org.lasersonlab.zarr.Ints.{ Ints1, Ints2 }
 import org.lasersonlab.zarr.Order.C
 import shapeless.nat._
-import DataType._
 
 class ArrayTest
   extends hammerlab.Suite {

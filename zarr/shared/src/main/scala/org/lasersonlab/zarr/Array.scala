@@ -9,6 +9,12 @@ import io.circe.Decoder
 import org.lasersonlab.ndarray.{ Arithmetic, Bytes, ScanRight, Sum }
 import shapeless.Nat
 
+/**
+ * A Zarr N-dimensional array
+ *
+ * Storage of the ND-array of chunks, as well as the records in each chunk, are each a configurable type-param; see
+ * companion-object for some convenient constructors
+ */
 case class Array[
   T,
   Shape,
@@ -22,60 +28,72 @@ case class Array[
 
 object Array {
 
+  /**
+   * Load an ND-array of chunks from a [[Path directory]]
+   *
+   * Each chunk lives in a file with basename given by the provided [[Key]] ('.'-joined indices)
+   */
   def chunks[
-    T,
+        T: DataType.Aux,
     Shape: Arithmetic.Id,
-    A[U]
+     A[U]: Traverse
   ](
            dir: Path,
       arrShape: Shape,
     chunkShape: Shape
   )(
-    implicit
-    ti: Indices.Aux[A, Shape],
-    traverse: Traverse[A],
-    ai: Arithmetic[Shape, Int],
-    k: Key[Shape],
-    scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
-    sum: Sum.Aux[Shape, Int],
-    compressor: Compressor,
-    datatype: DataType.Aux[T]
+     implicit
+     indices: Indices.Aux[A, Shape],
+     ai: Arithmetic[Shape, Int],
+     key: Key[Shape],
+     scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
+     sum: Sum.Aux[Shape, Int],
+     compressor: Compressor,
   ):
     Either[
       Exception,
       A[Bytes[T]]
     ] = {
 
-    import Arithmetic.Ops
-
     val chunkRanges = (arrShape + chunkShape - 1) / chunkShape
 
-    // We use Traverse and Applicative instances for Either, and Functor syntax
+    // We use Traverse and Applicative instances for Either, Traverse[A], and Functor syntax
     import cats.implicits._
 
     val chunks =
-      ti(chunkRanges)
+      indices(chunkRanges)
         .map {
-          idx ⇒
-            val key = k(idx)
-            val start = idx * chunkShape
-            val end = arrShape min ((idx + 1) * chunkShape)
-            val shape = end - start
-            Chunk(
-              dir / key,
-              shape,
-              idx,
-              start,
-              end,
-              compressor
-            )
-        }
+            idx ⇒
+              val start = idx * chunkShape
+              val end = arrShape min ((idx + 1) * chunkShape)
 
-    type Eith[U] = Either[Exception, U]
+              // chunks in the last "row" of any dimension may be smaller
+              val shape = end - start
 
-    chunks.sequence[Eith, Bytes[T]]
+              Chunk(
+                dir / key(idx),
+                shape,
+                idx,
+                start,
+                end,
+                compressor
+              )
+          }
+
+    // A[Either[Err, Chunk]] -> Either[Err, A[Chunk]]
+    chunks
+      .sequence[
+        Either[Exception, ?],
+        Bytes[T]
+      ]
   }
 
+  /**
+   * Convenience-constructor: given a data-type and a [[Nat (type-level) number of dimensions]], load an [[Array]] from
+   * a [[Path directory]]
+   *
+   * Uses a [[VectorInts]] as evidence for mapping from the [[Nat]] to a concrete shape
+   */
   def apply[
     T,
     N <: Nat
@@ -93,7 +111,7 @@ object Array {
   ] = {
     import v._
     apply[T, v.Shape, v.A](dir)(
-      // shouldn't have to do this? https://github.com/scala/bug/issues/11086
+      // shouldn't have to do list all these explicitly: https://github.com/scala/bug/issues/11086
       d = d,
       ti = ti,
       traverse = traverse,

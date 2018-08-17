@@ -3,7 +3,7 @@ package org.lasersonlab.zarr
 import hammerlab.shapeless.tlist._
 import io.circe.DecodingFailure
 import io.circe.parser.decode
-import org.lasersonlab.zarr.Ints.{ Ints1, Ints2 }
+import org.lasersonlab.ndarray.Ints._
 
 class TListDecoderTest
   extends hammerlab.Suite {

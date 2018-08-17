@@ -1,13 +1,12 @@
 package org.lasersonlab.zarr
 
-import org.lasersonlab.zarr
 import java.io.FileNotFoundException
 
 import hammerlab.option._
 import hammerlab.path._
-import io.circe.{ Decoder, Json }
 import io.circe.generic.auto._
 import io.circe.parser._
+import io.circe.{ Decoder, Json }
 import org.lasersonlab.zarr.Format._
 
 case class Metadata[T, Shape](

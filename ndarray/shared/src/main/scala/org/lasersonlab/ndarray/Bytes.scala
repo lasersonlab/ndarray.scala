@@ -4,6 +4,7 @@ import java.nio.ByteBuffer
 
 import cats.{ Eval, Foldable }
 import org.lasersonlab.ndarray
+import org.lasersonlab.ndarray.Arithmetic.Ops
 import org.lasersonlab.ndarray.io.Read
 
 trait Bytes[T] {
@@ -17,8 +18,6 @@ trait Bytes[T] {
   implicit def arithmetic: Arithmetic.Id[Shape]
   implicit def read: Read[T]
   implicit def sum: Sum.Aux[Shape, Int]
-
-  import Arithmetic.Ops
 
   lazy val buff = ByteBuffer.wrap(bytes.toArray)
 

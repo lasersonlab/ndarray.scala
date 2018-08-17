@@ -1,6 +1,11 @@
 package org.lasersonlab.zarr
 
-trait Empty[T] {
+/**
+ * Type-level default / "fill" values for Zarr data-types
+ *
+ * (Currently unused)
+ */
+sealed trait Empty[T] {
   def apply(): T
 }
 object Empty {

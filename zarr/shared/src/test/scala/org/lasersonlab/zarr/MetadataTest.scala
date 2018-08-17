@@ -9,6 +9,7 @@ import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.Compressor.Blosc.CName.lz4
 import org.lasersonlab.zarr.DataType._
 import org.lasersonlab.zarr.Format.`2`
+import org.lasersonlab.zarr.Ints.{ Ints1, Ints2 }
 import org.lasersonlab.zarr.Order.C
 
 class MetadataTest
@@ -66,7 +67,7 @@ class MetadataTest
     decode[
       Metadata[
         String,
-        Int :: TNil
+        Ints1
       ]
     ](
       `col_attrs/DonorID/.zarray`
@@ -74,7 +75,7 @@ class MetadataTest
       Right(
         Metadata[
           String,
-          Int :: TNil
+          Ints1
         ](
            shape = 5425 :: TNil,
           chunks = 5425 :: TNil,
@@ -124,7 +125,7 @@ class MetadataTest
     decode[
       Metadata[
         Float,
-        Int :: Int :: TNil
+        Ints2
       ]
     ](
       `matrix/.zarray`
@@ -132,7 +133,7 @@ class MetadataTest
       Right(
         Metadata[
           Float,
-          Int :: Int :: TNil
+          Ints2
         ](
            shape = 27998 :: 5425 :: TNil,
           chunks =  3092 :: 5425 :: TNil,

@@ -9,29 +9,21 @@ import org.lasersonlab.zarr.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.Compressor.Blosc.CName
 import org.lasersonlab.zarr.Format.`2`
+import org.lasersonlab.zarr.Ints.{ Ints1, Ints2 }
 import org.lasersonlab.zarr.Order.C
+import shapeless.nat._
 
 class ArrayTest
   extends hammerlab.Suite {
   val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/matrix")
   test("2-D floats") {
-    type T = Float
-    type Shape = Int :: Int :: TNil
-    type Row[T] = Vector1[T]
-    type Arr[T] = Vector2[T]
 
     implicit val float = DataType.float(LittleEndian)
 
-    val arr: Array[T, Shape, Arr, Bytes] =
-      Array[
-        T,
-        Shape,
-        Arr
-      ](
-        path
-      )
-      .right
-      .get
+    val arr =
+      Array[Float, _2](path)
+        .right
+        .get
 
     val metadata = arr.metadata
 
@@ -81,7 +73,7 @@ class ArrayTest
     chunks
       .zip(expected)
       .foreach {
-        case (actual: Chunk[T, Shape], expected) ⇒
+        case (actual: Chunk[Float, Ints2], expected) ⇒
           ==(actual.start, expected.start)
           ==(actual.end, expected.end)
           ==(actual.idx, expected.idx)
@@ -118,22 +110,13 @@ class ArrayTest
 
   test("1-D longs") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/row_attrs/_Valid")
-    type T = Long
-    type Shape = Int :: TNil
-    type Arr[T] = Vector1[T]
 
     implicit val long = DataType.i64(LittleEndian)
 
-    val arr: Array[T, Shape, Arr, Bytes] =
-      Array[
-        T,
-        Shape,
-        Arr
-      ](
-        path
-      )
-      .right
-      .get
+    val arr =
+      Array[Long, _1](path)
+        .right
+        .get
 
     val metadata = arr.metadata
 
@@ -157,15 +140,6 @@ class ArrayTest
     )
 
     ==(arr.attrs, None)
-
-    val chunkPath = path / "0"
-    val compressor =
-      Blosc(
-        cname = CName.lz4,
-        clevel = 5,
-        shuffle = 1,
-        blocksize = 0
-      )
 
     arr.chunks.size should be(1)
     val chunk = arr.chunks(0)

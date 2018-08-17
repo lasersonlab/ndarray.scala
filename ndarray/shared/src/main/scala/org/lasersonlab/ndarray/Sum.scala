@@ -10,6 +10,7 @@ trait Sum[In] {
 }
 object Sum {
   type Aux[T, _O] = Sum[T] { type Out = _O }
+
   implicit def tnil[T](implicit m: Monoid[T]): Aux[TNil, T] =
     new Sum[TNil] {
       type Out = T

@@ -7,6 +7,7 @@ import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder
 import org.lasersonlab.ndarray.{ Arithmetic, Bytes, ScanRight, Sum }
+import org.lasersonlab.zarr.dtype.DataType
 import shapeless.Nat
 
 /**

@@ -5,6 +5,7 @@ import java.io.FileNotFoundException
 import hammerlab.path._
 import org.lasersonlab.ndarray.io.Read
 import org.lasersonlab.ndarray.{ Arithmetic, Bytes, ScanRight, Sum }
+import org.lasersonlab.zarr.dtype.DataType
 
 case class Chunk[
   T,

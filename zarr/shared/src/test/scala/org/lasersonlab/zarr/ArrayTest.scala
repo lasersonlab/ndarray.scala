@@ -5,12 +5,13 @@ import io.circe.generic.auto._
 import hammerlab.path._
 import hammerlab.shapeless.tlist._
 import org.lasersonlab.ndarray.Ints._
-import org.lasersonlab.zarr.ByteOrder.LittleEndian
+import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.Compressor.Blosc.CName
-import org.lasersonlab.zarr.DataType._
+import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.Order.C
+import org.lasersonlab.zarr.dtype.DataType
 import shapeless.nat._
 
 class ArrayTest

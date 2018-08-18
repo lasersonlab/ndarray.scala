@@ -7,10 +7,11 @@ import java.util.Base64
 import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder.Result
-import io.circe.parser._
 import io.circe.generic.auto._
+import io.circe.parser._
 import io.circe.{ Decoder, DecodingFailure, HCursor, Json }
 import org.lasersonlab.zarr.Format._
+import org.lasersonlab.zarr.dtype.DataType
 
 case class Metadata[T, Shape](
   shape: Shape,

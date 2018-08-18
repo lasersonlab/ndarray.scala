@@ -7,7 +7,6 @@ package object zarr
      with OptDecoder
      with Arithmetic.HasOps {
 
-
   // TODO: move these to appropriate dependencies
 
   type |[+L, +R] = Either[L, R]

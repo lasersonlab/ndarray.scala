@@ -1,20 +1,33 @@
 package org.lasersonlab.zarr.dtype
 
 import org.lasersonlab.zarr.InstanceMap
+import org.lasersonlab.zarr.dtype.ByteOrder._
 
 import scala.PartialFunction.condOpt
 
 sealed abstract class ByteOrder(override val toString: String)
 
-object ByteOrder {
+trait Aliases {
+  val < = LittleEndian
+  val > = BigEndian
+  val | = None
+}
+
+object ByteOrder
+  extends Aliases {
 
   sealed abstract class Endianness(override val toString: String)
     extends ByteOrder(toString)
 
-  case object LittleEndian extends Endianness("<")
-  case object    BigEndian extends Endianness(">")
+  implicit case object LittleEndian extends Endianness("<")
+           case object    BigEndian extends Endianness(">")
+           case object         None extends  ByteOrder("|")
 
-  case object         None extends  ByteOrder("|")
+  object implicits
+    extends Aliases {
+    implicit val BigEndian = ByteOrder.BigEndian
+    implicit val None = ByteOrder.None
+  }
 
   object Endianness {
     implicit def toByteOrder(endianness: Endianness): java.nio.ByteOrder =

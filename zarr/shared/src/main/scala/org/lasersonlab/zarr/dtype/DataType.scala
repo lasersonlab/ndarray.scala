@@ -3,6 +3,7 @@ package org.lasersonlab.zarr.dtype
 import java.nio.ByteBuffer
 
 import io.circe.Decoder.Result
+import io.circe.DecodingFailure.fromThrowable
 import io.circe.{ Decoder, DecodingFailure, HCursor }
 import org.lasersonlab.ndarray.io.Read
 import org.lasersonlab.zarr.|
@@ -136,6 +137,13 @@ object DataType
     }
   }
 
+  implicit val   _char                                               =   char
+  implicit def  _short(implicit endianness: Endianness): Aux[ Short] =  short(endianness)
+  implicit def    _i32(implicit endianness: Endianness): Aux[   Int] =    i32(endianness)
+  implicit def    _i64(implicit endianness: Endianness): Aux[  Long] =    i64(endianness)
+  implicit def  _float(implicit endianness: Endianness): Aux[ Float] =  float(endianness)
+  implicit def _double(implicit endianness: Endianness): Aux[Double] = double(endianness)
+
   def get(order: ByteOrder, dtype: DType, size: Int): String | DataType =
     (order, dtype, size) match {
       case (e: Endianness, _: int,    4) ⇒ Right(   i32(   e))
@@ -150,7 +158,6 @@ object DataType
         )
     }
 
-  import DecodingFailure.fromThrowable
   val regex = """(.)(.)(\d+)""".r
   implicit val decoder: Decoder[DataType] =
     new Decoder[DataType] {

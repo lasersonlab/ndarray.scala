@@ -77,14 +77,15 @@ object Metadata {
         c
           .downField("dtype")
           .success
-          .map(Right(_))
-          .getOrElse(
+          .fold[DecodingFailure | HCursor](
             Left(
               DecodingFailure(
                 "",
                 c.history
               )
             )
+          )(
+            Right(_)
           )
           .flatMap {
             datatypeDecoder(_)
@@ -104,18 +105,19 @@ object Metadata {
                               .decodeJson(j)
                           ) {
                             base64 ⇒
-                              val decodedBytes =
-                                Base64
-                                .getDecoder
-                                .decode(base64)
-
-                              Right(
-                                datatype(
-                                  ByteBuffer.wrap(
-                                    decodedBytes
+                              if (base64.isEmpty)
+                                elemDecoder
+                                  .decodeJson(j)
+                              else
+                                Right(
+                                  datatype(
+                                    ByteBuffer.wrap(
+                                      Base64
+                                        .getDecoder
+                                        .decode(base64)
+                                    )
                                   )
                                 )
-                              )
                           }
                           .map { x ⇒ x }  // cast to Opt
                     }

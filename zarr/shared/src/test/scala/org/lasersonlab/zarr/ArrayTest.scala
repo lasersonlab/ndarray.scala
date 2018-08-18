@@ -55,8 +55,6 @@ class ArrayTest
 
     val unchecked = scala.Array.fill(1 << 26)(0.toByte)
 
-    implicit val _float = float(LittleEndian)
-
     val expected =
       Seq(
         Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 0 :: 0 :: TNil,     0 :: 0:: TNil,  3092 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
@@ -228,9 +226,7 @@ class ArrayTest
         .right
         .get
 
-    implicit val doubleDataType = double(LittleEndian)
-    implicit val shortDataType = short(LittleEndian)
-    implicit val longDataType = i64(LittleEndian)
+    // used for deriving DataType.Aux[Var] below
     implicit val stringDataType = string(18)
 
     arr.metadata should be(

@@ -26,7 +26,14 @@ trait DataTypeStructDerivations {
   type Aux[_T] = DataType { type T = _T }
 
   case class StructEntry[T](override val toString: String, size: Int)
-  case class Struct[S](entries: List[StructEntry[_]])(fn: ByteBuffer ⇒ S) extends DataType {
+
+  // TODO: make the parsing just use the entries?
+  case class Struct[S](
+    entries: List[StructEntry[_]]
+  )(
+    fn: ByteBuffer ⇒ S
+  )
+  extends DataType {
     val size: Int = entries.map(_.size).sum
     override type T = S
     @inline def apply(buff: ByteBuffer): T = fn(buff)
@@ -146,9 +153,10 @@ object DataType
 
   def get(order: ByteOrder, dtype: DType, size: Int): String | DataType =
     (order, dtype, size) match {
+      case (         None, _: int,    1) ⇒ Right(  char      )
+      case (e: Endianness, _: int,    2) ⇒ Right( short(   e))
       case (e: Endianness, _: int,    4) ⇒ Right(   i32(   e))
       case (e: Endianness, _: int,    8) ⇒ Right(   i64(   e))
-      case (e: Endianness, _: int,    1) ⇒ Right(  char      )
       case (e: Endianness, _: flt,    4) ⇒ Right( float(   e))
       case (e: Endianness, _: flt,    8) ⇒ Right(double(   e))
       case (         None, _: str, size) ⇒ Right(string(size))
@@ -158,28 +166,84 @@ object DataType
         )
     }
 
+  def get(str: String, c: HCursor): DecodingFailure | DataType =
+    for {
+      t ←
+        Try {
+          val regex(order, tpe, size) = str
+          (order, tpe, size)
+        }
+        .toEither
+        .left
+        .map(
+          fromThrowable(_, c.history)
+        )
+      (order, tpe, size) = t
+         order ←     ByteOrder.get(order).left.map(DecodingFailure(_, c.history))
+           tpe ←         DType.get(  tpe).left.map(DecodingFailure(_, c.history))
+          size ← Try(size.toInt).toEither.left.map(  fromThrowable(_, c.history))
+      datatype ←    get(order, tpe, size).left.map(DecodingFailure(_, c.history))
+    } yield
+      datatype
+
   val regex = """(.)(.)(\d+)""".r
   implicit val decoder: Decoder[DataType] =
     new Decoder[DataType] {
+      import cats.implicits._
       def apply(c: HCursor): Result[DataType] =
-        for {
-          s ← c.value.as[String]
-          t ←
-            Try {
-              val regex(order, tpe, size) = s
-              (order, tpe, size)
-            }
-            .toEither
-            .left
-            .map(
-              fromThrowable(_, c.history)
-            )
-          (order, tpe, size) = t
-             order ←     ByteOrder.get(order).left.map(DecodingFailure(_, c.history))
-               tpe ←         DType.get(  tpe).left.map(DecodingFailure(_, c.history))
-              size ← Try(size.toInt).toEither.left.map(  fromThrowable(_, c.history))
-          datatype ←    get(order, tpe, size).left.map(DecodingFailure(_, c.history))
-        } yield
-          datatype
+        c
+          .value
+          .as[String]
+          .fold[Result[DataType]](
+            _ ⇒
+              c
+                .value
+                .as[Vector[Parser.StructEntry]]
+                .flatMap {
+                  entries ⇒
+                    entries
+                      .map {
+                        entry ⇒
+                          get(
+                            entry.`type`,
+                            c
+                          )
+                          .map {
+                            datatype ⇒
+                              (
+                                StructEntry(
+                                  entry.`type`,
+                                  datatype.size
+                                ),
+                                datatype
+                              )
+                          }
+                      }
+                      .sequence[Result, (StructEntry[_], DataType)]
+                      .map {
+                        entries ⇒
+                          Struct(
+                            entries
+                              .map(_._1)
+                              .toList
+                          ) {
+                            buffer ⇒
+                              entries
+                                .foldLeft(
+                                  List.newBuilder[Any]
+                                ) {
+                                  case (list, (entry, datatype)) ⇒
+                                    list += datatype(buffer)
+                                }
+                                .result()
+                          }
+                      }
+                },
+            str ⇒
+              get(
+                str,
+                c
+              )
+          )
     }
 }

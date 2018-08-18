@@ -1,6 +1,5 @@
 package org.lasersonlab.zarr
 
-import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 import java.util.Base64
 
@@ -42,26 +41,15 @@ object Metadata {
   ):
     Exception |
     Metadata[T, Shape]
-  = {
-    val path = dir / basename
-    if (!path.exists)
-      Left(
-        new FileNotFoundException(
-          path.toString
+  =
+    dir ? basename flatMap {
+      path ⇒
+        decode(
+          path.read
+        )(
+          this.decoder[T, Shape]
         )
-      )
-    else
-      decode[
-        Metadata[
-          T,
-          Shape
-        ]
-      ](
-        path.read
-      )(
-        this.decoder[T, Shape]
-      )
-  }
+    }
 
   def decoder[
     T,
@@ -139,6 +127,16 @@ object Metadata {
       fill_value: Opt[Json] = None,
       zarr_format: Format = `2`,
       filters: Opt[Seq[Filter]] = None
-    )
+    ) {
+      type T = dtype.T
+    }
+    object Metadata {
+      type Aux[_T] = Metadata { type T = _T }
+      def apply(dir: Path): Exception | Metadata =
+        dir ? basename flatMap {
+          path ⇒
+            decode[Metadata](path.read)
+        }
+    }
   }
 }

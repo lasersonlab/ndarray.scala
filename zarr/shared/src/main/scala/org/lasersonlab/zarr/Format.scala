@@ -13,22 +13,25 @@ object Format {
   implicit val decoder: Decoder[Format] =
     new Decoder[Format] {
       override def apply(c: HCursor): Result[Format] =
-        c.value.as[Int].flatMap {
-          case 2 ⇒ Right(`2`)
-          case 1 ⇒
-            Left(
-              DecodingFailure(
-                s"Zarr version 1 not supported",
-                c.history
+        c
+          .value
+          .as[Int]
+          .flatMap {
+            case 2 ⇒ Right(`2`)
+            case 1 ⇒
+              Left(
+                DecodingFailure(
+                  s"Zarr version 1 not supported",
+                  c.history
+                )
               )
-            )
-          case s ⇒
-            Left(
-              DecodingFailure(
-                s"Unrecognized format: $s",
-                c.history
+            case s ⇒
+              Left(
+                DecodingFailure(
+                  s"Unrecognized Zarr version: $s",
+                  c.history
+                )
               )
-            )
-        }
+          }
     }
 }

@@ -145,31 +145,23 @@ object Array {
   ):
     Exception |
     Array[T, Shape, A, Bytes]
-  = {
-    if (!dir.exists)
-      Left(
-        new FileNotFoundException(
-          dir.toString
+  =
+    for {
+      metadata ← Metadata[T, Shape](dir)
+      attrs ← Attrs(dir)
+      chunks ← {
+        implicit val _md = metadata
+        import Metadata._
+        chunks[T, Shape, A](
+          dir,
+          metadata.shape,
+          metadata.chunks
         )
+      }
+    } yield
+      new Array[T, Shape, A, Bytes](
+        metadata,
+        chunks,
+        attrs
       )
-    else
-      for {
-        metadata ← Metadata[T, Shape](dir)
-        attrs ← Attrs(dir)
-        chunks ← {
-          implicit val _md = metadata
-          import Metadata._
-          chunks[T, Shape, A](
-            dir,
-            metadata.shape,
-            metadata.chunks
-          )
-        }
-      } yield
-        new Array[T, Shape, A, Bytes](
-          metadata,
-          chunks,
-          attrs
-        )
-  }
 }

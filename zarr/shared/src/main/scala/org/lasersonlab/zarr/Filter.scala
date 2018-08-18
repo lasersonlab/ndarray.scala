@@ -11,7 +11,7 @@ object Filter {
       override def apply(c: HCursor): Result[Filter] =
         Left(
           DecodingFailure(
-            "Filters not supported yet",
+            "Filters not supported",
             c.history
           )
         )

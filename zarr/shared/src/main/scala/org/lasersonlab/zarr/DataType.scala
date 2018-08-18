@@ -4,12 +4,13 @@ import java.nio.ByteBuffer
 
 import io.circe.Decoder.Result
 import io.circe.{ ACursor, Decoder, DecodingFailure, HCursor, Json }
+import io.circe.parser._
 import org.hammerlab.lines.Name
 import org.lasersonlab.ndarray.io.Read
 import org.lasersonlab.zarr.ByteOrder.Endianness
-import shapeless.HNil
+import org.lasersonlab.zarr.Parser.Return
 
-import PartialFunction.condOpt
+import scala.PartialFunction.condOpt
 import scala.util.Try
 
 sealed abstract class ByteOrder(override val toString: String)
@@ -47,6 +48,11 @@ object DType {
   case object   float extends DType("f")
   case object  string extends DType("S")
 
+  type    int =    int.type
+  type   bool =   bool.type
+  type  float =  float.type
+  type string = string.type
+
   // not implemented (yet?):
   // - V: void *
   // - u: unsigned integer types (little awkward on JVM; maybe doable)
@@ -61,188 +67,90 @@ object DType {
 sealed abstract class DataType {
   def size: Int
   type T
-  def apply(buff: ByteBuffer, idx: Int): T
+  def apply(buff: ByteBuffer): T
+  def apply(buff: ByteBuffer, idx: Int): T = {
+    buff.position(size * idx)
+    apply(buff)
+  }
 }
 
-trait StructDerivations {
+trait DataTypeStructDerivations {
   import shapeless._
 
   type Aux[_T] = DataType { type T = _T }
 
-  implicit val hnil: Aux[HNil] =
-    new DataType {
-      type T = HNil
-      val size = 0
-      def apply(buff: ByteBuffer, idx: Int): HNil = HNil
-    }
+  case class StructEntry[T](override val toString: String, size: Int)//name: String, `type`: Aux[T])
+  case class Struct[S](entries: List[StructEntry[_]])(fn: ByteBuffer ⇒ S) extends DataType {
+    //val size: Int = entries.map(_.`type`.size).sum
+    val size: Int = entries.map(_.size).sum
+    override type T = S
+    @inline def apply(buff: ByteBuffer): T = fn(buff)
+  }
 
-  implicit def cons[Head, Tail <: HList](
+  implicit val hnil: Struct[HNil] = Struct(Nil)(_ ⇒ HNil)
+
+  implicit def cons[
+    Head,
+    Tail <: HList
+  ](
     implicit
-    head: Lazy[Aux[Head]],
-    tail: Lazy[Aux[Tail]]
-  ): Aux[Head :: Tail] =
-    new DataType {
-      type T = Head :: Tail
-      val size = head.value.size + tail.value.size
-      def apply(buff: ByteBuffer, idx: Int): Head :: Tail = {
-        buff.position(idx * size)
-        val h = head.value(buff, 0)
-        val t = tail.value(buff, 0)
+    head: Aux[Head],
+    tail: Lazy[Struct[Tail]]
+  ): Struct[Head :: Tail] =
+    Struct(
+      scala.::(
+        StructEntry(
+          head.toString,
+          head.size
+        ),
+        tail.value.entries
+      )
+    ) {
+      buff ⇒
+        val h = head(buff)
+        val t = tail.value(buff)
         h :: t
-      }
     }
+//    new DataType {
+//      type T = Head :: Tail
+//      val size = head.size + tail.value.size
+//      def apply(buff: ByteBuffer): Head :: Tail = {
+//        val h = head(buff)
+//        val t = tail.value(buff)
+//        h :: t
+//      }
+//    }
 
-  implicit def struct[
+  implicit def _struct[
      S,
      L <: HList
   ](
     implicit
     g: Generic.Aux[S, L],
-    l: Lazy[Aux[L]]
+    l: Lazy[Struct[L]]
   ):
     Aux[S] =
-    new DataType {
-      val size = l.value.size
-      type T = S
-      def apply(buff: ByteBuffer, idx: Int): S = g.from(l.value(buff, idx))
-    }
-}
+    struct[S, L]
 
-import Parser.Return
-
-trait Parser[T] {
-  def apply(c: HCursor): Return[T]
-}
-object Parser {
-  type Return[T] = DecodingFailure | DataType.Aux[T]
-
-  def make[T](
-    fn:
-      PartialFunction[
-        List[Char],
-        DataType.Aux[T]
-      ]
-  )(
-    implicit
-    name: Name[T]
-  ):
-    Parser[T] =
-    new Parser[T] {
-      @inline def apply(c: HCursor): Return[T] =
-        c
-          .value
-          .as[String]
-          .flatMap {
-            str ⇒
-              fn
-                .andThen(Right(_))
-                .applyOrElse[List[Char], Return[T]](
-                  str.toList,
-                  str ⇒
-                    Left(
-                      DecodingFailure(
-                        s"Unrecognized $name dtype: $str",
-                        c.history
-                      )
-                    )
-                )
-          }
-    }
-
-  import DataType._
-
-  implicit val   _char: Parser[  Char] = make { case           '|' :: 'i' :: Int(   1) ⇒   char       }
-  implicit val     int: Parser[   Int] = make { case Endianness(e) :: 'i' :: Int(   4) ⇒    i32(   e) }
-  implicit val    long: Parser[  Long] = make { case Endianness(e) :: 'i' :: Int(   8) ⇒    i64(   e) }
-  implicit val  _float: Parser[ Float] = make { case Endianness(e) :: 'f' :: Int(   4) ⇒  float(   e) }
-  implicit val _double: Parser[Double] = make { case Endianness(e) :: 'f' :: Int(   8) ⇒ double(   e) }
-  implicit val _string: Parser[String] = make { case           '|' :: 'S' :: Int(size) ⇒ string(size) }
-
-  import shapeless._
-
-  implicit def structParser[S, L <: HList](
+  def struct[
+     S,
+     L <: HList
+  ](
     implicit
     g: Generic.Aux[S, L],
-    l: StructParser[L]
+    l: Lazy[Struct[L]]
   ):
-        Parser[S] =
-    new Parser[S] {
-      def apply(c: HCursor): Return[S] =
-        l(c.downArray)
-          .map {
-            tail ⇒
-              new DataType {
-                val size: Int = tail.size
-                type T = S
-                @inline def apply(buff: ByteBuffer, idx: Int): S =
-                  g.from(
-                    tail(
-                      buff,
-                      idx
-                    )
-                  )
-              }
-          }
-    }
-
-  trait StructParser[L <: HList] {
-    def apply(c: ACursor): Return[L]
-  }
-
-  object StructParser {
-    implicit val hnil:
-          StructParser[HNil] =
-      new StructParser[HNil] {
-        def apply(c: ACursor): Return[HNil] =
-          c
-            .values match {
-            case None ⇒
-              Right(
-                DataType.hnil
-              )
-            case Some(v) ⇒
-              Left(
-                DecodingFailure(
-                  s"${v.size} extra elements: $v",
-                  c.history
-                )
-              )
-          }
-      }
-
-    implicit def cons[H, T <: HList](
-      implicit
-      head: Lazy[Parser[H]],
-      tail: Lazy[StructParser[T]],
-      dt: DataType.Aux[H :: T]
-    ):
-          StructParser[H :: T] =
-      new StructParser[H :: T] {
-        def apply(c: ACursor): Return[H :: T] =
-          for {
-            c ←
-              c
-                .success
-                .map(Right(_))
-                .getOrElse(
-                  Left(
-                    DecodingFailure(
-                      "Bad starting cursor",
-                      c.history
-                    )
-                  )
-                )
-            h ← head.value(c)
-            t ← tail.value(c.right)
-          } yield
-            dt
-      }
-  }
+    Struct[S] =
+    Struct(l.value.entries) { buff ⇒ g.from(l.value(buff)) }
+//    new DataType {
+//      val size = l.value.size
+//      type T = S
+//      def apply(buff: ByteBuffer): S = g.from(l.value(buff))
+//    }
 }
 
-
 object DataType
-  extends StructDerivations {
+  extends DataTypeStructDerivations {
 
   sealed abstract class Primitive(
     val order: ByteOrder,
@@ -257,7 +165,6 @@ object DataType
       override def apply(c: HCursor): Result[Aux[T]] = parser(c)
     }
 
-
   implicit def read[T](implicit dataType: DataType.Aux[T]): Read[T] =
     new Read[T] {
       @inline def apply(buff: ByteBuffer, idx: Int): T = dataType(buff, idx)
@@ -271,16 +178,16 @@ object DataType
   val `0` = 0.toByte
 
   // TODO: setting the buffer's order every time seems suboptimal; some different design that streamlines that would be nice
-  case object   char                                 extends Primitive( None, int,    1) { type T =   Char; @inline def apply(buf: ByteBuffer, idx: Int): T = {                   buf.getChar  (    idx) } }
-  case  class    i32(override val order: Endianness) extends Primitive(order, int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getInt   (4 * idx) } }
-  case  class    i64(override val order: Endianness) extends Primitive(order, int,    8) { type T =   Long; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getLong  (8 * idx) } }
-  case  class  float(override val order: Endianness) extends Primitive(order, flt,    4) { type T =  Float; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getFloat (4 * idx) } }
-  case  class double(override val order: Endianness) extends Primitive(order, flt,    8) { type T = Double; @inline def apply(buf: ByteBuffer, idx: Int): T = { buf.order(order); buf.getDouble(8 * idx) } }
+  case object   char                                 extends Primitive( None, int,    1) { type T =   Char; @inline def apply(buf: ByteBuffer): T = {                   buf.getChar   } }
+  case  class  short(override val order: Endianness) extends Primitive(order, int,    2) { type T =  Short; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getShort  } }
+  case  class    i32(override val order: Endianness) extends Primitive(order, int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getInt    } }
+  case  class    i64(override val order: Endianness) extends Primitive(order, int,    8) { type T =   Long; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getLong   } }
+  case  class  float(override val order: Endianness) extends Primitive(order, flt,    4) { type T =  Float; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getFloat  } }
+  case  class double(override val order: Endianness) extends Primitive(order, flt,    8) { type T = Double; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getDouble } }
   case  class string(override val  size:        Int) extends Primitive( None, str, size) { type T = String
     import scala.Array.fill
     val arr = fill(size)(`0`)
-    def apply(buf: ByteBuffer, idx: Int): T = {
-      buf.position(size * idx)
+    def apply(buf: ByteBuffer): T = {
       buf.get(arr)
       val builder = new StringBuilder
       var i = 0
@@ -296,12 +203,12 @@ object DataType
 
   def get(order: ByteOrder, dtype: DType, size: Int): String | DataType =
     (order, dtype, size) match {
-      case (e: Endianness, _: int.type,    4) ⇒ Right(   i32(   e))
-      case (e: Endianness, _: int.type,    8) ⇒ Right(   i64(   e))
-      case (e: Endianness, _: int.type,    1) ⇒ Right(  char      )
-      case (e: Endianness, _: flt.type,    4) ⇒ Right( float(   e))
-      case (e: Endianness, _: flt.type,    8) ⇒ Right(double(   e))
-      case (         None, _: str.type, size) ⇒ Right(string(size))
+      case (e: Endianness, _: int,    4) ⇒ Right(   i32(   e))
+      case (e: Endianness, _: int,    8) ⇒ Right(   i64(   e))
+      case (e: Endianness, _: int,    1) ⇒ Right(  char      )
+      case (e: Endianness, _: flt,    4) ⇒ Right( float(   e))
+      case (e: Endianness, _: flt,    8) ⇒ Right(double(   e))
+      case (         None, _: str, size) ⇒ Right(string(size))
       case _ ⇒
         Left(
           s"Unrecognized data type: $order$dtype$size"
@@ -335,6 +242,160 @@ object DataType
     }
 }
 
-object Int {
-  def unapply(s: List[Char]): Option[Int] = Some( s.mkString.toInt )
+trait Parser[T] {
+  def apply(c: HCursor): Return[T]
+}
+object Parser {
+  type Return[T] = DecodingFailure | DataType.Aux[T]
+
+  def make[T](
+    fn:
+      PartialFunction[
+        List[Char],
+        DataType.Aux[T]
+      ]
+  )(
+    implicit
+    name: Name[T]
+  ):
+    Parser[T] =
+    new Parser[T] {
+      @inline def apply(c: HCursor): Return[T] =
+        c
+          .value
+          .as[String]
+          .flatMap {
+            str ⇒
+              fn
+                .andThen(Right(_))
+                .applyOrElse[List[Char], Return[T]](
+                  str.toList,
+                  str ⇒
+                    Left(
+                      DecodingFailure(
+                        s"Unrecognized $name dtype: ${str.mkString}",
+                        c.history
+                      )
+                    )
+                )
+          }
+    }
+
+  import DataType._
+
+  implicit val   _char: Parser[  Char] = make { case           '|' :: 'i' :: Int(   1) ⇒   char       }
+  implicit val  _short: Parser[ Short] = make { case Endianness(e) :: 'i' :: Int(   2) ⇒  short(   e) }
+  implicit val     int: Parser[   Int] = make { case Endianness(e) :: 'i' :: Int(   4) ⇒    i32(   e) }
+  implicit val    long: Parser[  Long] = make { case Endianness(e) :: 'i' :: Int(   8) ⇒    i64(   e) }
+  implicit val  _float: Parser[ Float] = make { case Endianness(e) :: 'f' :: Int(   4) ⇒  float(   e) }
+  implicit val _double: Parser[Double] = make { case Endianness(e) :: 'f' :: Int(   8) ⇒ double(   e) }
+  implicit val _string: Parser[String] = make { case           '|' :: 'S' :: Int(size) ⇒ string(size) }
+
+  import shapeless._
+
+  case class StructEntry(name: String, `type`: String)
+  object StructEntry {
+    implicit val decoder: Decoder[StructEntry] =
+      new Decoder[StructEntry] {
+        def apply(c: HCursor): Result[StructEntry] =
+          c
+            .as[Vector[String]]
+            .flatMap {
+              case Vector(name, tpe) ⇒
+                Right(
+                  StructEntry(
+                    name,
+                    tpe
+                  )
+                )
+              case v ⇒
+                Left(
+                  DecodingFailure(
+                    s"Array has unexpected number of elements (${v.length}): ${v.mkString(",")}",
+                    Nil
+                  )
+                )
+            }
+      }
+  }
+
+  implicit def structParser[S, L <: HList](
+    implicit
+    g: Generic.Aux[S, L],
+    l: StructParser[L]
+  ):
+        Parser[S] =
+    new Parser[S] {
+      def apply(c: HCursor): Return[S] =
+        c
+          .as[Vector[StructEntry]]
+          .map {
+            _.map { _.`type` }
+          }
+          .flatMap {
+            arr ⇒
+              l(arr.toList)
+                .map(
+                  l ⇒
+                    DataType.struct[S, L](g, Lazy(l))
+                )
+          }
+    }
+}
+
+import shapeless._
+
+trait StructParser[L <: HList] {
+  import StructParser.Return
+  def apply(c: List[String]): Return[L]
+}
+
+object StructParser {
+  import DataType.Struct
+  type Return[T] = DecodingFailure | Struct[T]
+
+  implicit val hnil:
+        StructParser[HNil] =
+    new StructParser[HNil] {
+      def apply(c: List[String]): Return[HNil] =
+        c match {
+          case Nil ⇒ Right(DataType.hnil)
+          case l ⇒
+            Left(
+              DecodingFailure(
+                s"${l.size} extra elements: ${l.mkString(",")}",
+                Nil
+              )
+            )
+        }
+    }
+
+  implicit def cons[
+    Head,
+    Tail <: HList
+  ](
+    implicit
+    head: Lazy[Parser[Head]],
+    tail: Lazy[StructParser[Tail]]
+  ):
+        StructParser[Head :: Tail] =
+    new StructParser[Head :: Tail] {
+      def apply(c: List[String]): Return[Head :: Tail] =
+        c match {
+          case Nil ⇒
+            Left(
+              DecodingFailure(
+                "Ran out of elements",
+                Nil
+              )
+            )
+          case scala.::(hStr, t) ⇒
+            for {
+              h ← head.value(HCursor.fromJson(Json.fromString(hStr)))
+              t ← tail.value(t)
+            } yield
+              //Struct()
+              DataType.cons[Head, Tail](h, Lazy(t))
+        }
+    }
 }

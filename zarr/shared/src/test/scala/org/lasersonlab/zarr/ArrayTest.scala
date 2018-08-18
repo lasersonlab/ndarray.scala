@@ -1,6 +1,7 @@
 package org.lasersonlab.zarr
 
 import cats.implicits._
+import io.circe.generic.auto._
 import hammerlab.path._
 import hammerlab.shapeless.tlist._
 import org.lasersonlab.ndarray.Ints._
@@ -54,8 +55,6 @@ class ArrayTest
     val unchecked = scala.Array.fill(1 << 26)(0.toByte)
 
     implicit val _float = float(LittleEndian)
-
-//    Chunk(unchecked, 3092 :: 5425 :: TNil, 0 :: 0 :: TNil,     0 :: 0:: TNil,  3092 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil)
 
     val expected =
       Seq(
@@ -210,5 +209,72 @@ class ArrayTest
   test("1-D structs") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr/var")
 
+    case class Var(
+      index: Long,
+      accession: String,
+      gene: Short,
+      logCV: Double,
+      logMean: Double,
+      selected: Long,
+      total: Double,
+      valid: Long
+    )
+
+    import shapeless._
+
+    val arr =
+      Array[Var, _1](path)
+        .right
+        .get
+
+    implicit val doubleDataType = double(LittleEndian)
+    implicit val shortDataType = short(LittleEndian)
+    implicit val longDataType = i64(LittleEndian)
+    implicit val stringDataType = string(18)
+
+    arr.metadata should be(
+      Metadata(
+         shape = 27998 :: TNil,
+        chunks = 27998 :: TNil,
+        dtype = !![DataType.Aux[Var]],
+        compressor =
+          Blosc(
+            cname = CName.lz4,
+            clevel = 5,
+            shuffle = 1,
+            blocksize = 0
+          ),
+        order = C,
+        fill_value = Var(0, "", 0, 0, 0, 0, 0, 0),
+        zarr_format = `2`,
+        filters = None
+      )
+    )
+
+    ==(arr.attrs, None)
+
+    arr.chunks.size should be(1)
+    val chunk = arr.chunks(0)
+    val bytes = chunk.bytes
+    bytes.length should be(1903864)
+
+    chunk.size should be(27998)
+    val elems = chunk.toList
+    elems.size should be(27998)
+    ==(
+      elems.take(10),
+      Seq(
+        Var(0, "ENSMUSG00000022528", gene = 14509, logCV = 0.4815124, logMean =   0.2018570, selected = 1, total = 1616.0, valid = 1),
+        Var(1, "ENSMUSG00000058427", gene =  5558, logCV = 3.3051310, logMean = - 5.9969227, selected = 1, total =   22.0, valid = 1),
+        Var(2, "ENSMUSG00000015312", gene =  7952, logCV = 0.6754399, logMean = - 0.1837246, selected = 1, total = 1237.0, valid = 1),
+        Var(3, "ENSMUSG00000024401", gene = 25608, logCV = 0.0      , logMean =   0.0      , selected = 1, total =    0.0, valid = 1),
+        Var(4, "ENSMUSG00000015396", gene =  4382, logCV = 2.4097327, logMean = - 4.5983734, selected = 1, total =   58.0, valid = 1),
+        Var(5, "ENSMUSG00000000982", gene =  4230, logCV = 4.8032539, logMean = - 8.8713918, selected = 1, total =    3.0, valid = 1),
+        Var(6, "ENSMUSG00000018930", gene =  4231, logCV = 5.2276633, logMean = -10.4563544, selected = 1, total =    1.0, valid = 1),
+        Var(7, "ENSMUSG00000038418", gene =  6673, logCV = 0.2999214, logMean =   2.0053807, selected = 1, total = 5641.0, valid = 1),
+        Var(8, "ENSMUSG00000042622", gene = 16562, logCV = 1.1246109, logMean = - 1.2789349, selected = 1, total =  579.0, valid = 1),
+        Var(9, "ENSMUSG00000053560", gene = 14957, logCV = 0.4013466, logMean =   2.0053807, selected = 1, total = 5641.0, valid = 1)
+      )
+    )
   }
 }

@@ -1,17 +1,16 @@
 package org.lasersonlab.zarr
 
-import io.circe._
-import parser._
-import generic.auto._
-import Format._
-import cats.data.Ior
-import cats.data.Ior.Both
+import hammerlab.option._
 import hammerlab.path._
 import hammerlab.str._
+import io.circe.generic.auto._
+import io.circe.parser._
+import org.lasersonlab.zarr.Format._
 
 case class Group(
   arrays: Map[String, untyped.Array],
-  groups: Map[String, Group]
+  groups: Map[String, Group],
+  attrs: Opt[Attrs] = None
 ) {
   def array(name: Str): untyped.Array = arrays(name)
   def group(name: Str):         Group = groups(name)
@@ -48,8 +47,11 @@ object Group {
     Exception | Group =
     for {
       metadata ← Metadata(dir)
+         attrs ←    Attrs(dir)
+
       arrays = Map.newBuilder[String, untyped.Array]
       groups = Map.newBuilder[String,         Group]
+
       group ←
         dir
           .list
@@ -86,7 +88,8 @@ object Group {
             a ⇒
               Group(
                 arrays.result,
-                groups.result
+                groups.result,
+                attrs
               )
           }
     } yield

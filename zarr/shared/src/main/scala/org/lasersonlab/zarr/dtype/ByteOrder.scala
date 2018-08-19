@@ -1,6 +1,6 @@
 package org.lasersonlab.zarr.dtype
 
-import org.lasersonlab.zarr.InstanceMap
+import hammerlab.shapeless._
 import org.lasersonlab.zarr.dtype.ByteOrder._
 
 import scala.PartialFunction.condOpt

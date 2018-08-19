@@ -11,7 +11,6 @@ import io.circe.generic.auto._
 import io.circe.{ Decoder, DecodingFailure, HCursor }
 import org.apache.commons.io.IOUtils
 import org.blosc.JBlosc
-import Math.min
 
 sealed trait Compressor {
   def apply(path: Path, sizeHint: Opt[Int] = Non): Seq[Byte]
@@ -70,7 +69,7 @@ object Compressor {
               MAX_BUFFER_SIZE,
               4L * bufferSize
             )
-            .toInt
+
           println(
             s"WARN: increasing buffer from $bufferSize to $newBufferSize while decompressing $path"
           )

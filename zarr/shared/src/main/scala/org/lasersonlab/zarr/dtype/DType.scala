@@ -1,6 +1,6 @@
 package org.lasersonlab.zarr.dtype
 
-import org.lasersonlab.zarr.InstanceMap
+import hammerlab.shapeless._
 
 sealed abstract class DType(override val toString: String)
 object DType {

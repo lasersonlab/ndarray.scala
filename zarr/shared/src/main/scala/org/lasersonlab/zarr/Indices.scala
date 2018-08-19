@@ -59,6 +59,9 @@ object Indices {
   // Vector CanBuildFrom
   import hammerlab.collection._
 
+  // The auto-derivations needed below fail, seemingly due to unification issues / general inability to work with HKTs,
+  // so here are some manual instances:
+
   implicit val     indices1:      Indices.Aux[Vector1, Ints1]  =
   new Indices[Vector1] {
     type Shape = Ints1

@@ -2,15 +2,18 @@
 default(
   group("org.lasersonlab"),
   versions(
-    hammerlab.types → "1.3.1",
-    hammerlab.   io → "5.2.0"
+    hammerlab.     math.utils → "2.3.0".snapshot,
+    hammerlab.          paths → "1.6.0".snapshot,
+    hammerlab.          types → "1.4.0".snapshot,
+    hammerlab.shapeless_utils → "1.6.0".snapshot,
+    hammerlab.        io → "5.2.0"
   )
 )
 
 lazy val ndarray = crossProject.settings(
   dep(
     cats,
-    hammerlab.shapeless_utils % "1.5.0" snapshot,
+    hammerlab.shapeless_utils,
     shapeless
   ),
   addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.7" cross CrossVersion.binary),
@@ -28,8 +31,8 @@ lazy val netcdf = project.settings(
     hammerlab.bytes % "1.2.0",
     hammerlab.cli.base % "1.0.1",
     hammerlab.io,
-    hammerlab.types,
-    paths % "1.5.0"
+    hammerlab.paths,
+    hammerlab.types
   )
 ).dependsOn(
   utils
@@ -62,7 +65,9 @@ lazy val zarr = project.in(new File("zarr/shared")).settings(
     circe.generic,
     circe.parser,
     hammerlab.io,
-    hammerlab.paths % "1.5.0",
+    hammerlab.math.utils,
+    hammerlab.paths,
+    hammerlab.shapeless_utils,
     hammerlab.types,
 
     "org.blosc" ^ "jblosc" ^ "1.0.1" snapshot

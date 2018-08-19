@@ -1,6 +1,7 @@
-package org.lasersonlab.zarr
+package org.lasersonlab.zarr.tlist
 
 import org.hammerlab.shapeless.tlist._
+import org.lasersonlab.zarr.|
 import shapeless.Lazy
 
 trait FromSeq[TL <: TList] {

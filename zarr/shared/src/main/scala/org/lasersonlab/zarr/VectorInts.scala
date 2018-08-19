@@ -7,6 +7,10 @@ import org.lasersonlab.ndarray.{ Arithmetic, ScanRight, Sum }
 import org.lasersonlab.ndarray.Ints._
 import shapeless.Nat
 
+/**
+ * Type- and value-level function from a [[Nat type-level natural number]] [[N]] to corresponding types and implicit
+ * values for an [[N]]-dimensional [[Array]]
+ */
 trait VectorInts[N <: Nat] {
   type Shape
   type A[_]

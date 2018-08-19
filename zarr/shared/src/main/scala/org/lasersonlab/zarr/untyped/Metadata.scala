@@ -5,6 +5,7 @@ import hammerlab.path._
 import io.circe._
 import io.circe.generic.auto._
 import io.circe.parser._
+import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.Metadata._
 import org.lasersonlab.zarr._
@@ -16,7 +17,7 @@ case class Metadata(
   dtype: DataType,
   compressor: Compressor,
   order: Order,
-  fill_value: Opt[Json] = None,
+  fill_value: FillValue[Json] = Null,
   zarr_format: Format = `2`,
   filters: Opt[Seq[Filter]] = None
 ) {

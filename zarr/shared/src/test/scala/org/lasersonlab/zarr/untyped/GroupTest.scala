@@ -1,4 +1,4 @@
-package org.lasersonlab.zarr
+package org.lasersonlab.zarr.untyped
 
 import hammerlab.path._
 import io.circe.Json
@@ -6,6 +6,7 @@ import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.Compressor.Blosc.CName.lz4
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.Order.C
+import org.lasersonlab.zarr.{ Suite, Var, untyped }
 
 class GroupTest
   extends Suite {

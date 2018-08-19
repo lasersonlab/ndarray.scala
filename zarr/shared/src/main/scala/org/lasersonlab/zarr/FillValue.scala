@@ -77,4 +77,9 @@ object FillValue {
           FillValue(_)
         )
     }
+
+  implicit val decodeJson: Decoder[FillValue[Json]] =
+    new Decoder[FillValue[Json]] {
+      override def apply(c: HCursor): Result[FillValue[Json]] = Right(c.value)
+    }
 }

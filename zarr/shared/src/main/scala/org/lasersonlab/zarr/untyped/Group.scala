@@ -1,4 +1,4 @@
-package org.lasersonlab.zarr
+package org.lasersonlab.zarr.untyped
 
 import hammerlab.option._
 import hammerlab.path._
@@ -6,6 +6,7 @@ import hammerlab.str._
 import io.circe.generic.auto._
 import io.circe.parser._
 import org.lasersonlab.zarr.Format._
+import org.lasersonlab.zarr._
 
 case class Group(
   arrays: Map[String, untyped.Array],
@@ -55,12 +56,16 @@ object Group {
       group ←
         dir
           .list
-          .filter { _.basename != Metadata.basename }
+          .filter {
+            _.basename != Metadata.basename
+          }
           .map {
             path: Path ⇒
+              /** First, try to parse as an [[Array]] */
               untyped.Array(path)
                 .fold(
                   arrayError ⇒
+                    /** If that failed, parse as a [[Group]] */
                     Group(path)
                       .map {
                         groups +=
@@ -69,6 +74,7 @@ object Group {
                     .left
                     .map {
                       groupError ⇒
+                        /** [[Array]]- and [[Group]]-parsing both failed */
                         InvalidChild(
                           path,
                           arrayError,
@@ -83,6 +89,10 @@ object Group {
                 )
           }
           .toList
+          /**
+           * transpose the per-child [[Either]]s out; the elements themselves were type-less; we accreted [[Group]]s
+           * and [[Array]]s into the builders ([[arrays]], [[groups]]) along the way
+           */
           .sequence[Either[Exception, ?], Any]
           .map {
             a ⇒

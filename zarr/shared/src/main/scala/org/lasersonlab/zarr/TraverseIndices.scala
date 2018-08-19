@@ -2,7 +2,11 @@ package org.lasersonlab.zarr
 
 import hammerlab.shapeless.tlist._
 
-trait TraverseIndices[TL <: TList] {
+/**
+ * Given a [[TList typed-list]] of [[Int]]s, `tl`, iterate through all [[TList]]s of that size whose elements are ≤ the
+ * corresponding element in `tl` (in lexicographic order)
+ */
+sealed trait TraverseIndices[TL <: TList] {
   def apply(tl: TL): Iterator[TL]
 }
 object TraverseIndices {

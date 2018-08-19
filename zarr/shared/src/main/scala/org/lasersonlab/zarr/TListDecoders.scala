@@ -4,6 +4,7 @@ import io.circe.Decoder.Result
 import io.circe.{ Decoder, DecodingFailure, HCursor }
 import hammerlab.shapeless.tlist._
 
+// TODO: move to shapeless-utils?
 trait TListDecoders {
   implicit val tnil: Decoder[TNil] =
     new Decoder[TNil] {

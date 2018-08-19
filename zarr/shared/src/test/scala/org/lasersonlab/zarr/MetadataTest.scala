@@ -2,7 +2,6 @@ package org.lasersonlab.zarr
 
 import hammerlab.shapeless.tlist._
 import io.circe.Json._
-import io.circe.generic.auto._
 import io.circe.parser._
 import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
@@ -11,10 +10,9 @@ import org.lasersonlab.zarr.Compressor.Blosc.CName.lz4
 import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.Order.C
-import Metadata.{ untyped ⇒ u }
 
 class MetadataTest
-  extends hammerlab.Suite {
+  extends Suite {
 
   val `matrix/.zarray` =
     """{
@@ -97,13 +95,14 @@ class MetadataTest
   }
 
   test("untyped metadata read: 1-D chars") {
+    import io.circe.generic.auto._
     decode[
-      u.Metadata
+      untyped.Metadata
     ](
       `col_attrs/DonorID/.zarray`
     ) should be(
       Right(
-        u.Metadata(
+        untyped.Metadata(
            shape = Seq(5425),
           chunks = Seq(5425),
           dtype = string(1),
@@ -155,13 +154,14 @@ class MetadataTest
   }
 
   test("untyped metadata read") {
+    import io.circe.generic.auto._
     decode[
-      u.Metadata
+      untyped.Metadata
     ](
       `matrix/.zarray`
     ) should be(
       Right(
-        u.Metadata(
+        untyped.Metadata(
           shape = Seq(27998, 5425),
           chunks = Seq(3092, 5425),
           dtype = float(LittleEndian),

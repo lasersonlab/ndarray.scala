@@ -7,6 +7,7 @@ import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder
 import org.lasersonlab.ndarray.{ Arithmetic, Bytes, ScanRight, Sum }
+import org.lasersonlab.zarr.FillValue.FillValueDecoder
 import org.lasersonlab.zarr.dtype.DataType
 import shapeless.Nat
 
@@ -103,7 +104,7 @@ object Array {
     implicit
     v: VectorInts[N],
     d: Decoder[DataType.Aux[T]],
-    dt: Decoder[T],
+    dt: FillValueDecoder[T],
   ):
     Exception |
     Array[T, v.Shape, v.A, Bytes]
@@ -138,7 +139,7 @@ object Array {
     ai: Arithmetic[Shape, Int],
     scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
     sum: Sum.Aux[Shape, Int],
-    dt: Decoder[T],
+    dt: FillValueDecoder[T],
     arithmetic: Arithmetic.Id[Shape],
     key: Key[Shape],
     ds: Decoder[Shape],

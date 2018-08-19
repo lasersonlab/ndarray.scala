@@ -1,13 +1,14 @@
 package org.lasersonlab.zarr
 
 import hammerlab.path._
+import io.circe.Json
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.Compressor.Blosc.CName.lz4
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.Order.C
 
 class GroupTest
-  extends hammerlab.Suite {
+  extends Suite {
   test("dir") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr")
 
@@ -33,7 +34,7 @@ class GroupTest
     `var`.chunks should be(27998 :: Nil)
 
     `var`.metadata should be(
-      Metadata(
+      untyped.Metadata(
         shape = Seq(27998),
         chunks = Seq(27998),
         dtype = Var.dtype,
@@ -45,7 +46,11 @@ class GroupTest
             blocksize = 0
           ),
         order = C,
-        fill_value = Var.empty,
+        fill_value =
+          Json.fromString(
+            // 68 0-bytes, base64-encoded
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          ),
         zarr_format = `2`
       )
     )

@@ -16,14 +16,12 @@ import shapeless.the
 import shapeless.nat._
 
 class ArrayTest
-  extends hammerlab.Suite {
+  extends Suite {
+
   test("2-D floats") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/matrix")
 
-    val arr =
-      Array[Float, _2](path)
-        .right
-        .get
+    val arr = Array[Float, _2](path).get
 
     val metadata = arr.metadata
 
@@ -111,10 +109,7 @@ class ArrayTest
   test("1-D longs") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/row_attrs/_Valid")
 
-    val arr =
-      Array[Long, _1](path)
-        .right
-        .get
+    val arr = Array[Long, _1](path).get
 
     arr.metadata should be(
       Metadata(
@@ -159,7 +154,7 @@ class ArrayTest
   test("1-D strings") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/col_attrs/Sex")
 
-    val arr = Array[String, _1](path).right.get
+    val arr = Array[String, _1](path).get
 
     arr.metadata should be(
       Metadata(
@@ -211,10 +206,7 @@ class ArrayTest
 
     import shapeless._
 
-    val arr =
-      Array[Var, _1](path)
-        .right
-        .get
+    val arr = Array[Var, _1](path).get
 
     arr.metadata should be(
       Metadata(

@@ -3,7 +3,6 @@ package org.lasersonlab.zarr.untyped
 import java.nio.ByteBuffer
 
 import hammerlab.path._
-import org.lasersonlab.zarr.Metadata.untyped.Metadata
 import org.lasersonlab.zarr.|
 
 import scala.collection.mutable

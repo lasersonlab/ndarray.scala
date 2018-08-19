@@ -1,14 +1,11 @@
 package org.lasersonlab.zarr
 
-import java.nio.ByteBuffer
-import java.util.Base64
-
 import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder.Result
-import io.circe.generic.auto._
 import io.circe.parser._
-import io.circe.{ Decoder, DecodingFailure, HCursor, Json }
+import io.circe.{ Decoder, DecodingFailure, HCursor }
+import org.lasersonlab.zarr.FillValue.{ FillValueDecoder, Null }
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.dtype.DataType
 
@@ -18,7 +15,7 @@ case class Metadata[T, Shape](
   dtype: DataType.Aux[T],
   compressor: Compressor,
   order: Order,
-  fill_value: Opt[T] = None,
+  fill_value: FillValue[T] = Null,
   zarr_format: Format = `2`,
   filters: Opt[Seq[Filter]] = None
 )
@@ -31,8 +28,8 @@ object Metadata {
   implicit def   _datatype[T, Shape](implicit md: Metadata[T, _]): DataType.Aux[T] = md.dtype
 
   def apply[
-        T : Decoder,
-    Shape : Decoder
+        T : FillValueDecoder,
+    Shape :          Decoder
   ](
     dir: Path
   )(
@@ -44,24 +41,46 @@ object Metadata {
   =
     dir ? basename flatMap {
       path ⇒
-        decode(
+        decode[Metadata[T, Shape]](
           path.read
-        )(
-          this.decoder[T, Shape]
         )
     }
 
-  def decoder[
-    T,
-    Shape: Decoder
+  /**
+   * To JSON-decode a [[Metadata]], we can mostly use [[io.circe.generic.auto]], however there is one wrinkle:
+   * [[Metadata.fill_value `fill_value`]]s for structs are stored in JSON as base64-encoded strings.
+   *
+   * Complicating matters further, decoding such a blob can require knowing lengths of multiple
+   * [[org.lasersonlab.zarr.dtype.DType.string]]-typed fields, which we don't store in the type-system.
+   *
+   * So, we decode [[Metadata]] by:
+   *
+   * - first, decoding the [[Metadata.dtype `dtype`]] field to get the complete picture of the [[DataType]]
+   * - creating a [[Metadata.fill_value `fill_value`]]-[[Decoder]] with this information
+   * - running a normal generic auto-derivation to get a [[Metadata]]-[[Decoder]]
+   */
+  implicit def decoder[
+        T: FillValueDecoder,
+    Shape:          Decoder
   ](
     implicit
-    datatypeDecoder: Decoder[DataType.Aux[T]],
-    elementDecoder: Decoder[T]
-  ): Decoder[Metadata[T, Shape]] =
+    datatypeDecoder: Decoder[DataType.Aux[T]]
+  ):
+    Decoder[
+      Metadata[
+        T,
+        Shape
+      ]
+    ] =
     new Decoder[Metadata[T, Shape]] {
-      val elemDecoder = elementDecoder
-      def apply(c: HCursor): Result[Metadata[T, Shape]] = {
+      def apply(c: HCursor):
+        Result[
+          Metadata[
+            T,
+            Shape
+          ]
+        ]
+      = {
         c
           .downField("dtype")
           .success
@@ -79,64 +98,10 @@ object Metadata {
             datatypeDecoder(_)
           }
           .flatMap {
-            datatype ⇒
-              implicit val elementDecoder: Decoder[Opt[T]] =
-                new Decoder[Opt[T]] {
-                  def apply(c: HCursor): Result[Opt[T]] =
-                    c.value match {
-                      case j if j.isNull ⇒ Right(None)
-                      case j ⇒
-                        j
-                          .asString
-                          .fold(
-                            elemDecoder
-                              .decodeJson(j)
-                          ) {
-                            base64 ⇒
-                              if (base64.isEmpty)
-                                elemDecoder
-                                  .decodeJson(j)
-                              else
-                                Right(
-                                  datatype(
-                                    ByteBuffer.wrap(
-                                      Base64
-                                        .getDecoder
-                                        .decode(base64)
-                                    )
-                                  )
-                                )
-                          }
-                          .map { x ⇒ x }  // cast to Opt
-                    }
-                }
-
-              val decoder = implicitly[Decoder[Metadata[T, Shape]]]
-              decoder(c)
+            implicit datatype ⇒
+              import io.circe.generic.auto._
+              exportDecoder[Metadata[T, Shape]].instance(c)
           }
       }
     }
-
-  object untyped {
-    case class Metadata(
-       shape: Seq[Int],
-      chunks: Seq[Int],
-      dtype: DataType,
-      compressor: Compressor,
-      order: Order,
-      fill_value: Opt[Json] = None,
-      zarr_format: Format = `2`,
-      filters: Opt[Seq[Filter]] = None
-    ) {
-      type T = dtype.T
-    }
-    object Metadata {
-      type Aux[_T] = Metadata { type T = _T }
-      def apply(dir: Path): Exception | Metadata =
-        dir ? basename flatMap {
-          path ⇒
-            decode[Metadata](path.read)
-        }
-    }
-  }
 }

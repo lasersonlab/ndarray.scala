@@ -11,6 +11,7 @@ import org.lasersonlab.zarr.Compressor.Blosc.CName.lz4
 import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.Order.C
+import Metadata.{ untyped ⇒ u }
 
 class MetadataTest
   extends hammerlab.Suite {
@@ -97,12 +98,12 @@ class MetadataTest
 
   test("untyped metadata read: 1-D chars") {
     decode[
-      Metadata.untyped.Metadata
+      u.Metadata
     ](
       `col_attrs/DonorID/.zarray`
     ) should be(
       Right(
-        Metadata.untyped.Metadata(
+        u.Metadata(
            shape = Seq(5425),
           chunks = Seq(5425),
           dtype = string(1),
@@ -155,12 +156,12 @@ class MetadataTest
 
   test("untyped metadata read") {
     decode[
-      Metadata.untyped.Metadata
+      u.Metadata
     ](
       `matrix/.zarray`
     ) should be(
       Right(
-        Metadata.untyped.Metadata(
+        u.Metadata(
           shape = Seq(27998, 5425),
           chunks = Seq(3092, 5425),
           dtype = float(LittleEndian),

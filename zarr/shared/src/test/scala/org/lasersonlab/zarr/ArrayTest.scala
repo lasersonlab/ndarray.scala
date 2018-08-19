@@ -12,6 +12,7 @@ import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.DataType
+import shapeless.the
 import shapeless.nat._
 
 class ArrayTest
@@ -208,17 +209,6 @@ class ArrayTest
   test("1-D structs") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr/var")
 
-    case class Var(
-      index: Long,
-      accession: String,
-      gene: Short,
-      logCV: Double,
-      logMean: Double,
-      selected: Long,
-      total: Double,
-      valid: Long
-    )
-
     import shapeless._
 
     val arr =
@@ -226,14 +216,11 @@ class ArrayTest
         .right
         .get
 
-    // used for deriving DataType.Aux[Var] below
-    implicit val stringDataType = string(18)
-
     arr.metadata should be(
       Metadata(
          shape = 27998 :: TNil,
         chunks = 27998 :: TNil,
-        dtype = !![DataType.Aux[Var]],
+        dtype = Var.dtype,
         compressor =
           Blosc(
             cname = CName.lz4,
@@ -242,7 +229,7 @@ class ArrayTest
             blocksize = 0
           ),
         order = C,
-        fill_value = Var(0, "", 0, 0, 0, 0, 0, 0),
+        fill_value = Var.empty,
         zarr_format = `2`,
         filters = None
       )
@@ -274,4 +261,22 @@ class ArrayTest
       )
     )
   }
+}
+
+case class Var(
+  index: Long,
+  accession: String,
+  gene: Short,
+  logCV: Double,
+  logMean: Double,
+  selected: Long,
+  total: Double,
+  valid: Long
+)
+object Var {
+  val empty = Empty[Var]()
+
+  // used for deriving DataType.Aux[Var] below
+  private implicit val stringDataType = string(18)
+  val dtype = the[DataType.Aux[Var]]
 }

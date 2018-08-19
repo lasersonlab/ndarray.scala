@@ -25,7 +25,19 @@ trait DataTypeStructDerivations {
 
   type Aux[_T] = DataType { type T = _T }
 
-  case class StructEntry[T](override val toString: String, size: Int)
+  case class StructEntry[T](name: String, datatype: Aux[T]) {
+    val size = datatype.size
+    override def toString: String =
+      Seq(
+        name,
+        size
+      )
+      .mkString(
+        "[\"",
+        "\",\"",
+        "\"]"
+      )
+  }
 
   // TODO: make the parsing just use the entries?
   case class Struct[S](
@@ -53,7 +65,7 @@ trait DataTypeStructDerivations {
       scala.::(
         StructEntry(
           head.toString,
-          head.size
+          head
         ),
         tail.value.entries
       )
@@ -211,9 +223,9 @@ object DataType
                           .map {
                             datatype ⇒
                               (
-                                StructEntry(
+                                StructEntry[datatype.T](
                                   entry.`type`,
-                                  datatype.size
+                                  datatype
                                 ),
                                 datatype
                               )

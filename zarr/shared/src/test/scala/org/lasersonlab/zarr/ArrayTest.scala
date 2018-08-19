@@ -4,6 +4,7 @@ import cats.implicits._
 import io.circe.generic.auto._
 import hammerlab.path._
 import hammerlab.shapeless.tlist._
+import org.lasersonlab.anndata.loom.Var
 import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.Compressor.Blosc
@@ -253,22 +254,4 @@ class ArrayTest
       )
     )
   }
-}
-
-case class Var(
-  index: Long,
-  accession: String,
-  gene: Short,
-  logCV: Double,
-  logMean: Double,
-  selected: Long,
-  total: Double,
-  valid: Long
-)
-object Var {
-  val empty = Empty[Var]()
-
-  // used for deriving DataType.Aux[Var] below
-  private implicit val stringDataType = string(18)
-  val dtype = the[DataType.Aux[Var]]
 }

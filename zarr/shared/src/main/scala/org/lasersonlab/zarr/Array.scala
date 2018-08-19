@@ -1,7 +1,5 @@
 package org.lasersonlab.zarr
 
-import java.io.FileNotFoundException
-
 import cats.Traverse
 import hammerlab.option._
 import hammerlab.path._
@@ -17,18 +15,25 @@ import shapeless.Nat
  * Storage of the ND-array of chunks, as well as the records in each chunk, are each a configurable type-param; see
  * companion-object for some convenient constructors
  */
-case class Array[
+trait Array[
   T,
   Shape,
-  A[_],
-  Chunk[_]
-](
-  metadata: Metadata[T, Shape],
-  chunks: A[Chunk[T]],
-  attrs: Opt[Attrs] = None
-)
+] {
+  type A[_]
+  type Chunk[_]
+
+  def metadata: Metadata[T, Shape]
+  def chunks: A[Chunk[T]]
+  def attrs: Opt[Attrs]
+}
 
 object Array {
+
+  type Aux[T, Shape, _A[_], _Chunk[_]] =
+    Array[T, Shape] {
+      type A[U] = _A[U]
+      type Chunk[U] = _Chunk[U]
+    }
 
   /**
    * Load an ND-array of chunks from a [[Path directory]]
@@ -107,7 +112,7 @@ object Array {
     dt: FillValueDecoder[T],
   ):
     Exception |
-    Array[T, v.Shape, v.A, Bytes]
+    Aux[T, v.Shape, v.A, Bytes]
   = {
     import v._
     apply[T, v.Shape, v.A](dir)(
@@ -128,14 +133,14 @@ object Array {
   def apply[
     T,
     Shape,
-    A[U]
+    _A[U]
   ](
     dir: Path
   )(
     implicit
     d: Decoder[DataType.Aux[T]],
-    ti: Indices.Aux[A, Shape],
-    traverse: Traverse[A],
+    ti: Indices.Aux[_A, Shape],
+    traverse: Traverse[_A],
     ai: Arithmetic[Shape, Int],
     scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
     sum: Sum.Aux[Shape, Int],
@@ -145,24 +150,26 @@ object Array {
     ds: Decoder[Shape],
   ):
     Exception |
-    Array[T, Shape, A, Bytes]
+    Aux[T, Shape, _A, Bytes]
   =
     for {
-      metadata ← Metadata[T, Shape](dir)
-      attrs ← Attrs(dir)
-      chunks ← {
-        implicit val _md = metadata
+      _metadata ← Metadata[T, Shape](dir)
+      _attrs ← Attrs(dir)
+      _chunks ← {
+        implicit val md = _metadata
         import Metadata._
-        chunks[T, Shape, A](
+        chunks[T, Shape, _A](
           dir,
-          metadata.shape,
-          metadata.chunks
+          md.shape,
+          md.chunks
         )
       }
     } yield
-      new Array[T, Shape, A, Bytes](
-        metadata,
-        chunks,
-        attrs
-      )
+      new Array[T, Shape] {
+        type A[U] = _A[U]
+        type Chunk[U] = Bytes[U]
+        val metadata = _metadata
+        val   chunks =   _chunks
+        val    attrs =    _attrs
+      }
 }

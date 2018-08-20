@@ -3,7 +3,7 @@ package org.lasersonlab.zarr
 import cats.Traverse
 import io.circe.Decoder
 import org.lasersonlab.ndarray.Vectors._
-import org.lasersonlab.ndarray.{ Arithmetic, ScanRight, Sum }
+import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
 import org.lasersonlab.ndarray.Ints._
 import shapeless.Nat
 
@@ -19,6 +19,7 @@ trait VectorInts[N <: Nat] {
   implicit def ds: Decoder[Shape]
   implicit def ti: Indices.Aux[A, Shape]
   implicit def traverse: Traverse[A]
+  implicit def arrayLike: ArrayLike.Aux[A, Shape]
   implicit def ai: Arithmetic[Shape, Int]
   implicit def key: Key[Shape]
   implicit def scanRight: ScanRight.Aux[Shape, Int, Int, Shape]
@@ -40,6 +41,7 @@ object VectorInts {
     _key: Key[_S],
     _ti: Indices.Aux[_A, _S],
     _traverse: Traverse[_A],
+    _arrayLike: ArrayLike.Aux[_A, _S],
     _ai: Arithmetic[_S, Int],
     _scanRight: ScanRight.Aux[_S, Int, Int, _S],
     _sum: Sum.Aux[_S, Int]
@@ -54,6 +56,7 @@ object VectorInts {
       implicit val key = _key
       implicit val ti = _ti
       implicit val traverse = _traverse
+      implicit val arrayLike = _arrayLike
       implicit val ai = _ai
       implicit val scanRight = _scanRight
       implicit val sum = _sum

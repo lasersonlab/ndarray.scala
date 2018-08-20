@@ -132,6 +132,7 @@ class ArrayTest
 
     ==(arr.attrs, None)
 
+    import arr._
     arr.chunks.size should be(1)
     val chunk = arr.chunks(0)
     val bytes = chunk.bytes
@@ -182,6 +183,7 @@ class ArrayTest
     val bytes = chunk.bytes
     bytes.length should be(27125)
 
+    import arr._
     chunk.size should be(5425)
     val elems = chunk.toList
     elems.size should be(5425)
@@ -234,10 +236,12 @@ class ArrayTest
     val bytes = chunk.bytes
     bytes.length should be(1903864)
 
+    import arr._
+
     chunk.size should be(27998)
     val elems = chunk.toList
     elems.size should be(27998)
-    ==(
+    ===(
       elems.take(10),
       Seq(
         Var(0, "ENSMUSG00000022528", gene = 14509, logCV = 0.4815124, logMean =   0.2018570, selected = 1, total = 1616.0, valid = 1),

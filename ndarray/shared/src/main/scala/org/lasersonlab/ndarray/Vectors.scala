@@ -19,6 +19,7 @@ object Vectors {
     new Vectors[T] {
       type Row[U] = _Row[U]
       val rows = _rows
+      override val size = rows.size
       val traverseRow = _traverseRow
     }
 
@@ -148,19 +149,17 @@ object Vectors {
         }
         ev.map(builder) { _.result() }
       }
-      @inline def foldLeft[A, B](fa: Vector[A], b: B)(f: (B, A) ⇒ B): B = fa.foldLeft(b)(f)
+      @inline def foldLeft [A, B](fa: Vector[A],  b:      B )(f: (B,      A ) ⇒      B ):      B  = fa.foldLeft ( b)(f)
       @inline def foldRight[A, B](fa: Vector[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.foldRight(lb)(f)
     }
 
-//  type Vector0[T] = Id[T]
-  type Vector1[T] = Vector[T] //Vectors.Aux[T, Id]
+  type Vector1[T] = Vector[T]
   type Vector2[T] = Vectors.Aux[T, Vector1]
   type Vector3[T] = Vectors.Aux[T, Vector2]
   type Vector4[T] = Vectors.Aux[T, Vector3]
   type Vector5[T] = Vectors.Aux[T, Vector4]
   type Vector6[T] = Vectors.Aux[T, Vector5]
 
-//  implicit val traverseV1: Traverse[Vector1] = makeVectorTraverse[Id]
   implicit val traverseV2: Traverse[Vector2] = makeTraverse[Vector1]
   implicit val traverseV3: Traverse[Vector3] = makeTraverse[Vector2]
   implicit val traverseV4: Traverse[Vector4] = makeTraverse[Vector3]

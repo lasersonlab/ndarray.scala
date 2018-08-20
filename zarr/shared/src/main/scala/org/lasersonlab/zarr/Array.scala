@@ -1,10 +1,11 @@
 package org.lasersonlab.zarr
 
-import cats.Traverse
+import cats.{ Applicative, Eval, Foldable, Functor, Traverse }
+import hammerlab.option
 import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder
-import org.lasersonlab.ndarray.{ Arithmetic, Bytes, ScanRight, Sum }
+import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, Bytes, ScanRight, Sum, ToArray }
 import org.lasersonlab.zarr.FillValue.FillValueDecoder
 import org.lasersonlab.zarr.dtype.DataType
 import shapeless.Nat
@@ -22,6 +23,14 @@ trait Array[
   type A[_]
   type Chunk[_]
 
+  implicit def traverseA: Traverse[A]
+  implicit def foldableChunk: Foldable[Chunk]
+
+  def shape: Shape
+  def chunkShape: Shape
+
+  def apply(idx: Shape): T
+
   def metadata: Metadata[T, Shape]
   def chunks: A[Chunk[T]]
   def attrs: Opt[Attrs]
@@ -31,7 +40,7 @@ object Array {
 
   type Aux[T, Shape, _A[_], _Chunk[_]] =
     Array[T, Shape] {
-      type A[U] = _A[U]
+      type     A[U] =     _A[U]
       type Chunk[U] = _Chunk[U]
     }
 
@@ -58,7 +67,7 @@ object Array {
      compressor: Compressor,
   ):
     Exception |
-    A[Bytes[T]]
+    A[Bytes.Aux[T, Shape]]
   = {
 
     val chunkRanges = (arrShape + chunkShape - 1) / chunkShape
@@ -90,7 +99,7 @@ object Array {
     chunks
       .sequence[
         Exception | ?,
-        Bytes[T]
+        Bytes.Aux[T, Shape]
       ]
   }
 
@@ -112,7 +121,7 @@ object Array {
     dt: FillValueDecoder[T],
   ):
     Exception |
-    Aux[T, v.Shape, v.A, Bytes]
+    Aux[T, v.Shape, v.A, Bytes.Aux[?, v.Shape]]
   = {
     import v._
     apply[T, v.Shape, v.A](dir)(
@@ -120,6 +129,7 @@ object Array {
       d = d,
       ti = ti,
       traverse = traverse,
+      arrayLike = arrayLike,
       ai = ai,
       scanRight = scanRight,
       sum = sum,
@@ -141,6 +151,7 @@ object Array {
     d: Decoder[DataType.Aux[T]],
     ti: Indices.Aux[_A, Shape],
     traverse: Traverse[_A],
+    arrayLike: ArrayLike.Aux[_A, Shape],
     ai: Arithmetic[Shape, Int],
     scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
     sum: Sum.Aux[Shape, Int],
@@ -150,7 +161,7 @@ object Array {
     ds: Decoder[Shape],
   ):
     Exception |
-    Aux[T, Shape, _A, Bytes]
+    Aux[T, Shape, _A, Bytes.Aux[?, Shape]]
   =
     for {
       _metadata ← Metadata[T, Shape](dir)
@@ -167,9 +178,94 @@ object Array {
     } yield
       new Array[T, Shape] {
         type A[U] = _A[U]
-        type Chunk[U] = Bytes[U]
+        type Chunk[U] = Bytes.Aux[U, Shape]
+
+        override val traverseA = traverse
+        override val foldableChunk = Bytes.foldableAux
+
         val metadata = _metadata
         val   chunks =   _chunks
         val    attrs =    _attrs
+
+        val shape = metadata.shape
+        val chunkShape = metadata.chunks
+
+        def apply(idx: Shape): T =
+          Bytes.arrayLike(
+            arrayLike(
+              chunks,
+              idx / chunkShape
+            ),
+            idx % chunkShape
+          )
       }
+
+  import cats.implicits._
+  implicit def foldable[Shape]: Foldable[Array[?, Shape]] =
+    new Foldable[Array[?, Shape]] {
+      type F[A] = Array[A, Shape]
+//      def traverse[G[_], A, B](fa: F[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[F[B]] = {
+//        import fa._
+//        implicit val funct: Traverse[fa.Chunk] = ???
+//        chunks
+//          .map {
+//            chunk ⇒
+//              chunk
+//                .map(f)
+//                .sequence
+//          }
+//          .sequence
+//          .map {
+//            _chunks ⇒
+//              new Array[B, Shape] {
+//                type A[U] = fa.A[U]
+//                type Chunk[U] = fa.Chunk[U]
+//                implicit def traverseA: Traverse[A] = fa.traverseA
+//                implicit def foldableChunk: Foldable[Chunk] = fa.foldableChunk
+//                val shape: Shape = fa.shape
+//                val chunkShape: Shape = fa.chunkShape
+//                def apply(idx: Shape): B = ???
+//                def metadata: Metadata[B, Shape] = ???
+//                val chunks = _chunks
+//                def attrs: option.Opt[Attrs] = fa.attrs
+//              }
+//          }
+//      }
+
+      def foldLeft[A, B](fa: F[A], b: B)(f: (B, A) ⇒ B): B =
+        fa
+          .traverseA
+          .foldLeft(
+            fa.chunks,
+            b
+          ) {
+            (b, chunk) ⇒
+              fa
+                .foldableChunk
+                .foldLeft(
+                  chunk,
+                  b
+                )(
+                  f
+                )
+          }
+
+      def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] =
+        fa
+          .traverseA
+          .foldRight(
+            fa.chunks,
+            lb
+          ) {
+            (chunk, lb) ⇒
+              fa
+                .foldableChunk
+                .foldRight(
+                  chunk,
+                  lb
+                )(
+                  f
+                )
+          }
+    }
 }

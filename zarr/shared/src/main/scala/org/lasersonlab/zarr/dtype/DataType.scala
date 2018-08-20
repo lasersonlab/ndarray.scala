@@ -6,10 +6,13 @@ import io.circe.Decoder.Result
 import io.circe.DecodingFailure.fromThrowable
 import io.circe.{ Decoder, DecodingFailure, HCursor }
 import org.lasersonlab.ndarray.io.Read
-import org.lasersonlab.zarr.|
+import org.lasersonlab.zarr.{ untyped, | }
 
 import scala.util.Try
 
+/**
+ * Representation of a Zarr record-type; includes functionality for reading a record from a [[ByteBuffer]]
+ */
 sealed abstract class DataType {
   def size: Int
   type T
@@ -85,7 +88,7 @@ trait DataTypeStructDerivations {
     l: Lazy[Struct[L]]
   ):
     Aux[S] =
-    struct[S, L]
+    struct[S, L](g, l.value)
 
   def struct[
      S,
@@ -93,13 +96,13 @@ trait DataTypeStructDerivations {
   ](
     implicit
     g: Generic.Aux[S, L],
-    l: Lazy[Struct[L]]
+    l: Struct[L]
   ):
     Struct[S] =
-    Struct(l.value.entries) {
+    Struct(l.entries) {
       buff ⇒
         g.from(
-          l.value(buff)
+          l(buff)
         )
     }
 }
@@ -128,18 +131,19 @@ object DataType
   import ByteOrder._
   type Order = ByteOrder
 
-  import DType.{ float ⇒ flt, string ⇒ str, _ }
+  import org.lasersonlab.zarr.dtype.{ DType ⇒ d }
+  //import DType.{ float ⇒ flt, string ⇒ str, _ }
 
   val `0` = 0.toByte
 
   // TODO: setting the buffer's order every time seems suboptimal; some different design that streamlines that would be nice
-  case object   char                                 extends Primitive( None, int,    1) { type T =   Char; @inline def apply(buf: ByteBuffer): T = {                   buf.getChar   } }
-  case  class  short(override val order: Endianness) extends Primitive(order, int,    2) { type T =  Short; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getShort  } }
-  case  class    i32(override val order: Endianness) extends Primitive(order, int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getInt    } }
-  case  class    i64(override val order: Endianness) extends Primitive(order, int,    8) { type T =   Long; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getLong   } }
-  case  class  float(override val order: Endianness) extends Primitive(order, flt,    4) { type T =  Float; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getFloat  } }
-  case  class double(override val order: Endianness) extends Primitive(order, flt,    8) { type T = Double; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getDouble } }
-  case  class string(override val  size:        Int) extends Primitive( None, str, size) { type T = String
+  case object   byte                                 extends Primitive( None, d.   int,    1) { type T =   Byte; @inline def apply(buf: ByteBuffer): T = {                   buf.get       } }
+  case  class  short(override val order: Endianness) extends Primitive(order, d.   int,    2) { type T =  Short; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getShort  } }
+  case  class    int(override val order: Endianness) extends Primitive(order, d.   int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer): T = {buf.order(order); buf.getInt    } }
+  case  class   long(override val order: Endianness) extends Primitive(order, d.   int,    8) { type T =   Long; @inline def apply(buf: ByteBuffer): T = {buf.order(order); buf.getLong   } }
+  case  class  float(override val order: Endianness) extends Primitive(order, d. float,    4) { type T =  Float; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getFloat  } }
+  case  class double(override val order: Endianness) extends Primitive(order, d. float,    8) { type T = Double; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getDouble } }
+  case  class string(override val  size:        Int) extends Primitive( None, d.string, size) { type T = String
     import scala.Array.fill
     val arr = fill(size)(`0`)
     def apply(buf: ByteBuffer): T = {
@@ -156,22 +160,57 @@ object DataType
     }
   }
 
-  implicit val   _char                                               =   char
+  object  short { implicit def apply(v:  short.type)(implicit endianness: Endianness): Aux[ Short] =  short(endianness) }
+  object    int { implicit def apply(v:    int.type)(implicit endianness: Endianness): Aux[   Int] = int(endianness) }
+  object   long { implicit def apply(v:   long.type)(implicit endianness: Endianness): Aux[  Long] =   long(endianness) }
+  object  float { implicit def apply(v:  float.type)(implicit endianness: Endianness): Aux[ Float] =  float(endianness) }
+  object double { implicit def apply(v: double.type)(implicit endianness: Endianness): Aux[Double] = double(endianness) }
+
+  case class struct(entries: Seq[(String, DataType)])
+    extends DataType {
+    type T = untyped.Struct
+
+    val size: Int =
+      entries
+        .map(_._2.size)
+        .sum
+
+    def apply(buff: ByteBuffer): T =
+      untyped.Struct(
+        entries
+          .foldLeft(
+            Map.newBuilder[String, Any]
+          ) {
+            case (
+              builder,
+              (
+                name,
+                datatype
+              )
+            ) ⇒
+              builder +=
+                name → datatype(buff)
+          }
+          .result()
+      )
+  }
+
+  implicit val   _byte                                               =   byte
   implicit def  _short(implicit endianness: Endianness): Aux[ Short] =  short(endianness)
-  implicit def    _i32(implicit endianness: Endianness): Aux[   Int] =    i32(endianness)
-  implicit def    _i64(implicit endianness: Endianness): Aux[  Long] =    i64(endianness)
+  implicit def    _int(implicit endianness: Endianness): Aux[   Int] =    int(endianness)
+  implicit def   _long(implicit endianness: Endianness): Aux[  Long] =   long(endianness)
   implicit def  _float(implicit endianness: Endianness): Aux[ Float] =  float(endianness)
   implicit def _double(implicit endianness: Endianness): Aux[Double] = double(endianness)
 
   def get(order: ByteOrder, dtype: DType, size: Int): String | DataType =
     (order, dtype, size) match {
-      case (         None, _: int,    1) ⇒ Right(  char      )
-      case (e: Endianness, _: int,    2) ⇒ Right( short(   e))
-      case (e: Endianness, _: int,    4) ⇒ Right(   i32(   e))
-      case (e: Endianness, _: int,    8) ⇒ Right(   i64(   e))
-      case (e: Endianness, _: flt,    4) ⇒ Right( float(   e))
-      case (e: Endianness, _: flt,    8) ⇒ Right(double(   e))
-      case (         None, _: str, size) ⇒ Right(string(size))
+      case (         None, _: d.   int,    1) ⇒ Right(  byte      )
+      case (e: Endianness, _: d.   int,    2) ⇒ Right( short(   e))
+      case (e: Endianness, _: d.   int,    4) ⇒ Right(   int(   e))
+      case (e: Endianness, _: d.   int,    8) ⇒ Right(  long(   e))
+      case (e: Endianness, _: d. float,    4) ⇒ Right( float(   e))
+      case (e: Endianness, _: d. float,    8) ⇒ Right(double(   e))
+      case (         None, _: d.string, size) ⇒ Right(string(size))
       case _ ⇒
         Left(
           s"Unrecognized data type: $order$dtype$size"
@@ -206,56 +245,9 @@ object DataType
         c
           .value
           .as[String]
-          .fold[Result[DataType]](
-            _ ⇒
-              c
-                .value
-                .as[Vector[Parser.StructEntry]]
-                .flatMap {
-                  entries ⇒
-                    entries
-                      .map {
-                        entry ⇒
-                          get(
-                            entry.`type`,
-                            c
-                          )
-                          .map {
-                            datatype ⇒
-                              (
-                                StructEntry[datatype.T](
-                                  entry.`type`,
-                                  datatype
-                                ),
-                                datatype
-                              )
-                          }
-                      }
-                      .sequence[Result, (StructEntry[_], DataType)]
-                      .map {
-                        entries ⇒
-                          Struct(
-                            entries
-                              .map(_._1)
-                              .toList
-                          ) {
-                            buffer ⇒
-                              entries
-                                .foldLeft(
-                                  List.newBuilder[Any]
-                                ) {
-                                  case (list, (entry, datatype)) ⇒
-                                    list += datatype(buffer)
-                                }
-                                .result()
-                          }
-                      }
-                },
-            str ⇒
-              get(
-                str,
-                c
-              )
+          .fold(
+            _ ⇒ Parser.untypedStruct(c),
+            get(_, c)
           )
     }
 }

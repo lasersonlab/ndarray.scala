@@ -1,19 +1,18 @@
 package org.lasersonlab.zarr
 
 import cats.implicits._
-import io.circe.generic.auto._
 import hammerlab.path._
-import hammerlab.shapeless.tlist._
-import org.lasersonlab.anndata.loom.Var
+import hammerlab.shapeless.tlist.{ Map ⇒ _, _ }
+import io.circe.generic.auto._
+import org.lasersonlab.anndata.loom.{ Obs, Var }
 import org.lasersonlab.ndarray.Ints._
-import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.Compressor.Blosc.CName
-import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.Order.C
+import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.dtype.DataType
-import shapeless.the
+import org.lasersonlab.zarr.dtype.DataType._
 import shapeless.nat._
 
 class ArrayTest
@@ -116,7 +115,7 @@ class ArrayTest
       Metadata(
          shape = 27998 :: TNil,
         chunks = 27998 :: TNil,
-        dtype = i64(LittleEndian),
+        dtype = long(LittleEndian),
         compressor =
           Blosc(
             cname = CName.lz4,
@@ -202,7 +201,7 @@ class ArrayTest
     )
   }
 
-  test("1-D structs") {
+  test("1-D typed structs") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr/var")
 
     import shapeless._
@@ -253,5 +252,298 @@ class ArrayTest
         Var(9, "ENSMUSG00000053560", gene = 14957, logCV = 0.4013466, logMean =   2.0053807, selected = 1, total = 5641.0, valid = 1)
       )
     )
+  }
+
+  test("1-D untyped structs") {
+    val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr/obs")
+
+    import shapeless._
+
+    val arr = Array[Obs, _1](path).get
+
+    arr.metadata should be(
+      Metadata(
+         shape = 5425 :: TNil,
+        chunks = 5425 :: TNil,
+        dtype =
+          DataType.struct(
+            List[(String, DataType)](
+              ("index", long),
+              ("Age", byte),
+              ("AnalysisPool", byte),
+              ("AnalysisProject", byte),
+              ("Bucket", byte),
+              ("CellConc", byte),
+              ("CellID", string(24)),
+              ("Cell_Conc", byte),
+              ("ChipID", byte),
+              ("Class", byte),
+              ("ClassProbability_Astrocyte", double),
+              ("ClassProbability_Astrocyte,Immune", double),
+              ("ClassProbability_Astrocyte,Neurons", double),
+              ("ClassProbability_Astrocyte,Oligos", double),
+              ("ClassProbability_Astrocyte,Vascular", double),
+              ("ClassProbability_Bergmann-glia", double),
+              ("ClassProbability_Blood", double),
+              ("ClassProbability_Blood,Vascular", double),
+              ("ClassProbability_Enteric-glia", double),
+              ("ClassProbability_Enteric-glia,Cycling", double),
+              ("ClassProbability_Ependymal", double),
+              ("ClassProbability_Ex-Neurons", double),
+              ("ClassProbability_Ex-Vascular", double),
+              ("ClassProbability_Immune", double),
+              ("ClassProbability_Immune,Neurons", double),
+              ("ClassProbability_Immune,Oligos", double),
+              ("ClassProbability_Neurons", double),
+              ("ClassProbability_Neurons,Cycling", double),
+              ("ClassProbability_Neurons,Oligos", double),
+              ("ClassProbability_Neurons,Satellite-glia", double),
+              ("ClassProbability_Neurons,Vascular", double),
+              ("ClassProbability_OEC", double),
+              ("ClassProbability_Oligos", double),
+              ("ClassProbability_Oligos,Cycling", double),
+              ("ClassProbability_Oligos,Vascular", double),
+              ("ClassProbability_Satellite-glia", double),
+              ("ClassProbability_Satellite-glia,Cycling", double),
+              ("ClassProbability_Satellite-glia,Schwann", double),
+              ("ClassProbability_Schwann", double),
+              ("ClassProbability_Ttr", double),
+              ("ClassProbability_Vascular", double),
+              ("ClusterName", byte),
+              ("Clusters", long),
+              ("Comment", byte),
+              ("Comments", byte),
+              ("DateCaptured", byte),
+              ("Date_Captured", byte),
+              ("Description", byte),
+              ("Developmental_compartment", byte),
+              ("DonorID", byte),
+              ("Estimated Number of Cells", byte),
+              ("Flowcell", byte),
+              ("Fraction Reads in Cells", byte),
+              ("Label", byte),
+              ("LeafOrder", long),
+              ("Location_based_on", byte),
+              ("Mean Reads per Cell", byte),
+              ("Median Genes per Cell", byte),
+              ("Median UMI Counts per Cell", byte),
+              ("MitoRiboRatio", float),
+              ("NGI_PlateWell", byte),
+              ("Neurotransmitter", byte),
+              ("NumPooledAnimals", byte),
+              ("Num_Pooled_Animals", byte),
+              ("Number of Reads", byte),
+              ("OriginalClusters", long),
+              ("Outliers", long),
+              ("PCRCycles", byte),
+              ("PCR_Cycles", byte),
+              ("PassedQC", byte),
+              ("PlugDate", byte),
+              ("Plug_Date", byte),
+              ("Probable_location", byte),
+              ("Project", byte),
+              ("Q30 Bases in Barcode", byte),
+              ("Q30 Bases in RNA Read", byte),
+              ("Q30 Bases in Sample Index", byte),
+              ("Q30 Bases in UMI", byte),
+              ("Reads Mapped Confidently to Exonic Regions", byte),
+              ("Reads Mapped Confidently to Intergenic Regions", byte),
+              ("Reads Mapped Confidently to Intronic Regions", byte),
+              ("Reads Mapped Confidently to Transcriptome", byte),
+              ("Region", byte),
+              ("SampleID", byte),
+              ("SampleIndex", byte),
+              ("SampleOK", byte),
+              ("Sample_Index", byte),
+              ("SeqComment", byte),
+              ("SeqLibDate", byte),
+              ("SeqLibOk", byte),
+              ("Seq_Comment", byte),
+              ("Seq_Lib_Date", byte),
+              ("Seq_Lib_Ok", byte),
+              ("Sequencing Saturation", byte),
+              ("Serial_Number", byte),
+              ("Sex", byte),
+              ("Species", byte),
+              ("Strain", byte),
+              ("Subclass", byte),
+              ("TargetNumCells", byte),
+              ("Target_Num_Cells", byte),
+              ("TaxonomyRank1", byte),
+              ("TaxonomyRank2", byte),
+              ("TaxonomyRank3", byte),
+              ("TaxonomyRank4", byte),
+              ("TaxonomySymbol", byte),
+              ("Taxonomy_group", byte),
+              ("TimepointPool", byte),
+              ("Tissue", byte),
+              ("Total Genes Detected", byte),
+              ("Transcriptome", byte),
+              ("Valid Barcodes", byte),
+              ("_KMeans_10", double),
+              ("_LogCV", double),
+              ("_LogMean", double),
+              ("_NGenes", double),
+              ("_PC1", double),
+              ("_PC2", double),
+              ("_Total", double),
+              ("_Valid", long),
+              ("_X", double),
+              ("_Y", double),
+              ("_tSNE1", double),
+              ("_tSNE2", double),
+              ("cDNAConcNanogramPerMicroliter", byte),
+              ("cDNALibOk", byte),
+              ("cDNA_Lib_Ok", byte),
+              ("ngperul_cDNA", byte)
+            )
+          ),
+        compressor =
+          Blosc(
+            cname = CName.lz4,
+            clevel = 5,
+            shuffle = 1,
+            blocksize = 0
+          ),
+        order = C,
+        fill_value =
+          untyped.Struct(
+            Map(
+              "index" → 0L,
+              "Age" → 0.toByte,
+              "AnalysisPool" → 0.toByte,
+              "AnalysisProject" → 0.toByte,
+              "Bucket" → 0.toByte,
+              "CellConc" → 0.toByte,
+              "CellID" → "",
+              "Cell_Conc" → 0.toByte,
+              "ChipID" → 0.toByte,
+              "Class" → 0.toByte,
+              "ClassProbability_Astrocyte" → 0.0,
+              "ClassProbability_Astrocyte,Immune" → 0.0,
+              "ClassProbability_Astrocyte,Neurons" → 0.0,
+              "ClassProbability_Astrocyte,Oligos" → 0.0,
+              "ClassProbability_Astrocyte,Vascular" → 0.0,
+              "ClassProbability_Bergmann-glia" → 0.0,
+              "ClassProbability_Blood" → 0.0,
+              "ClassProbability_Blood,Vascular" → 0.0,
+              "ClassProbability_Enteric-glia" → 0.0,
+              "ClassProbability_Enteric-glia,Cycling" → 0.0,
+              "ClassProbability_Ependymal" → 0.0,
+              "ClassProbability_Ex-Neurons" → 0.0,
+              "ClassProbability_Ex-Vascular" → 0.0,
+              "ClassProbability_Immune" → 0.0,
+              "ClassProbability_Immune,Neurons" → 0.0,
+              "ClassProbability_Immune,Oligos" → 0.0,
+              "ClassProbability_Neurons" → 0.0,
+              "ClassProbability_Neurons,Cycling" → 0.0,
+              "ClassProbability_Neurons,Oligos" → 0.0,
+              "ClassProbability_Neurons,Satellite-glia" → 0.0,
+              "ClassProbability_Neurons,Vascular" → 0.0,
+              "ClassProbability_OEC" → 0.0,
+              "ClassProbability_Oligos" → 0.0,
+              "ClassProbability_Oligos,Cycling" → 0.0,
+              "ClassProbability_Oligos,Vascular" → 0.0,
+              "ClassProbability_Satellite-glia" → 0.0,
+              "ClassProbability_Satellite-glia,Cycling" → 0.0,
+              "ClassProbability_Satellite-glia,Schwann" → 0.0,
+              "ClassProbability_Schwann" → 0.0,
+              "ClassProbability_Ttr" → 0.0,
+              "ClassProbability_Vascular" → 0.0,
+              "ClusterName" → 0.toByte,
+              "Clusters" → 0L,
+              "Comment" → 0.toByte,
+              "Comments" → 0.toByte,
+              "DateCaptured" → 0.toByte,
+              "Date_Captured" → 0.toByte,
+              "Description" → 0.toByte,
+              "Developmental_compartment" → 0.toByte,
+              "DonorID" → 0.toByte,
+              "Estimated Number of Cells" → 0.toByte,
+              "Flowcell" → 0.toByte,
+              "Fraction Reads in Cells" → 0.toByte,
+              "Label" → 0.toByte,
+              "LeafOrder" → 0L,
+              "Location_based_on" → 0.toByte,
+              "Mean Reads per Cell" → 0.toByte,
+              "Median Genes per Cell" → 0.toByte,
+              "Median UMI Counts per Cell" → 0.toByte,
+              "MitoRiboRatio" → 0.0f,
+              "NGI_PlateWell" → 0.toByte,
+              "Neurotransmitter" → 0.toByte,
+              "NumPooledAnimals" → 0.toByte,
+              "Num_Pooled_Animals" → 0.toByte,
+              "Number of Reads" → 0.toByte,
+              "OriginalClusters" → 0L,
+              "Outliers" → 0L,
+              "PCRCycles" → 0.toByte,
+              "PCR_Cycles" → 0.toByte,
+              "PassedQC" → 0.toByte,
+              "PlugDate" → 0.toByte,
+              "Plug_Date" → 0.toByte,
+              "Probable_location" → 0.toByte,
+              "Project" → 0.toByte,
+              "Q30 Bases in Barcode" → 0.toByte,
+              "Q30 Bases in RNA Read" → 0.toByte,
+              "Q30 Bases in Sample Index" → 0.toByte,
+              "Q30 Bases in UMI" → 0.toByte,
+              "Reads Mapped Confidently to Exonic Regions" → 0.toByte,
+              "Reads Mapped Confidently to Intergenic Regions" → 0.toByte,
+              "Reads Mapped Confidently to Intronic Regions" → 0.toByte,
+              "Reads Mapped Confidently to Transcriptome" → 0.toByte,
+              "Region" → 0.toByte,
+              "SampleID" → 0.toByte,
+              "SampleIndex" → 0.toByte,
+              "SampleOK" → 0.toByte,
+              "Sample_Index" → 0.toByte,
+              "SeqComment" → 0.toByte,
+              "SeqLibDate" → 0.toByte,
+              "SeqLibOk" → 0.toByte,
+              "Seq_Comment" → 0.toByte,
+              "Seq_Lib_Date" → 0.toByte,
+              "Seq_Lib_Ok" → 0.toByte,
+              "Sequencing Saturation" → 0.toByte,
+              "Serial_Number" → 0.toByte,
+              "Sex" → 0.toByte,
+              "Species" → 0.toByte,
+              "Strain" → 0.toByte,
+              "Subclass" → 0.toByte,
+              "TargetNumCells" → 0.toByte,
+              "Target_Num_Cells" → 0.toByte,
+              "TaxonomyRank1" → 0.toByte,
+              "TaxonomyRank2" → 0.toByte,
+              "TaxonomyRank3" → 0.toByte,
+              "TaxonomyRank4" → 0.toByte,
+              "TaxonomySymbol" → 0.toByte,
+              "Taxonomy_group" → 0.toByte,
+              "TimepointPool" → 0.toByte,
+              "Tissue" → 0.toByte,
+              "Total Genes Detected" → 0.toByte,
+              "Transcriptome" → 0.toByte,
+              "Valid Barcodes" → 0.toByte,
+              "_KMeans_10" → 0.0,
+              "_LogCV" → 0.0,
+              "_LogMean" → 0.0,
+              "_NGenes" → 0.0,
+              "_PC1" → 0.0,
+              "_PC2" → 0.0,
+              "_Total" → 0.0,
+              "_Valid" → 0L,
+              "_X" → 0.0,
+              "_Y" → 0.0,
+              "_tSNE1" → 0.0,
+              "_tSNE2" → 0.0,
+              "cDNAConcNanogramPerMicroliter" → 0.toByte,
+              "cDNALibOk" → 0.toByte,
+              "cDNA_Lib_Ok" → 0.toByte,
+              "ngperul_cDNA" → 0.toByte,
+            )
+          ),
+        zarr_format = `2`,
+        filters = None
+      )
+    )
+
+    ==(arr.attrs, None)
   }
 }

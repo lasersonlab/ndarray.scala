@@ -25,6 +25,8 @@ trait VectorInts[N <: Nat] {
   implicit def sum: Sum.Aux[Shape, Int]
 }
 object VectorInts {
+  type Ax[N <: Nat, S] = VectorInts[N] { type Shape = S }
+
   type Aux[N <: Nat, _S, _A[_]] =
     VectorInts[N] {
       type Shape = _S

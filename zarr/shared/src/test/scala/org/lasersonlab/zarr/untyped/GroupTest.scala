@@ -7,6 +7,7 @@ import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.Compressor.Blosc.CName.lz4
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.Order.C
+import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.{ Suite, untyped }
 
 class GroupTest
@@ -39,7 +40,19 @@ class GroupTest
       untyped.Metadata(
         shape = Seq(27998),
         chunks = Seq(27998),
-        dtype = Var.dtype,
+        dtype =
+          struct(
+            Vector(
+              ("index", long),
+              ("Accession", string(18)),
+              ("Gene", short),
+              ("_LogCV", double),
+              ("_LogMean", double),
+              ("_Selected", long),
+              ("_Total", double),
+              ("_Valid", long)
+            )
+          ),
         compressor =
           Blosc(
             cname = lz4,

@@ -7,7 +7,8 @@ import io.circe.parser._
 import io.circe.{ Decoder, DecodingFailure, HCursor }
 import org.lasersonlab.zarr.FillValue.{ FillValueDecoder, Null }
 import org.lasersonlab.zarr.Format._
-import org.lasersonlab.zarr.dtype.DataType
+import org.lasersonlab.zarr.dtype.{ DataType, Parser }
+import org.lasersonlab.zarr.untyped.Struct
 
 case class Metadata[T, Shape](
   shape: Shape,
@@ -104,4 +105,30 @@ object Metadata {
           }
       }
     }
+
+//  implicit def structDecoder[Shape: Decoder]: Decoder[Metadata[Struct, Shape]] =
+//    new Decoder[Metadata[Struct, Shape]] {
+//      def apply(c: HCursor): Result[Metadata[Struct, Shape]] =
+//        c
+//          .downField("dtype")
+//          .success
+//          .fold[DecodingFailure | HCursor](
+//            Left(
+//              DecodingFailure(
+//                "Didn't find `dtype` field in Metadata",
+//                c.history
+//              )
+//            )
+//          )(
+//            Right(_)
+//          )
+//          .flatMap {
+//            Parser.untypedStruct(_)
+//          }
+//          .flatMap {
+//            implicit datatype ⇒
+//              import io.circe.generic.auto._
+//              exportDecoder[Metadata[Struct, Shape]].instance(c)
+//          }
+//    }
 }

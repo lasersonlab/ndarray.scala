@@ -1,12 +1,13 @@
 package org.lasersonlab.zarr.dtype
 
 import io.circe.{ DecodingFailure, HCursor, Json }
+import org.lasersonlab.zarr.dtype.Parser.StructEntry
 import org.lasersonlab.zarr.|
 import shapeless._
 
 trait StructParser[L <: HList] {
   import StructParser.Return
-  def apply(c: List[String]): Return[L]
+  def apply(c: List[StructEntry]): Return[L]
 }
 
 object StructParser {
@@ -16,7 +17,7 @@ object StructParser {
   implicit val hnil:
         StructParser[HNil] =
     new StructParser[HNil] {
-      def apply(c: List[String]): Return[HNil] =
+      def apply(c: List[StructEntry]): Return[HNil] =
         c match {
           case Nil ⇒ Right(DataType.hnil)
           case l ⇒
@@ -39,8 +40,8 @@ object StructParser {
   ):
         StructParser[Head :: Tail] =
     new StructParser[Head :: Tail] {
-      def apply(c: List[String]): Return[Head :: Tail] =
-        c match {
+      def apply(entries: List[StructEntry]): Return[Head :: Tail] =
+        entries match {
           case Nil ⇒
             Left(
               DecodingFailure(
@@ -48,12 +49,17 @@ object StructParser {
                 Nil
               )
             )
-          case scala.::(hStr, t) ⇒
+          case scala.::(StructEntry(name, tpe), rest) ⇒
             for {
-              h ← head.value(HCursor.fromJson(Json.fromString(hStr)))
-              t ← tail.value(t)
+              h ←
+                head.value(
+                  HCursor.fromJson(
+                    Json.fromString(
+                      tpe)
+                  )
+                )
+              t ← tail.value(rest)
             } yield
-              //Struct()
               DataType.cons[Head, Tail](h, Lazy(t))
         }
     }

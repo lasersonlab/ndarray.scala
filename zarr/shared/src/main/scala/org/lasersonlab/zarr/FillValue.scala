@@ -4,8 +4,10 @@ import java.nio.ByteBuffer
 import java.util.Base64
 
 import io.circe.Decoder.Result
-import io.circe.{ Decoder, HCursor, Json }
+import io.circe.{ Decoder, DecodingFailure, HCursor, Json }
 import org.lasersonlab.zarr.dtype.DataType
+
+import scala.util.Try
 
 sealed trait FillValue[+T]
 
@@ -26,31 +28,49 @@ object FillValue {
     def apply(json: Json, datatype: DataType.Aux[T]): Result[T]
   }
   trait StructDecoder {
-    implicit def decoder[T](implicit d: Decoder[T]): FillValueDecoder[T] =
+    implicit def decoder[T]: FillValueDecoder[T] =
       new FillValueDecoder[T] {
-        def apply(json: Json, datatype: DataType.Aux[T]): Result[T] =
+        def apply(
+          json: Json,
+          datatype: DataType.Aux[T]
+         ):
+          Result[T] =
           json
             .as[String]
-            .map {
+            .flatMap {
               str ⇒
-                datatype(
-                  ByteBuffer.wrap(
-                    Base64
-                      .getDecoder
-                      .decode(str)
+                Try {
+                  datatype(
+                    ByteBuffer.wrap(
+                      Base64
+                        .getDecoder
+                        .decode(str)
+                    )
                   )
+                }
+                .fold[Result[T]](
+                  err ⇒
+                    Left(
+                      DecodingFailure.fromThrowable(
+                        err,
+                        Nil
+                      )
+                    ),
+                  Right(_)
                 )
             }
       }
   }
   object FillValueDecoder
     extends StructDecoder {
+
     private def make[T](implicit d: Decoder[T]): FillValueDecoder[T] =
       new FillValueDecoder[T] {
         override def apply(json: Json, datatype: DataType.Aux[T]): Result[T] =
           d.decodeJson(json)
       }
-    implicit val   char: FillValueDecoder[  Char] = make[  Char]
+
+    implicit val   byte: FillValueDecoder[  Byte] = make[  Byte]
     implicit val  short: FillValueDecoder[ Short] = make[ Short]
     implicit val    i32: FillValueDecoder[   Int] = make[   Int]
     implicit val    i64: FillValueDecoder[  Long] = make[  Long]

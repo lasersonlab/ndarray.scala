@@ -1,4 +1,10 @@
-package org.lasersonlab.anndata.loom
+package org.lasersonlab.anndata
+
+import org.lasersonlab.zarr.untyped.Struct
+
+package object loom {
+  type Obs = Struct
+}
 
 /*
        [

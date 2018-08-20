@@ -5,8 +5,12 @@ import io.circe.{ Decoder, DecodingFailure, HCursor }
 import org.hammerlab.lines.Name
 import org.lasersonlab.zarr.dtype.ByteOrder.Endianness
 import org.lasersonlab.zarr.dtype.Parser.Return
-import org.lasersonlab.zarr.{ Int, | }
+import org.lasersonlab.zarr.untyped.Struct
+import org.lasersonlab.zarr.{ Int, untyped, | }
 
+/**
+ * Parse some JSON to identify and construct a [[DataType]] for a [[T given type]]
+ */
 trait Parser[T] {
   def apply(c: HCursor): Return[T]
 }
@@ -46,18 +50,21 @@ object Parser {
           }
     }
 
-  import DataType._
+  import DataType.{ Struct ⇒ _, _ }
 
-  implicit val   _char: Parser[  Char] = make { case           '|' :: 'i' :: Int(   1) ⇒   char       }
+  implicit val   _byte: Parser[  Byte] = make { case           '|' :: 'i' :: Int(   1) ⇒   byte       }
   implicit val  _short: Parser[ Short] = make { case Endianness(e) :: 'i' :: Int(   2) ⇒  short(   e) }
-  implicit val     int: Parser[   Int] = make { case Endianness(e) :: 'i' :: Int(   4) ⇒    i32(   e) }
-  implicit val    long: Parser[  Long] = make { case Endianness(e) :: 'i' :: Int(   8) ⇒    i64(   e) }
+  implicit val    _int: Parser[   Int] = make { case Endianness(e) :: 'i' :: Int(   4) ⇒ int(e) }
+  implicit val   _long: Parser[  Long] = make { case Endianness(e) :: 'i' :: Int(   8) ⇒   long(e) }
   implicit val  _float: Parser[ Float] = make { case Endianness(e) :: 'f' :: Int(   4) ⇒  float(   e) }
   implicit val _double: Parser[Double] = make { case Endianness(e) :: 'f' :: Int(   8) ⇒ double(   e) }
   implicit val _string: Parser[String] = make { case           '|' :: 'S' :: Int(size) ⇒ string(size) }
 
   import shapeless._
 
+  /**
+   * The JSON representation of a struct field
+   */
   case class StructEntry(name: String, `type`: String)
   object StructEntry {
     implicit val decoder: Decoder[StructEntry] =
@@ -94,17 +101,36 @@ object Parser {
       def apply(c: HCursor): Return[S] =
         c
           .as[Vector[StructEntry]]
-          .map {
-            _.map { _.`type` }
-          }
           .flatMap {
-            arr ⇒
-              l(arr.toList)
-                .map(
-                  l ⇒
-                    DataType.struct[S, L](g, Lazy(l))
-                )
+            entries ⇒
+              l(entries.toList)
+                .map {
+                  struct(g, _)
+                }
           }
     }
-}
 
+  implicit val untypedStruct: Parser[Struct] =
+    new Parser[Struct] {
+      import cats.implicits._
+      override def apply(c: HCursor): Return[Struct] =
+        c
+          .value
+          .as[Vector[Parser.StructEntry]]
+            .flatMap {
+              _
+                .map {
+                  case Parser.StructEntry(name, tpe) ⇒
+                    get(
+                      tpe,
+                      c
+                    )
+                    .map {
+                      name → _
+                    }
+                }
+                .sequence[Result, (String, DataType)]
+                .map { struct(_) }
+            }
+    }
+}

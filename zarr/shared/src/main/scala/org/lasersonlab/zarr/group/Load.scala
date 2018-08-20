@@ -17,17 +17,17 @@ trait Load[T] {
 }
 object Load {
 
-  implicit def array[T, N <: Nat](
+  implicit def array[T, N <: Nat, Shape](
     implicit
-    v: VectorInts[N],
+    v: VectorInts.Ax[N, Shape],
     d: Decoder[DataType.Aux[T]],
     dt: FillValueDecoder[T]
   ):
     Load[
-      Arr.Aux[T, v.Shape, v.A, Bytes]
+      Arr[T, Shape]
     ] =
-    new Load[Arr.Aux[T, v.Shape, v.A, Bytes]] {
-      override def apply(dir: Path): Exception | Arr.Aux[T, v.Shape, v.A, Bytes] =
+    new Load[Arr[T, Shape]] {
+      override def apply(dir: Path): Exception | Arr[T, Shape] =
         Arr[T, N](dir)
     }
 
@@ -45,7 +45,7 @@ object Load {
     implicit
     h: Lazy[Load[H]],
     t: Lazy[Load[T]],
-    w: Witness.Lt[K]
+    w: Witness.Aux[K]
   ):
     Load[FieldType[K, H] :: T] =
     new Load[FieldType[K, H] :: T] {
@@ -73,4 +73,8 @@ object Load {
       def apply(dir: Path): Exception | T =
         load.value(dir).map { lg.from }
     }
+
+  implicit class Ops(val dir: Path) extends AnyVal {
+    def load[T](implicit l: Load[T]) = l(dir)
+  }
 }

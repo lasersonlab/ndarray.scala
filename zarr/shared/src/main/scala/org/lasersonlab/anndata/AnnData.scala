@@ -5,8 +5,8 @@ import org.lasersonlab.zarr
 import org.lasersonlab.zarr.untyped.Group
 
 case class AnnData[Obs, Var](
-     X : zarr.Array[Float, Ints2],
-   obs : zarr.Array[  Obs, Ints1],
-  `var`: zarr.Array[  Var, Ints1],
+     X : zarr.Array.S[Ints2, Float],
+   obs : zarr.Array.S[Ints1,   Obs],
+  `var`: zarr.Array.S[Ints1,   Var],
    uns : Group
 )

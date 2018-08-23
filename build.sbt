@@ -6,7 +6,7 @@ default(
     hammerlab.          paths → "1.6.0".snapshot,
     hammerlab.          types → "1.4.0".snapshot,
     hammerlab.shapeless_utils → "1.6.0".snapshot,
-    hammerlab.        io → "5.2.0"
+    hammerlab.             io → "5.2.0"
   )
 )
 

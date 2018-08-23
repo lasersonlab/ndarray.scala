@@ -16,10 +16,8 @@ import shapeless.Nat
  * Storage of the ND-array of chunks, as well as the records in each chunk, are each a configurable type-param; see
  * companion-object for some convenient constructors
  */
-trait Array[
-  T,
-  Shape,
-] {
+trait Array[T] {
+  type Shape
   type A[_]
   type Chunk[_]
 
@@ -38,8 +36,11 @@ trait Array[
 
 object Array {
 
-  type Aux[T, Shape, _A[_], _Chunk[_]] =
-    Array[T, Shape] {
+  type S[S, T] = Array[T] { type Shape = S }
+
+  type Aux[T, S, _A[_], _Chunk[_]] =
+    Array[T] {
+      type Shape = S
       type     A[U] =     _A[U]
       type Chunk[U] = _Chunk[U]
     }
@@ -142,41 +143,42 @@ object Array {
 
   def apply[
     T,
-    Shape,
+    _Shape,
     _A[U]
   ](
     dir: Path
   )(
     implicit
     d: Decoder[DataType.Aux[T]],
-    ti: Indices.Aux[_A, Shape],
+    ti: Indices.Aux[_A, _Shape],
     traverse: Traverse[_A],
-    arrayLike: ArrayLike.Aux[_A, Shape],
-    ai: Arithmetic[Shape, Int],
-    scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
-    sum: Sum.Aux[Shape, Int],
+    arrayLike: ArrayLike.Aux[_A, _Shape],
+    ai: Arithmetic[_Shape, Int],
+    scanRight: ScanRight.Aux[_Shape, Int, Int, _Shape],
+    sum: Sum.Aux[_Shape, Int],
     dt: FillValueDecoder[T],
-    arithmetic: Arithmetic.Id[Shape],
-    key: Key[Shape],
-    ds: Decoder[Shape],
+    arithmetic: Arithmetic.Id[_Shape],
+    key: Key[_Shape],
+    ds: Decoder[_Shape],
   ):
     Exception |
-    Aux[T, Shape, _A, Bytes.Aux[?, Shape]]
+    Aux[T, _Shape, _A, Bytes.Aux[?, _Shape]]
   =
     for {
-      _metadata ← Metadata[T, Shape](dir)
+      _metadata ← Metadata[T, _Shape](dir)
       _attrs ← Attrs(dir)
       _chunks ← {
         implicit val md = _metadata
         import Metadata._
-        chunks[T, Shape, _A](
+        chunks[T, _Shape, _A](
           dir,
           md.shape,
           md.chunks
         )
       }
     } yield
-      new Array[T, Shape] {
+      new Array[T] {
+        type Shape = _Shape
         type A[U] = _A[U]
         type Chunk[U] = Bytes.Aux[U, Shape]
 
@@ -200,10 +202,12 @@ object Array {
           )
       }
 
+  //implicit val anyFoldable: Foldable[Array] = ???
+
   import cats.implicits._
-  implicit def foldable[Shape]: Foldable[Array[?, Shape]] =
-    new Foldable[Array[?, Shape]] {
-      type F[A] = Array[A, Shape]
+  implicit def foldable[Shape]: Foldable[Array.S[Shape, ?]] =
+    new Foldable[Array.S[Shape, ?]] {
+      type F[A] = Array.S[Shape, A]
 //      def traverse[G[_], A, B](fa: F[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[F[B]] = {
 //        import fa._
 //        implicit val funct: Traverse[fa.Chunk] = ???

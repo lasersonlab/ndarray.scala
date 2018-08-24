@@ -3,8 +3,6 @@ package org.lasersonlab.zarr
 import cats.implicits._
 import hammerlab.path._
 import hammerlab.shapeless.tlist.{ Map ⇒ _, _ }
-import io.circe.Decoder
-import io.circe.generic.auto._
 import org.lasersonlab.anndata.loom.{ Obs, Var }
 import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.zarr.Compressor.Blosc
@@ -12,7 +10,7 @@ import org.lasersonlab.zarr.Compressor.Blosc.CName
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
-import org.lasersonlab.zarr.dtype.{ DataType, Parser, StructParser }
+import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.dtype.DataType._
 import shapeless.nat._
 
@@ -112,7 +110,9 @@ class ArrayTest
 
     val arr = Array[Long, _1](path).get
 
-    arr.metadata should be(
+    import arr.{ == ⇒ _, _ }
+
+    metadata should be(
       Metadata(
          shape = 27998 :: TNil,
         chunks = 27998 :: TNil,
@@ -131,11 +131,9 @@ class ArrayTest
       )
     )
 
-    ==(arr.attrs, None)
-
-    import arr._
-    arr.chunks.size should be(1)
-    val chunk = arr.chunks(0)
+    ==(attrs, None)
+    chunks.size should be(1)
+    val chunk = chunks(0)
     val bytes = chunk.bytes
     bytes.length should be(223984)
 
@@ -158,7 +156,9 @@ class ArrayTest
 
     val arr = Array[String, _1](path).get
 
-    arr.metadata should be(
+    import arr.{ == ⇒ _, _ }
+
+    metadata should be(
       Metadata(
          shape = 5425 :: TNil,
         chunks = 5425 :: TNil,
@@ -177,15 +177,16 @@ class ArrayTest
       )
     )
 
-    ==(arr.attrs, None)
+    ==(attrs, None)
 
-    arr.chunks.size should be(1)
-    val chunk = arr.chunks(0)
+    chunks.size should be(1)
+
+    val chunk = chunks(0)
+    chunk.size should be(5425)
+
     val bytes = chunk.bytes
     bytes.length should be(27125)
 
-    import arr._
-    chunk.size should be(5425)
     val elems = chunk.toList
     elems.size should be(5425)
     elems.take(10) should be(
@@ -210,11 +211,12 @@ class ArrayTest
     import shapeless._
 
     val arr = Array[Var, _1](path).get
+    val Array(metadata, attrs, chunks) = arr
 
     implicit val stringDataType = string(18)
     val dtype = !![DataType.Aux[Var]]
 
-    arr.metadata should be(
+    metadata should be(
       Metadata(
          shape = 27998 :: TNil,
         chunks = 27998 :: TNil,
@@ -233,14 +235,12 @@ class ArrayTest
       )
     )
 
-    ==(arr.attrs, None)
+    ==(attrs, None)
 
-    arr.chunks.size should be(1)
-    val chunk = arr.chunks(0)
+    chunks.size should be(1)
+    val chunk = chunks(0)
     val bytes = chunk.bytes
     bytes.length should be(1903864)
-
-    import arr._
 
     chunk.size should be(27998)
     val elems = chunk.toList
@@ -265,7 +265,7 @@ class ArrayTest
   test("1-D untyped structs") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr/obs")
 
-    import shapeless._
+    //import shapeless._
 
     val arr = Array[Obs, _1](path).get
 
@@ -405,6 +405,10 @@ class ArrayTest
               ("cDNA_Lib_Ok", byte),
               ("ngperul_cDNA", byte)
             )
+            .map {
+              case       (name, datatype) ⇒
+              StructEntry(name, datatype)
+            }
           ),
         compressor =
           Blosc(

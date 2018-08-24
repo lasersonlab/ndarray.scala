@@ -43,14 +43,14 @@ class GroupTest
         dtype =
           struct(
             Vector(
-              ("index", long),
-              ("Accession", string(18)),
-              ("Gene", short),
-              ("_LogCV", double),
-              ("_LogMean", double),
-              ("_Selected", long),
-              ("_Total", double),
-              ("_Valid", long)
+              StructEntry("index", long),
+              StructEntry("Accession", string(18)),
+              StructEntry("Gene", short),
+              StructEntry("_LogCV", double),
+              StructEntry("_LogMean", double),
+              StructEntry("_Selected", long),
+              StructEntry("_Total", double),
+              StructEntry("_Valid", long)
             )
           ),
         compressor =

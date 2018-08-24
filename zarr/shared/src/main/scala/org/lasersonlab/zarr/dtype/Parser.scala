@@ -6,7 +6,7 @@ import org.hammerlab.lines.Name
 import org.lasersonlab.zarr.dtype.ByteOrder.Endianness
 import org.lasersonlab.zarr.dtype.Parser.Return
 import org.lasersonlab.zarr.untyped.Struct
-import org.lasersonlab.zarr.{ Int, untyped, | }
+import org.lasersonlab.zarr.{ Int, | }
 
 /**
  * Parse some JSON to identify and construct a [[DataType]] for a [[T given type]]
@@ -94,7 +94,7 @@ object Parser {
   implicit def structParser[S, L <: HList, D <: HList](
     implicit
     g: Generic.Aux[S, L],
-    l: StructParser[L, D]
+    l: StructParser[L]
   ):
         Parser[S] =
     new Parser[S] {
@@ -118,24 +118,24 @@ object Parser {
           .value
           .as[
             Vector[
-              Parser.StructEntry
+              StructEntry
             ]
           ]
           .flatMap {
             _
               .map {
-                case Parser.StructEntry(name, tpe) ⇒
+                case StructEntry(name, tpe) ⇒
                   get(
                     tpe,
                     c
                   )
                   .map {
-                    name → _
+                    DataType.StructEntry(name, _)
                   }
               }
               .sequence[
                 Result,
-                (String, DataType)
+                DataType.StructEntry
               ]
               .map { struct(_) }
           }

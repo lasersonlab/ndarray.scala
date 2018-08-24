@@ -1,58 +1,20 @@
 package org.lasersonlab.zarr.group
 
-import cats.Foldable
 import hammerlab.either._
 import hammerlab.path._
 import io.circe.Decoder
-import org.lasersonlab.ndarray.Bytes
-import org.lasersonlab.ndarray.Ints.Ints1
-import org.lasersonlab.zarr
 import org.lasersonlab.zarr.FillValue.FillValueDecoder
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.untyped.Group
+import org.lasersonlab.zarr.{ VectorInts, Array ⇒ Arr }
 import shapeless.labelled._
-import shapeless.{ Path ⇒ _, Witness ⇒ W, _ }
-import zarr.{ VectorInts, Array ⇒ Arr }
+import shapeless.{ Witness ⇒ W, Path ⇒ _, _ }
 
 trait Load[T] {
   def apply(dir: Path): Exception | T
 }
-trait LowPriLoad {
-//  implicit def cons[H, T <: HList](
-//    implicit
-//    h: Lazy[Load[H]],
-//    t: Lazy[Load[T]]
-//  ):
-//    Load[H :: T] =
-//    new Load[H :: T] {
-//      def apply(dir: Path):
-//        Exception |
-//        (H :: T)
-//      = {
-//        for {
-//          h ← h.value(dir / w.value)
-//          t <- t.value(dir)
-//        } yield
-//          field[K](h) :: t
-//      }
-//    }
-}
-object Load
-  extends LowPriLoad {
 
-//  implicit def unshaped[T, N <: Nat](
-//    implicit
-//    v: VectorInts[N],
-//    d: Decoder[DataType.Aux[T]],
-//    dt: FillValueDecoder[T]
-//  ):
-//    Load[
-//      Arr[T]
-//    ] =
-//    new Load[Arr[T]] {
-//      override def apply(dir: Path): Exception | Arr[T] =
-//        Arr[T, N](dir)
-//    }
+object Load {
 
   implicit def array[T, N <: Nat, Shape](
     implicit

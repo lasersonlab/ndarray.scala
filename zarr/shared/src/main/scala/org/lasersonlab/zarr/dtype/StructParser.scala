@@ -6,19 +6,19 @@ import org.lasersonlab.zarr.|
 import shapeless._
 import DataType.StructList
 
-trait StructParser[L <: HList, D <: HList] {
+trait StructParser[L <: HList] {
   import StructParser.Return
-  def apply(c: List[StructEntry]): Return[L, D]
+  def apply(c: List[StructEntry]): Return[L]
 }
 
 object StructParser {
   import DataType.Struct
-  type Return[L <: HList, D <: HList] = DecodingFailure | StructList[L, D]
+  type Return[L <: HList] = DecodingFailure | StructList[L]
 
   implicit val hnil:
-        StructParser[HNil, HNil] =
-    new StructParser[HNil, HNil] {
-      def apply(c: List[StructEntry]): Return[HNil, HNil] =
+        StructParser[HNil] =
+    new StructParser[HNil] {
+      def apply(c: List[StructEntry]): Return[HNil] =
         c match {
           case Nil ⇒ Right(DataType.hnil)
           case l ⇒
@@ -39,11 +39,11 @@ object StructParser {
     implicit
     // TODO: making these both Lazy breaks [[Parser.structParser]] derivation; why?
     head: Parser[Head],
-    tail: StructParser[Tail, DTail]
+    tail: StructParser[Tail]
   ):
-        StructParser[Head :: Tail, DataType.StructEntry[Head] :: DTail] =
-    new StructParser[Head :: Tail, DataType.StructEntry[Head] :: DTail] {
-      def apply(entries: List[StructEntry]): Return[Head :: Tail, DataType.StructEntry[Head] :: DTail] =
+        StructParser[Head :: Tail] =
+    new StructParser[Head :: Tail] {
+      def apply(entries: List[StructEntry]): Return[Head :: Tail] =
         entries match {
           case Nil ⇒
             Left(
@@ -64,7 +64,7 @@ object StructParser {
                 )
               t ← tail(rest)
             } yield
-              DataType.cons[Head, Tail, DTail](h, t)
+              DataType.cons[Head, Tail](h, t)
         }
     }
 }

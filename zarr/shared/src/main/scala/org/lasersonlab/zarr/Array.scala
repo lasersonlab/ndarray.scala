@@ -31,6 +31,8 @@ trait Array[T] {
 
   def metadata: Metadata[T, Shape]
   def chunks: A[Chunk[T]]
+
+  // TODO: this should be type-parameterizable, and validated accordingly during JSON-parsing
   def attrs: Opt[Attrs]
 }
 
@@ -44,6 +46,22 @@ object Array {
       type     A[U] =     _A[U]
       type Chunk[U] = _Chunk[U]
     }
+
+  def unapply[T](a: Array[T]):
+    Option[
+      (
+        Metadata[T, a.Shape],
+        Option[Attrs],
+        a.A[a.Chunk[T]]
+      )
+    ] =
+    Some(
+      (
+        a.metadata,
+        a.attrs,
+        a.chunks
+      )
+    )
 
   /**
    * Load an ND-array of chunks from a [[Path directory]]
@@ -202,39 +220,10 @@ object Array {
           )
       }
 
-  //implicit val anyFoldable: Foldable[Array] = ???
-
   import cats.implicits._
   implicit def foldable[Shape]: Foldable[Array.S[Shape, ?]] =
     new Foldable[Array.S[Shape, ?]] {
       type F[A] = Array.S[Shape, A]
-//      def traverse[G[_], A, B](fa: F[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[F[B]] = {
-//        import fa._
-//        implicit val funct: Traverse[fa.Chunk] = ???
-//        chunks
-//          .map {
-//            chunk ⇒
-//              chunk
-//                .map(f)
-//                .sequence
-//          }
-//          .sequence
-//          .map {
-//            _chunks ⇒
-//              new Array[B, Shape] {
-//                type A[U] = fa.A[U]
-//                type Chunk[U] = fa.Chunk[U]
-//                implicit def traverseA: Traverse[A] = fa.traverseA
-//                implicit def foldableChunk: Foldable[Chunk] = fa.foldableChunk
-//                val shape: Shape = fa.shape
-//                val chunkShape: Shape = fa.chunkShape
-//                def apply(idx: Shape): B = ???
-//                def metadata: Metadata[B, Shape] = ???
-//                val chunks = _chunks
-//                def attrs: option.Opt[Attrs] = fa.attrs
-//              }
-//          }
-//      }
 
       def foldLeft[A, B](fa: F[A], b: B)(f: (B, A) ⇒ B): B =
         fa

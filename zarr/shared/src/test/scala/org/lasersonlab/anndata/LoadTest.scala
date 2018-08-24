@@ -5,12 +5,10 @@ import hammerlab.path._
 import hammerlab.shapeless.tlist._
 import org.lasersonlab.anndata.loom.{ Obs, Var }
 import org.lasersonlab.zarr.Suite
-import org.lasersonlab.zarr.group.Load
-import Load.Ops
-import org.hammerlab.cmp.CanEq.Cmp
-import org.hammerlab.cmp.{ CanEq, Cmp }
-import org.lasersonlab.zarr.dtype.{ DataType, Parser, StructParser }
+import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.dtype.DataType.string
+import org.lasersonlab.zarr.group.Load
+import org.lasersonlab.zarr.group.Load.Ops
 import shapeless.Generic
 
 class LoadTest

@@ -17,7 +17,7 @@ class MetadataTest
   test("1-D chars") {
     decode[
       untyped.Metadata
-      ](
+    ](
       `col_attrs/DonorID/.zarray`
     ) should be(
       Right(

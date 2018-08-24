@@ -33,7 +33,7 @@ trait Bytes[T] {
 }
 
 object Bytes {
-  type Aux[T, _Shape] = ndarray.Bytes[T] { type Shape = _Shape }
+  type Aux[_Shape, T] = ndarray.Bytes[T] { type Shape = _Shape }
 
   case class Bytes[
     T,
@@ -68,9 +68,9 @@ object Bytes {
       def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = ???
     }
 
-  def foldableAux[Shape]: Foldable[Aux[?, Shape]] =
-    new Foldable[Aux[?, Shape]] {
-      type F[A] = Aux[A, Shape]
+  def foldableAux[Shape]: Foldable[Aux[Shape, ?]] =
+    new Foldable[Aux[Shape, ?]] {
+      type F[A] = Aux[Shape, A]
       def foldLeft[A, B](fa: F[A], b: B)(f: (B, A) ⇒ B): B = {
         var ret = b
         var idx = 0
@@ -83,10 +83,10 @@ object Bytes {
       def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = ???
     }
 
-  implicit def arrayLike[S]: ArrayLike.Aux[Aux[?, S], S] =
-    new ArrayLike[Aux[?, S]] {
+  implicit def arrayLike[S]: ArrayLike.Aux[Aux[S, ?], S] =
+    new ArrayLike[Aux[S, ?]] {
       type Shape = S
-      @inline def shape(a: Aux[_, S]): Shape = a.shape
-      def apply[T](a: Aux[T, Shape], idx: Shape): T = a(idx)
+      @inline def shape(a: Aux[S, _]): Shape = a.shape
+      def apply[T](a: Aux[Shape, T], idx: Shape): T = a(idx)
     }
 }

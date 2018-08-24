@@ -90,7 +90,7 @@ object ToArray
   implicit def bytes[
     T,
     Idx <: TList.Aux[Int],
-    B <: Bytes.Aux[T, Idx]
+    B <: Bytes.Aux[Idx, T]
   ]:
     Aux[
       B,

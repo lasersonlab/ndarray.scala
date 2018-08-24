@@ -1,11 +1,10 @@
 package org.lasersonlab.zarr
 
-import cats.{ Applicative, Eval, Foldable, Functor, Traverse }
-import hammerlab.option
+import cats.{ Eval, Foldable, Traverse }
 import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder
-import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, Bytes, ScanRight, Sum, ToArray }
+import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, Bytes, ScanRight, Sum }
 import org.lasersonlab.zarr.FillValue.FillValueDecoder
 import org.lasersonlab.zarr.dtype.DataType
 import shapeless.Nat
@@ -40,7 +39,7 @@ object Array {
 
   type S[S, T] = Array[T] { type Shape = S }
 
-  type Aux[T, S, _A[_], _Chunk[_]] =
+  type Aux[S, _A[_], _Chunk[_], T] =
     Array[T] {
       type Shape = S
       type     A[U] =     _A[U]
@@ -86,7 +85,7 @@ object Array {
      compressor: Compressor,
   ):
     Exception |
-    A[Bytes.Aux[T, Shape]]
+    A[Bytes.Aux[Shape, T]]
   = {
 
     val chunkRanges = (arrShape + chunkShape - 1) / chunkShape
@@ -118,7 +117,7 @@ object Array {
     chunks
       .sequence[
         Exception | ?,
-        Bytes.Aux[T, Shape]
+        Bytes.Aux[Shape, T]
       ]
   }
 
@@ -140,7 +139,8 @@ object Array {
     dt: FillValueDecoder[T],
   ):
     Exception |
-    Aux[T, v.Shape, v.A, Bytes.Aux[?, v.Shape]]
+    S[v.Shape, T]
+//    Aux[v.Shape, v.A, Bytes.Aux[v.Shape, ?], T]
   = {
     import v._
     apply[T, v.Shape, v.A](dir)(
@@ -180,7 +180,7 @@ object Array {
     ds: Decoder[_Shape],
   ):
     Exception |
-    Aux[T, _Shape, _A, Bytes.Aux[?, _Shape]]
+    Aux[_Shape, _A, Bytes.Aux[_Shape, ?], T]  // TODO: replace Bytes with something lazy / network-based
   =
     for {
       _metadata ← Metadata[T, _Shape](dir)
@@ -198,7 +198,7 @@ object Array {
       new Array[T] {
         type Shape = _Shape
         type A[U] = _A[U]
-        type Chunk[U] = Bytes.Aux[U, Shape]
+        type Chunk[U] = Bytes.Aux[Shape, U]
 
         override val traverseA = traverse
         override val foldableChunk = Bytes.foldableAux
@@ -221,6 +221,8 @@ object Array {
       }
 
   import cats.implicits._
+//  implicit def foldableAux[Shape, A[_]]: Foldable[Aux[Shape, A, Bytes, ?]] = ???
+
   implicit def foldable[Shape]: Foldable[Array.S[Shape, ?]] =
     new Foldable[Array.S[Shape, ?]] {
       type F[A] = Array.S[Shape, A]

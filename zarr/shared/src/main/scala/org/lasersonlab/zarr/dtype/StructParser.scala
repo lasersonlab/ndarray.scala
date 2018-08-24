@@ -4,20 +4,21 @@ import io.circe.{ DecodingFailure, HCursor, Json }
 import org.lasersonlab.zarr.dtype.Parser.StructEntry
 import org.lasersonlab.zarr.|
 import shapeless._
+import DataType.StructList
 
-trait StructParser[L <: HList] {
+trait StructParser[L <: HList, D <: HList] {
   import StructParser.Return
-  def apply(c: List[StructEntry]): Return[L]
+  def apply(c: List[StructEntry]): Return[L, D]
 }
 
 object StructParser {
   import DataType.Struct
-  type Return[T] = DecodingFailure | Struct[T]
+  type Return[L <: HList, D <: HList] = DecodingFailure | StructList[L, D]
 
   implicit val hnil:
-        StructParser[HNil] =
-    new StructParser[HNil] {
-      def apply(c: List[StructEntry]): Return[HNil] =
+        StructParser[HNil, HNil] =
+    new StructParser[HNil, HNil] {
+      def apply(c: List[StructEntry]): Return[HNil, HNil] =
         c match {
           case Nil ⇒ Right(DataType.hnil)
           case l ⇒
@@ -32,15 +33,17 @@ object StructParser {
 
   implicit def cons[
     Head,
-    Tail <: HList
+    Tail <: HList,
+    DTail <: HList
   ](
     implicit
-    head: Lazy[Parser[Head]],
-    tail: Lazy[StructParser[Tail]]
+    // TODO: making these both Lazy breaks [[Parser.structParser]] derivation; why?
+    head: Parser[Head],
+    tail: StructParser[Tail, DTail]
   ):
-        StructParser[Head :: Tail] =
-    new StructParser[Head :: Tail] {
-      def apply(entries: List[StructEntry]): Return[Head :: Tail] =
+        StructParser[Head :: Tail, DataType.StructEntry[Head] :: DTail] =
+    new StructParser[Head :: Tail, DataType.StructEntry[Head] :: DTail] {
+      def apply(entries: List[StructEntry]): Return[Head :: Tail, DataType.StructEntry[Head] :: DTail] =
         entries match {
           case Nil ⇒
             Left(
@@ -52,15 +55,16 @@ object StructParser {
           case scala.::(StructEntry(name, tpe), rest) ⇒
             for {
               h ←
-                head.value(
+                head(
                   HCursor.fromJson(
                     Json.fromString(
-                      tpe)
+                      tpe
+                    )
                   )
                 )
-              t ← tail.value(rest)
+              t ← tail(rest)
             } yield
-              DataType.cons[Head, Tail](h, Lazy(t))
+              DataType.cons[Head, Tail, DTail](h, t)
         }
     }
 }

@@ -3,6 +3,7 @@ package org.lasersonlab.zarr
 import cats.implicits._
 import hammerlab.path._
 import hammerlab.shapeless.tlist.{ Map ⇒ _, _ }
+import io.circe.Decoder
 import io.circe.generic.auto._
 import org.lasersonlab.anndata.loom.{ Obs, Var }
 import org.lasersonlab.ndarray.Ints._
@@ -11,7 +12,7 @@ import org.lasersonlab.zarr.Compressor.Blosc.CName
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
-import org.lasersonlab.zarr.dtype.DataType
+import org.lasersonlab.zarr.dtype.{ DataType, Parser, StructParser }
 import org.lasersonlab.zarr.dtype.DataType._
 import shapeless.nat._
 
@@ -210,11 +211,14 @@ class ArrayTest
 
     val arr = Array[Var, _1](path).get
 
+    implicit val stringDataType = string(18)
+    val dtype = !![DataType.Aux[Var]]
+
     arr.metadata should be(
       Metadata(
          shape = 27998 :: TNil,
         chunks = 27998 :: TNil,
-        dtype = Var.dtype,
+        dtype = dtype,
         compressor =
           Blosc(
             cname = CName.lz4,

@@ -2,18 +2,22 @@ package org.lasersonlab.zarr.dtype
 
 import java.nio.ByteBuffer
 
+import cats.Eq
 import io.circe.Decoder.Result
 import io.circe.DecodingFailure.fromThrowable
 import io.circe.{ Decoder, DecodingFailure, HCursor }
 import org.lasersonlab.ndarray.io.Read
-import org.lasersonlab.zarr.{ untyped, | }
+import org.lasersonlab.zarr
+import org.lasersonlab.zarr.{ dtype, untyped, | }
+import shapeless.ops.hlist.LiftAll
+import shapeless.{ :+:, CNil, Generic, HList, the }
 
 import scala.util.Try
 
 /**
  * Representation of a Zarr record-type; includes functionality for reading a record from a [[ByteBuffer]]
  */
-sealed abstract class DataType {
+sealed trait DataType {
   def size: Int
   type T
   def apply(buff: ByteBuffer): T
@@ -43,72 +47,240 @@ trait DataTypeStructDerivations {
   }
 
   // TODO: make the parsing just use the entries?
-  case class Struct[S](
-    entries: List[StructEntry[_]]
+  case class Struct[
+    S,
+    L <: HList,
+    D <: HList
+  ](
+    entries: StructList[L, D]
   )(
-    fn: ByteBuffer ⇒ S
+    implicit
+    g: Generic.Aux[S, L]
   )
   extends DataType {
-    val size: Int = entries.map(_.size).sum
+    val size: Int = entries.size
     override type T = S
+    @inline def apply(buff: ByteBuffer): T = g.from(entries(buff))
+  }
+
+  case class StructList[
+    L <: HList,
+    D <: HList
+  ](
+    entries: D,
+    size: Int
+  )(
+    fn: ByteBuffer ⇒ L
+  )(
+    implicit
+    val ev: LiftAll.Aux[StructEntry, L, D]
+  )
+  extends DataType {
+    type T = L
     @inline def apply(buff: ByteBuffer): T = fn(buff)
   }
 
-  implicit val hnil: Struct[HNil] = Struct(Nil)(_ ⇒ HNil)
+  implicit val hnil: StructList[HNil, HNil] =
+    StructList[
+      HNil,
+      HNil
+    ](
+      entries = HNil,
+      size = 0
+    )(
+      _ ⇒ HNil
+    )
 
   implicit def cons[
     Head,
-    Tail <: HList
+    Tail <: HList,
+    DTail <: HList
   ](
     implicit
     head: Aux[Head],
-    tail: Lazy[Struct[Tail]]
-  ): Struct[Head :: Tail] =
-    Struct(
-      scala.::(
-        StructEntry(
-          head.toString,
-          head
-        ),
-        tail.value.entries
+    tail: StructList[Tail, DTail],
+  ):
+    StructList[
+      Head :: Tail,
+      StructEntry[Head] :: DTail
+    ]
+  = {
+    implicit val headEntry =
+      StructEntry(
+        head.toString,
+        head
       )
-    ) {
+
+    import tail._
+
+    StructList(
+      headEntry :: tail.entries,
+      head.size  + tail.size
+    )(
       buff ⇒
-        val h = head(buff)
-        val t = tail.value(buff)
-        h :: t
-    }
+        head(buff) ::
+        tail(buff)
+    )
+  }
 
   implicit def _struct[
-     S,
-     L <: HList
+    S,
+    L <: HList,
+    D <: HList
   ](
     implicit
     g: Generic.Aux[S, L],
-    l: Lazy[Struct[L]]
+    l: StructList[L, D]
   ):
     Aux[S] =
-    struct[S, L](g, l.value)
+    struct[S, L, D](g, l)
 
   def struct[
-     S,
-     L <: HList
+    S,
+    L <: HList,
+    D <: HList
   ](
     implicit
     g: Generic.Aux[S, L],
-    l: Struct[L]
+    entries: StructList[L, D]
   ):
-    Struct[S] =
-    Struct(l.entries) {
-      buff ⇒
-        g.from(
-          l(buff)
-        )
-    }
+    Aux[S] =
+    Struct(entries)
 }
 
 object DataType
   extends DataTypeStructDerivations {
+
+//  implicit val generic:
+//    Generic.Aux[
+//      DataType,
+//      byte :+:
+//      short :+:
+//      int :+:
+//      long :+:
+//      float :+:
+//      double :+:
+//      string :+:
+//      struct :+:
+//      Struct[_, _, _] :+:
+//      StructList[_, _] :+:
+//      CNil
+//    ] =
+//    new Generic[DataType] {
+//      type Repr =
+//        byte :+:
+//        short :+:
+//        int :+:
+//        long :+:
+//        float :+:
+//        double :+:
+//        string :+:
+//        struct :+:
+//        Struct[_, _, _] :+:
+//        StructList[_, _] :+:
+//        CNil
+//
+//      def to(t: DataType): Repr = ???
+//      def from(r: Repr): DataType = ???
+//    }
+
+  lazy val structEq: Eq[struct] =
+    Eq.by[
+      struct,
+      List[
+        (
+          String,
+          DataType
+        )
+      ]
+    ](
+      _
+        .entries
+        .toList
+    )(
+      structEntriesEq
+    )
+
+  val structEntriesEq: Eq[List[(String, DataType)]] =
+    new Eq[List[(String, DataType)]] {
+      def eqv(x: List[(String, DataType)], y: List[(String, DataType)]): Boolean =
+        (x, y) match {
+          case (Nil, Nil) ⇒ true
+          case ((nx, dx) :: tx, (ny, dy) :: ty) ⇒
+            nx == ny &&
+            dataTypeEq.eqv(dx, dy) &&
+            eqv(tx, ty)
+          case _ ⇒ false
+        }
+    }
+
+  implicit val dataTypeEq: Eq[DataType] =
+    new Eq[DataType] {
+      import cats.implicits.catsKernelStdOrderForInt
+      import cats.derived.auto.eq._
+      the[Eq[byte.type]]
+      the[Eq[int]]
+      the[Eq[short]]
+      the[Eq[long]]
+      the[Eq[float]]
+      the[Eq[double]]
+      the[Eq[string]]
+      val primitive = the[Eq[Primitive]]
+      val hlistEq: Eq[HList] = ??? //the[Eq[HList]]
+
+      //val Struct = the[Eq[DataType.Struct[_, _, _]]]
+      def eqv(x: DataType, y: DataType): Boolean =
+        (x, y) match {
+          case (x: Primitive, y: Primitive) ⇒ primitive.eqv(x, y)
+          case (x: struct, y: struct) ⇒ structEq.eqv(x, y)
+          case (Struct(StructList(xEntries, xSize)), Struct(StructList(yEntries, ySize))) ⇒
+            hlistEq.eqv(xEntries, yEntries) &&
+            x.size == y.size
+          case (StructList(xEntries, xSize), StructList(yEntries, ySize)) ⇒
+            hlistEq.eqv(xEntries, yEntries) &&
+              x.size == y.size
+          case _ ⇒ false
+        }
+    }
+
+//  val StructEq: Eq[Struct[_, _, _]] = Eq.by[Struct[_, _, _], StructList[_, _]](_.entries)(StructListEq)
+//
+//  val StructListEq: Eq[StructList[_, _]] =
+//    new Eq[StructList[_, _]] {
+//      val hlistEq = the[Eq[HList]]
+//      def eqv(x: StructList[_, _], y: StructList[_, _]): Boolean =
+//        hlistEq.eqv(x.entries, y.entries) &&
+//        x.size == y.size
+//    }
+
+//  implicit def genericAux[T]:
+//    Generic.Aux[
+//      Aux[T],
+//      byte :+:
+//        short :+:
+//        int :+:
+//        long :+:
+//        float :+:
+//        double :+:
+//        string :+:
+//        CNil
+//      ] =
+//    new Generic[Aux[T]] {
+//      type Repr =
+//        byte :+:
+//          short :+:
+//          int :+:
+//          long :+:
+//          float :+:
+//          double :+:
+//          string :+:
+//          CNil
+//
+//      def to(t: Aux[T]): Repr = ???
+//
+//      def from(r: Repr): Aux[T] = ???
+//    }
+
 
   sealed abstract class Primitive(
     val order: ByteOrder,
@@ -132,7 +304,6 @@ object DataType
   type Order = ByteOrder
 
   import org.lasersonlab.zarr.dtype.{ DType ⇒ d }
-  //import DType.{ float ⇒ flt, string ⇒ str, _ }
 
   val `0` = 0.toByte
 
@@ -160,8 +331,10 @@ object DataType
     }
   }
 
+  type byte = byte.type
+
   object  short { implicit def apply(v:  short.type)(implicit endianness: Endianness): Aux[ Short] =  short(endianness) }
-  object    int { implicit def apply(v:    int.type)(implicit endianness: Endianness): Aux[   Int] = int(endianness) }
+  object    int { implicit def apply(v:    int.type)(implicit endianness: Endianness): Aux[   Int] =    int(endianness) }
   object   long { implicit def apply(v:   long.type)(implicit endianness: Endianness): Aux[  Long] =   long(endianness) }
   object  float { implicit def apply(v:  float.type)(implicit endianness: Endianness): Aux[ Float] =  float(endianness) }
   object double { implicit def apply(v: double.type)(implicit endianness: Endianness): Aux[Double] = double(endianness) }

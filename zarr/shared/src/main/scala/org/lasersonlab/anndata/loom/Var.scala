@@ -20,6 +20,6 @@ object Var {
   val empty = Empty[Var]()
 
   // used for deriving DataType.Aux[Var] below
-  private implicit val stringDataType = string(18)
-  val dtype = the[DataType.Aux[Var]]
+//  private implicit val stringDataType = string(18)
+//  val dtype = the[DataType.Aux[Var]]
 }

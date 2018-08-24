@@ -91,10 +91,10 @@ object Parser {
       }
   }
 
-  implicit def structParser[S, L <: HList](
+  implicit def structParser[S, L <: HList, D <: HList](
     implicit
     g: Generic.Aux[S, L],
-    l: StructParser[L]
+    l: StructParser[L, D]
   ):
         Parser[S] =
     new Parser[S] {
@@ -116,21 +116,28 @@ object Parser {
       override def apply(c: HCursor): Return[Struct] =
         c
           .value
-          .as[Vector[Parser.StructEntry]]
-            .flatMap {
-              _
-                .map {
-                  case Parser.StructEntry(name, tpe) ⇒
-                    get(
-                      tpe,
-                      c
-                    )
-                    .map {
-                      name → _
-                    }
-                }
-                .sequence[Result, (String, DataType)]
-                .map { struct(_) }
-            }
+          .as[
+            Vector[
+              Parser.StructEntry
+            ]
+          ]
+          .flatMap {
+            _
+              .map {
+                case Parser.StructEntry(name, tpe) ⇒
+                  get(
+                    tpe,
+                    c
+                  )
+                  .map {
+                    name → _
+                  }
+              }
+              .sequence[
+                Result,
+                (String, DataType)
+              ]
+              .map { struct(_) }
+          }
     }
 }

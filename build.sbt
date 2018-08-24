@@ -70,6 +70,7 @@ lazy val zarr = project.in(new File("zarr/shared")).settings(
     hammerlab.shapeless_utils,
     hammerlab.types,
 
+    "org.typelevel" ^^ "kittens" ^ "1.1.0",
     "org.blosc" ^ "jblosc" ^ "1.0.1" snapshot
   ),
   addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.7" cross CrossVersion.binary),

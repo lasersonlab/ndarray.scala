@@ -107,30 +107,4 @@ object Metadata {
           }
       }
     }
-
-//  implicit def structDecoder[Shape: Decoder]: Decoder[Metadata[Struct, Shape]] =
-//    new Decoder[Metadata[Struct, Shape]] {
-//      def apply(c: HCursor): Result[Metadata[Struct, Shape]] =
-//        c
-//          .downField("dtype")
-//          .success
-//          .fold[DecodingFailure | HCursor](
-//            Left(
-//              DecodingFailure(
-//                "Didn't find `dtype` field in Metadata",
-//                c.history
-//              )
-//            )
-//          )(
-//            Right(_)
-//          )
-//          .flatMap {
-//            Parser.untypedStruct(_)
-//          }
-//          .flatMap {
-//            implicit datatype ⇒
-//              import io.circe.generic.auto._
-//              exportDecoder[Metadata[Struct, Shape]].instance(c)
-//          }
-//    }
 }

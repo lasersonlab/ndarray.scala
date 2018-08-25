@@ -3,8 +3,8 @@ package org.lasersonlab.zarr
 import java.nio.ByteBuffer
 import java.util.Base64
 
-import io.circe.Decoder.Result
 import io.circe.{ Decoder, DecodingFailure, HCursor, Json }
+import org.lasersonlab.zarr.FillValue.FillValueDecoder.Result
 import org.lasersonlab.zarr.dtype.DataType
 
 import scala.util.Try
@@ -12,8 +12,6 @@ import scala.util.Try
 sealed trait FillValue[+T]
 
 object FillValue {
-
-  import org.relaxng.datatype.Datatype
 
   implicit def apply[T](t: T): FillValue[T] = NonNull(t)
 
@@ -46,34 +44,39 @@ object FillValue {
           datatype: DataType.Aux[T]
          ):
           Result[T] =
-          json
-            .as[String]
-            .flatMap {
-              str ⇒
-                Try {
-                  datatype(
-                    ByteBuffer.wrap(
-                      Base64
-                        .getDecoder
-                        .decode(str)
-                    )
-                  )
-                }
-                .fold[Result[T]](
-                  err ⇒
-                    Left(
-                      DecodingFailure.fromThrowable(
-                        err,
-                        Nil
+          if (json.isNull)
+            Right(Null)
+          else
+            json
+              .as[String]
+              .flatMap {
+                str ⇒
+                  Try {
+                    datatype(
+                      ByteBuffer.wrap(
+                        Base64
+                          .getDecoder
+                          .decode(str)
                       )
-                    ),
-                  Right(_)
-                )
-            }
+                    )
+                  }
+                  .fold[Result[T]](
+                    err ⇒
+                      Left(
+                        DecodingFailure.fromThrowable(
+                          err,
+                          Nil
+                        )
+                      ),
+                    Right(_)
+                  )
+              }
       }
   }
   object FillValueDecoder
     extends StructDecoder {
+
+    type Result[T] = Decoder.Result[FillValue[T]]
 
     private def make[T](implicit d: Decoder[T]): FillValueDecoder[T] =
       new FillValueDecoder[T] {
@@ -82,7 +85,12 @@ object FillValue {
          * always the same size), e.g. numeric types.
          */
         def apply(json: Json, unused: DataType.Aux[T]): Result[T] =
-          d.decodeJson(json)
+          if (json.isNull)
+            Right(Null)
+          else
+            d
+              .decodeJson(json)
+              .map(FillValue(_))
       }
 
     implicit val   byte: FillValueDecoder[  Byte] = make[  Byte]
@@ -91,6 +99,38 @@ object FillValue {
     implicit val    i64: FillValueDecoder[  Long] = make[  Long]
     implicit val  float: FillValueDecoder[ Float] = make[ Float]
     implicit val double: FillValueDecoder[Double] = make[Double]
+    implicit val string: FillValueDecoder[String] =
+      new FillValueDecoder[String] {
+        val base64Decoder = decoder[String]
+        def apply(json: Json, datatype: DataType.Aux[String]): Result[String] =
+          if (json.isNull)
+            Right(Null)
+          else
+            json
+              .as[String]
+              .flatMap {
+                // TODO: this is probably a bug in the spec (or reference implementation): zarr datasets in the wild use
+                // "" as `fill_value` for "string" datatypes (e.g. "|S12"), but the spec says:
+                //
+                // """
+                // If an array has a fixed length byte string data type (e.g., "|S12"), or a structured data type, and
+                // if the fill value is not null, then the fill value MUST be encoded as an ASCII string using the
+                // standard Base64 alphabet.
+                // """
+                //
+                // In my reading, the `fill_value` for "|S12" should be either `null` or e.g. "AAAAAAAAAAAAAAAA=" to
+                // represent an empty string; "" is not a valid base64-encoded 12-byte string… or, if it is, what about
+                // other base64-encoded strings of length less than 16 (corresponding to 12 decoded bytes)? Are we only
+                // providing the least-significant bytes / a suffix of the actual value, and assuming left-padding with
+                // 0's ("A"s)?
+                case "" ⇒ Right("")
+                case _ ⇒
+                  base64Decoder(
+                    json,
+                    datatype
+                  )
+              }
+      }
   }
 
   /**
@@ -98,12 +138,8 @@ object FillValue {
    * known, because e.g. [[string]] fields are encoded as a specific length that is not captured in the decoded
    * [[String]] type (which also affects parsing of [[Struct typed]] and [[struct untyped]] structs).
    *
-   * We implement
- *
-   * @param d
-   * @param datatype
-   * @tparam T
-   * @return
+   * [[Metadata]]-parsing machinery needs to open the JSON, parse the [[DataType]], and then make that implicitly
+   * available in order to get [[FillValue]]-decoding
    */
   implicit def decoder[T](
     implicit
@@ -114,13 +150,10 @@ object FillValue {
       FillValue[T]
     ] =
     new Decoder[FillValue[T]] {
-      def apply(c: HCursor): Result[FillValue[T]] =
+      def apply(c: HCursor): Result[T] =
         d(
           c.value,
           datatype
-        )
-        .map(
-          FillValue(_)
         )
     }
 
@@ -130,6 +163,6 @@ object FillValue {
    */
   implicit val decodeJson: Decoder[FillValue[Json]] =
     new Decoder[FillValue[Json]] {
-      def apply(c: HCursor): Result[FillValue[Json]] = Right(c.value)
+      def apply(c: HCursor): Result[Json] = Right(c.value)
     }
 }

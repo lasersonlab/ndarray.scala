@@ -55,9 +55,21 @@ trait TListDecoders {
 object TListDecoders extends TListDecoders
 
 trait TListEncoders {
-  implicit def encodeAsSeq[T <: TList](implicit tolist: ToList[T]): Encoder[T] =
+  implicit def encodeAsSeq[T <: TList, E](
+    implicit
+    encode: Encoder[E],
+    tolist: ToList.Aux[E, T]
+  ):
+    Encoder[T] =
     new Encoder[T] {
-      def apply(t: T): Json = Json.arr(tolist(t): _*)
+      def apply(t: T): Json =
+        Json.arr(
+          tolist(t)
+            .map(
+              encode(_)
+            ):
+            _*
+        )
     }
 }
 

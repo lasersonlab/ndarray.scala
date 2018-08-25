@@ -7,14 +7,15 @@ import io.circe.generic.auto._
 import io.circe.parser._
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr._
+import org.lasersonlab.zarr.group.Basename
 
 case class Group(
-  arrays: Map[String, untyped.Array],
+  arrays: Map[String, Array],
   groups: Map[String, Group],
   attrs: Opt[Attrs] = None
 ) {
-  def array(name: Str): untyped.Array = arrays(name)
-  def group(name: Str):         Group = groups(name)
+  def array(name: Str): Array = arrays(name)
+  def group(name: Str): Group = groups(name)
 }
 
 object Group {
@@ -23,6 +24,8 @@ object Group {
   )
   object Metadata {
     val basename = ".zgroup"
+    implicit val _basename = Basename[Metadata](basename)
+
     def apply(dir: Path): Exception | Metadata =
       dir ? basename flatMap {
         path ⇒
@@ -50,8 +53,8 @@ object Group {
       metadata ← Metadata(dir)
          attrs ←    Attrs(dir)
 
-      arrays = Map.newBuilder[String, untyped.Array]
-      groups = Map.newBuilder[String,         Group]
+      arrays = Map.newBuilder[String, Array]
+      groups = Map.newBuilder[String, Group]
 
       group ←
         dir
@@ -62,7 +65,7 @@ object Group {
           .map {
             path: Path ⇒
               /** First, try to parse as an [[Array]] */
-              untyped.Array(path)
+              Array(path)
                 .fold(
                   arrayError ⇒
                     /** If that failed, parse as a [[Group]] */

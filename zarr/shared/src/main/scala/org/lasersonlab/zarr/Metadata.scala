@@ -4,8 +4,8 @@ import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder.Result
 import io.circe.parser._
-import io.circe.{ Decoder, DecodingFailure, HCursor }
-import org.lasersonlab.zarr.FillValue.{ FillValueDecoder, Null }
+import io.circe._
+import org.lasersonlab.zarr.FillValue.{ FillValueDecoder, FillValueEncoder, Null }
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.group.Basename
@@ -105,6 +105,29 @@ object Metadata {
               import io.circe.generic.auto._
               exportDecoder[Metadata[T, Shape]].instance(c)
           }
+      }
+    }
+
+  implicit def encoder[
+    T: FillValueEncoder,
+    Shape: Encoder
+  ](
+    implicit
+    datatypeEncoder: Encoder[DataType.Aux[T]]
+  ):
+    Encoder[
+      Metadata[
+        T,
+        Shape
+      ]
+    ]
+  =
+    new Encoder[Metadata[T, Shape]] {
+      def apply(m: Metadata[T, Shape]): Json = {
+        implicit val datatype = m.dtype
+        implicit val enc = FillValue.encoder[T]
+        import io.circe.generic.auto._
+        exportEncoder[Metadata[T, Shape]].instance(m)
       }
     }
 }

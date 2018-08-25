@@ -1,7 +1,7 @@
 package org.lasersonlab.zarr
 
 import io.circe.Decoder.Result
-import io.circe.{ Decoder, DecodingFailure, HCursor }
+import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
 
 // TODO: filter support
 sealed trait Filter
@@ -15,5 +15,9 @@ object Filter {
             c.history
           )
         )
+    }
+  implicit val encoder: Encoder[Filter] =
+    new Encoder[Filter] {
+      override def apply(f: Filter): Json = Json.Null
     }
 }

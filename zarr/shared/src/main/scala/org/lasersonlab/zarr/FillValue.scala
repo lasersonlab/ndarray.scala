@@ -3,7 +3,7 @@ package org.lasersonlab.zarr
 import java.nio.ByteBuffer
 import java.util.Base64
 
-import io.circe.{ Decoder, DecodingFailure, HCursor, Json }
+import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
 import org.lasersonlab.zarr.FillValue.FillValueDecoder.Result
 import org.lasersonlab.zarr.dtype.DataType
 
@@ -95,8 +95,8 @@ object FillValue {
 
     implicit val   byte: FillValueDecoder[  Byte] = make[  Byte]
     implicit val  short: FillValueDecoder[ Short] = make[ Short]
-    implicit val    i32: FillValueDecoder[   Int] = make[   Int]
-    implicit val    i64: FillValueDecoder[  Long] = make[  Long]
+    implicit val    int: FillValueDecoder[   Int] = make[   Int]
+    implicit val   long: FillValueDecoder[  Long] = make[  Long]
     implicit val  float: FillValueDecoder[ Float] = make[ Float]
     implicit val double: FillValueDecoder[Double] = make[Double]
     implicit val string: FillValueDecoder[String] =
@@ -164,5 +164,60 @@ object FillValue {
   implicit val decodeJson: Decoder[FillValue[Json]] =
     new Decoder[FillValue[Json]] {
       def apply(c: HCursor): Result[Json] = Right(c.value)
+    }
+
+  sealed class FillValueEncoder[T](val apply: (T, DataType.Aux[T]) ⇒ Json)
+  trait LowPriorityFillValueEncoder {
+    case class Make[T](f: (T, DataType.Aux[T]) ⇒ Json) extends FillValueEncoder(f)
+    implicit def default[T](implicit e: Encoder[T]): FillValueEncoder[T] =
+      Make {
+        (t, datatype) ⇒
+          Json.fromString(
+            Base64
+              .getEncoder
+              .encodeToString(datatype(t))
+          )
+      }
+  }
+  object FillValueEncoder
+    extends LowPriorityFillValueEncoder {
+    import Encoder._
+    implicit val _encodeByte  : FillValueEncoder[  Byte] = Make { (t, _) ⇒ encodeByte  (t) }
+    implicit val _encodeShort : FillValueEncoder[ Short] = Make { (t, _) ⇒ encodeShort (t) }
+    implicit val _encodeInt   : FillValueEncoder[   Int] = Make { (t, _) ⇒ encodeInt   (t) }
+    implicit val _encodeLong  : FillValueEncoder[  Long] = Make { (t, _) ⇒ encodeLong  (t) }
+    implicit val _encodeFloat : FillValueEncoder[ Float] = Make { (t, _) ⇒ encodeFloat (t) }
+    implicit val _encodeDouble: FillValueEncoder[Double] = Make { (t, _) ⇒ encodeDouble(t) }
+    implicit val _encodeString: FillValueEncoder[String] =
+      Make {
+        case ("", _) ⇒ Json.fromString("")
+        case (t, datatype) ⇒
+          Json.fromString(
+            Base64
+              .getEncoder
+              .encodeToString(datatype(t))
+          )
+      }
+  }
+
+  implicit def encoder[T](
+    implicit
+    fillValueEncoder: FillValueEncoder[T],
+    datatype: DataType.Aux[T]
+  ):
+    Encoder[
+      FillValue[T]
+    ]
+  =
+    new Encoder[FillValue[T]] {
+      def apply(t: FillValue[T]): Json =
+        t match {
+          case Null ⇒ Json.Null
+          case NonNull(t) ⇒
+            fillValueEncoder.apply(
+              t,
+              datatype
+            )
+        }
     }
 }

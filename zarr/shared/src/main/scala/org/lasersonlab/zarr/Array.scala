@@ -4,9 +4,11 @@ import cats.{ Eval, Foldable, Traverse }
 import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder
+import io.circe.generic.auto._
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, Bytes, ScanRight, Sum }
 import org.lasersonlab.zarr.FillValue.FillValueDecoder
 import org.lasersonlab.zarr.dtype.DataType
+import org.lasersonlab.zarr.group.Load.Ops
 import shapeless.Nat
 
 /**
@@ -213,8 +215,8 @@ object Array {
     Aux[_Shape, _A, Bytes.Aux[_Shape, ?], T]  // TODO: replace Bytes with something lazy / network-based
   =
     for {
-      _metadata ← Metadata[T, _Shape](dir)
-      _attrs ← Attrs(dir)
+      _metadata ← dir.load[Metadata[T, _Shape]]
+         _attrs ← dir.load[Opt[Attrs]]
       _chunks ← {
         implicit val md = _metadata
         import Metadata._

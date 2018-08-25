@@ -2,7 +2,6 @@ package org.lasersonlab.zarr.untyped
 
 import hammerlab.path._
 import io.circe.Json
-import org.lasersonlab.anndata.loom.Var
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.Compressor.Blosc.CName.lz4
 import org.lasersonlab.zarr.Format.`2`
@@ -19,7 +18,8 @@ class GroupTest
       Group(
         arrays,
         groups,
-        attrs
+        attrs,
+        metadata
       ) =
       Group(path)
         .fold(
@@ -31,6 +31,7 @@ class GroupTest
     groups.keys should be(Set("uns"))
 
     ==(attrs, None)
+    ==(metadata, Group.Metadata(`2`))
 
     val `var` = group.array('var)
     `var`.shape should be(27998 :: Nil)

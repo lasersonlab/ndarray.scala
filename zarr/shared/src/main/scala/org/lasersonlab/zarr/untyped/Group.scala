@@ -4,15 +4,16 @@ import hammerlab.option._
 import hammerlab.path._
 import hammerlab.str._
 import io.circe.generic.auto._
-import io.circe.parser._
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr._
-import org.lasersonlab.zarr.group.Basename
+import org.lasersonlab.zarr.group.{ Basename, Load }
+import org.lasersonlab.zarr.group.Load.Ops
 
 case class Group(
   arrays: Map[String, Array],
   groups: Map[String, Group],
-  attrs: Opt[Attrs] = None
+  attrs: Opt[Attrs] = None,
+  metadata: Group.Metadata = Group.Metadata()
 ) {
   def array(name: Str): Array = arrays(name)
   def group(name: Str): Group = groups(name)
@@ -25,12 +26,6 @@ object Group {
   object Metadata {
     val basename = ".zgroup"
     implicit val _basename = Basename[Metadata](basename)
-
-    def apply(dir: Path): Exception | Metadata =
-      dir ? basename flatMap {
-        path ⇒
-          decode[Metadata](path.read)
-      }
   }
 
   import cats.implicits._
@@ -50,8 +45,8 @@ object Group {
   ):
     Exception | Group =
     for {
-      metadata ← Metadata(dir)
-         attrs ←    Attrs(dir)
+      metadata ← dir.load[Metadata]
+         attrs ← dir.load[Opt[Attrs]]
 
       arrays = Map.newBuilder[String, Array]
       groups = Map.newBuilder[String, Group]

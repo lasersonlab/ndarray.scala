@@ -1,8 +1,10 @@
 package org.lasersonlab.zarr.group
 
 import hammerlab.either._
+import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder
+import io.circe.parser.parse
 import org.lasersonlab.zarr.FillValue.FillValueDecoder
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.untyped.Group
@@ -14,7 +16,48 @@ trait Load[T] {
   def apply(dir: Path): Exception | T
 }
 
-object Load {
+trait LowPriorityLoad {
+  implicit def basename[T](
+    implicit
+    basename: Basename[T],
+    decoder: Decoder[T]
+  ):
+    Load[T] =
+    new Load[T] {
+      def apply(dir: Path): Exception | T =
+        dir ? basename flatMap {
+          path ⇒
+            import Decoder._
+            parse(path.read)
+              .flatMap {
+                decoder.decodeJson
+              }
+        }
+    }
+}
+object Load
+  extends LowPriorityLoad {
+  implicit def basenameOpt[T](
+    implicit
+    basename: Basename[T],
+    decoder: Decoder[T]
+  ):
+    Load[Opt[T]] =
+    new Load[Opt[T]] {
+      def apply(dir: Path): Exception | Opt[T] =  {
+        val path = dir / basename
+        if (!path.exists)
+          Right(None)
+        else
+          parse(path.read)
+            .flatMap {
+              json ⇒
+                decoder
+                  .decodeJson(json)
+            }
+            .map { o ⇒ o }
+      }
+    }
 
   implicit def array[T, N <: Nat, Shape](
     implicit

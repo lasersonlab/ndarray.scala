@@ -22,7 +22,7 @@ class ArrayTest
   test("2-D floats") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/matrix")
 
-    val arr = Array[Float, _2](path).get
+    implicit val arr = Array.chunks[Float, _2](path).get
 
     arr.metadata should be(
       Metadata(
@@ -45,56 +45,70 @@ class ArrayTest
 
     ==(arr.attrs, None)
 
-    //val chunks = arr.chunks
-//    chunks.size should be(10)
+    val chunks = arr.chunks
+    chunks.size should be(10)
     // TODO: chunks.shape
 
-//    val rows = chunks.rows
-//    rows.length should be(10)
-//    rows.foreach(_.size should be(1))
-//
-//    val unchecked = scala.Array.fill(1 << 26)(0.toByte)
-//
-//    val expected =
-//      Seq(
-//        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 0 :: 0 :: TNil,     0 :: 0:: TNil,  3092 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-//        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 1 :: 0 :: TNil,  3092 :: 0:: TNil,  6184 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-//        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 2 :: 0 :: TNil,  6184 :: 0:: TNil,  9276 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-//        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 3 :: 0 :: TNil,  9276 :: 0:: TNil, 12368 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-//        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 4 :: 0 :: TNil, 12368 :: 0:: TNil, 15460 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-//        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 5 :: 0 :: TNil, 15460 :: 0:: TNil, 18552 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-//        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 6 :: 0 :: TNil, 18552 :: 0:: TNil, 21644 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-//        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 7 :: 0 :: TNil, 21644 :: 0:: TNil, 24736 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-//        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 8 :: 0 :: TNil, 24736 :: 0:: TNil, 27828 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
-//        Chunk[Float, Ints2](unchecked,  170 :: 5425 :: TNil, 9 :: 0 :: TNil, 27828 :: 0:: TNil, 27998 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil)
-//      )
-//
-//    chunks
-//      .toList
-//      .zip(expected)
-//      .foreach {
-//        case (actual: Chunk[Float, Ints2], expected) ⇒
-//          ==(actual.start, expected.start)
-//          ==(actual.  end, expected.  end)
-//          ==(actual.  idx, expected.  idx)
-//          ==(actual.shape, expected.shape)
-//      }
-//
-//    val chunkNonzeroCounts =
-//      chunks
-//        .map {
-//          chunk: Bytes[Float] ⇒
-//            chunk.foldLeft(0) {
-//            (sum, n) ⇒
-//              if (n > 0)
-//                sum + 1
-//              else
-//                sum
-//          }
-//        }
-//        .toList
+    val rows = chunks.rows
+    rows.length should be(10)
+    rows.foreach(_.size should be(1))
 
-    arr.foldLeft(0.0f)(_ + _) should be(0)
+    val unchecked = scala.Array.fill(1 << 26)(0.toByte)
+
+    val expected =
+      Seq(
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 0 :: 0 :: TNil,     0 :: 0:: TNil,  3092 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 1 :: 0 :: TNil,  3092 :: 0:: TNil,  6184 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 2 :: 0 :: TNil,  6184 :: 0:: TNil,  9276 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 3 :: 0 :: TNil,  9276 :: 0:: TNil, 12368 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 4 :: 0 :: TNil, 12368 :: 0:: TNil, 15460 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 5 :: 0 :: TNil, 15460 :: 0:: TNil, 18552 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 6 :: 0 :: TNil, 18552 :: 0:: TNil, 21644 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 7 :: 0 :: TNil, 21644 :: 0:: TNil, 24736 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked, 3092 :: 5425 :: TNil, 8 :: 0 :: TNil, 24736 :: 0:: TNil, 27828 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil),
+        Chunk[Float, Ints2](unchecked,  170 :: 5425 :: TNil, 9 :: 0 :: TNil, 27828 :: 0:: TNil, 27998 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil)
+      )
+
+    chunks
+      .toList
+      .zip(expected)
+      .foreach {
+        case (actual: Chunk[Float, Ints2], expected) ⇒
+          ==(actual.start, expected.start)
+          ==(actual.  end, expected.  end)
+          ==(actual.  idx, expected.  idx)
+          ==(actual.shape, expected.shape)
+      }
+
+    val chunkNonzeroCounts =
+      arr
+        .chunks
+        .map {
+          _.foldLeft(0) {
+            (sum, n) ⇒
+              if (n > 0)
+                sum + 1
+              else
+                sum
+          }
+        }
+        .toList
+
+    chunkNonzeroCounts should be(
+      Vector(
+        287412,
+        444234,
+        17227,
+        58283,
+        876917,
+        796162,
+        582618,
+        505650,
+        615567,
+        36142
+      )
+    )
+
     arr.foldLeft(0) {
       case (numNonZero, elem) ⇒
         numNonZero + (
@@ -102,30 +116,16 @@ class ArrayTest
             1
           else
             0
-        )
-    } should be(0)
-
-
-//    chunkNonzeroCounts should be(
-//      Vector(
-//        287412,
-//        444234,
-//        17227,
-//        58283,
-//        876917,
-//        796162,
-//        582618,
-//        505650,
-//        615567,
-//        36142
-//      )
-//    )
+          )
+    } should be(
+      chunkNonzeroCounts.sum
+    )
   }
 
   test("1-D longs") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/row_attrs/_Valid")
 
-    val Array(metadata, attrs, chunks) = Array[Long, _1](path).get
+    val Array(metadata, attrs, chunks) = Array.chunks[Long, _1](path).get
 
     metadata should be(
       Metadata(
@@ -169,7 +169,7 @@ class ArrayTest
   test("1-D strings") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/col_attrs/Sex")
 
-    val Array(metadata, attrs, chunks) = Array[String, _1](path).get
+    val Array(metadata, attrs, chunks) = Array.chunks[String, _1](path).get
 
     metadata should be(
       Metadata(
@@ -223,7 +223,7 @@ class ArrayTest
 
     import shapeless._
 
-    val Array(metadata, attrs, chunks) = Array[Var, _1](path).get
+    val Array(metadata, attrs, chunks) = Array.chunks[Var, _1](path).get
 
     implicit val stringDataType = string(18)
     val dtype = !![DataType.Aux[Var]]

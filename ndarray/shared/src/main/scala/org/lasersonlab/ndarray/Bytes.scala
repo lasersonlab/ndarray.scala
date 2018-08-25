@@ -68,7 +68,7 @@ object Bytes {
       def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = ???
     }
 
-  def foldableAux[Shape]: Foldable[Aux[Shape, ?]] =
+  implicit def foldableAux[Shape]: Foldable[Aux[Shape, ?]] =
     new Foldable[Aux[Shape, ?]] {
       type F[A] = Aux[Shape, A]
       def foldLeft[A, B](fa: F[A], b: B)(f: (B, A) ⇒ B): B = {

@@ -67,7 +67,7 @@ object Array {
    *
    * Each chunk lives in a file with basename given by the provided [[Key]] ('.'-joined indices)
    */
-  def chunks[
+  private def chunks[
         T: DataType.Aux,
     Shape: Arithmetic.Id,
      A[U]: Traverse
@@ -140,7 +140,37 @@ object Array {
   ):
     Exception |
     S[v.Shape, T]
-//    Aux[v.Shape, v.A, Bytes.Aux[v.Shape, ?], T]
+  =
+    chunks[
+      T,
+      N
+    ](
+      dir
+    )
+
+  /**
+   * Convenience-constructor: given a data-type and a [[Nat (type-level) number of dimensions]], load an [[Array]] from
+   * a [[Path directory]]
+   *
+   * Uses a [[VectorInts]] as evidence for mapping from the [[Nat]] to a concrete shape
+   *
+   * Differs from [[apply]] above in that it returns full-resolved [[Array.A]] and [[Array.Chunk]] type-members, for
+   * situations where that is important (in general, it shouldn't be; tests may wish to verify / operate on chunks, but
+   * users shouldn't ever need to).
+   */
+  def chunks[
+    T,
+    N <: Nat
+  ](
+    dir: Path
+  )(
+    implicit
+    v: VectorInts[N],
+    d: Decoder[DataType.Aux[T]],
+    dt: FillValueDecoder[T],
+  ):
+    Exception |
+    Aux[v.Shape, v.A, Bytes.Aux[v.Shape, ?], T]
   = {
     import v._
     apply[T, v.Shape, v.A](dir)(
@@ -221,11 +251,51 @@ object Array {
       }
 
   import cats.implicits._
-//  implicit def foldableAux[Shape, A[_]]: Foldable[Aux[Shape, A, Bytes, ?]] = ???
 
   implicit def foldable[Shape]: Foldable[Array.S[Shape, ?]] =
-    new Foldable[Array.S[Shape, ?]] {
-      type F[A] = Array.S[Shape, A]
+    new Foldable[S[Shape, ?]] {
+      type F[A] = S[Shape, A]
+
+      def foldLeft[A, B](fa: F[A], b: B)(f: (B, A) ⇒ B): B =
+        fa
+          .traverseA
+          .foldLeft(
+            fa.chunks,
+            b
+          ) {
+            (b, chunk) ⇒
+              fa
+                .foldableChunk
+                .foldLeft(
+                  chunk,
+                  b
+                )(
+                  f
+                )
+          }
+
+      def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] =
+        fa
+          .traverseA
+          .foldRight(
+            fa.chunks,
+            lb
+          ) {
+            (chunk, lb) ⇒
+              fa
+                .foldableChunk
+                .foldRight(
+                  chunk,
+                  lb
+                )(
+                  f
+                )
+          }
+    }
+
+  implicit def foldableDerived[T](implicit a: Array[T]): Foldable[Aux[a.Shape, a.A, a.Chunk, ?]] =
+    new Foldable[Aux[a.Shape, a.A, a.Chunk, ?]] {
+      type F[A] = Aux[a.Shape, a.A, a.Chunk, A]
 
       def foldLeft[A, B](fa: F[A], b: B)(f: (B, A) ⇒ B): B =
         fa

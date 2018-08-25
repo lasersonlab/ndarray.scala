@@ -25,7 +25,7 @@ object FromSeq {
 
   implicit def cons[T, TL <: TList](
     implicit
-    tl: Lazy[Aux[T, TL]],
+    tl: Aux[T, TL],
     pp: Prepend[T, TL]
   ):
     Aux[T, T :: TL] =
@@ -37,8 +37,7 @@ object FromSeq {
             "Too few elements"
           )
         else
-          tl
-            .value(ts.tail)
+          tl(ts.tail)
             .map {
               ts.head :: _
             }

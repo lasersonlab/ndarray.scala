@@ -6,7 +6,7 @@ import java.nio.ByteBuffer
 import cats.Eq
 import io.circe.Decoder.Result
 import io.circe.DecodingFailure.fromThrowable
-import io.circe.{ Decoder, DecodingFailure, HCursor }
+import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
 import org.lasersonlab.ndarray.io.{ Read, Write }
 import org.lasersonlab.zarr.{ untyped, | }
 import shapeless.the
@@ -212,6 +212,29 @@ object DataType
   implicit def dataTypeDecoder[T](implicit parser: Parser[T]): Decoder[Aux[T]] =
     new Decoder[Aux[T]] {
       def apply(c: HCursor): Result[Aux[T]] = parser(c)
+    }
+
+  implicit val dataTypeEncoder: Encoder[DataType] =
+    new Encoder[DataType] {
+      def apply(entries: Seq[StructEntry]): Json =
+        Json.arr(
+          entries
+            .map {
+              case StructEntry(name, datatype) ⇒
+                Json.arr(
+                  Json.fromString(name),
+                  dataTypeEncoder(datatype)
+                )
+            }:
+            _*
+        )
+      def apply(a: DataType): Json =
+        a match {
+          case p: Primitive ⇒ Json.fromString(p.toString)
+          case        StructList(entries, _)  ⇒ apply(entries)
+          case Struct(StructList(entries, _)) ⇒ apply(entries)
+          case struct           (entries   )  ⇒ apply(entries)
+        }
     }
 
   implicit def read[T](implicit dataType: DataType.Aux[T]): Read[T] =

@@ -2,7 +2,7 @@ package org.lasersonlab.zarr.tlist
 
 import hammerlab.shapeless.tlist._
 import io.circe.Decoder.Result
-import io.circe.{ Decoder, DecodingFailure, HCursor }
+import io.circe._
 
 // TODO: move to shapeless-utils?
 trait TListDecoders {
@@ -53,3 +53,18 @@ trait TListDecoders {
 }
 
 object TListDecoders extends TListDecoders
+
+trait TListEncoders {
+  implicit def encodeAsSeq[T <: TList](implicit tolist: ToList[T]): Encoder[T] =
+    new Encoder[T] {
+      def apply(t: T): Json = Json.arr(tolist(t): _*)
+    }
+}
+
+object TListEncoders extends TListEncoders
+
+trait TListCodec
+  extends TListDecoders
+     with TListEncoders
+
+object TListCodec extends TListCodec

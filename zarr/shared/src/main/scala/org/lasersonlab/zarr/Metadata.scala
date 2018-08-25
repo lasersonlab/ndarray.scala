@@ -7,11 +7,11 @@ import io.circe.parser._
 import io.circe.{ Decoder, DecodingFailure, HCursor }
 import org.lasersonlab.zarr.FillValue.{ FillValueDecoder, Null }
 import org.lasersonlab.zarr.Format._
-import org.lasersonlab.zarr.dtype.{ DataType, Parser }
-import org.lasersonlab.zarr.untyped.Struct
+import org.lasersonlab.zarr.dtype.DataType
+import org.lasersonlab.zarr.group.Basename
 
 case class Metadata[T, Shape](
-  shape: Shape,
+   shape: Shape,
   chunks: Shape,
   dtype: DataType.Aux[T],
   compressor: Compressor,
@@ -22,7 +22,9 @@ case class Metadata[T, Shape](
 )
 
 object Metadata {
+
   val basename = ".zarray"
+  implicit def _basename[T, Shape] = Basename[Metadata[T, Shape]](basename)
 
   // Implicit unwrappers for some fields
   implicit def _compressor[T, Shape](implicit md: Metadata[_, _]): Compressor = md.compressor

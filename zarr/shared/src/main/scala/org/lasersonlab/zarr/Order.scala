@@ -1,7 +1,7 @@
 package org.lasersonlab.zarr
 
 import io.circe.Decoder.Result
-import io.circe.{ Decoder, DecodingFailure, HCursor }
+import io.circe._
 
 /**
  * Either “C” or “F”, defining the layout of bytes within each chunk of the array.
@@ -29,6 +29,14 @@ object Order {
                 )
               )
           }
+    }
+
+  implicit val encoder: Encoder[Order] =
+    new Encoder[Order] {
+      def apply(a: Order): Json =
+        a match {
+          case C ⇒ Json.fromString("C")
+        }
     }
 
   // TODO: column-major order not implemented (yet?)

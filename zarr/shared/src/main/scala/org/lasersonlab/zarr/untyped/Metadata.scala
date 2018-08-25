@@ -10,6 +10,7 @@ import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.Metadata._
 import org.lasersonlab.zarr._
 import org.lasersonlab.zarr.dtype.DataType
+import org.lasersonlab.zarr.group.Basename
 
 case class Metadata(
    shape: Seq[Int],
@@ -30,4 +31,6 @@ object Metadata {
       path ⇒
         decode[Metadata](path.read)
     }
+
+  implicit val _basename = Basename[Metadata](basename)
 }

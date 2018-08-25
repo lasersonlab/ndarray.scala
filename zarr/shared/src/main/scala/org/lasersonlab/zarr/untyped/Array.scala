@@ -31,6 +31,7 @@ object Array {
         val shape = metadata.shape
         val chunkShape = metadata.chunks
 
+        // TODO: should probably key this off of integers to avoid constructing strings on every index-lookup?
         private val _chunks = mutable.Map[String, ByteBuffer]()
         def chunk(idx: String): ByteBuffer =
           _chunks.getOrElseUpdate(
@@ -47,8 +48,8 @@ object Array {
 
         val total :: products =
           chunkShape
-          .scanRight(1)(_ * _)
-          .toList
+            .scanRight(1)(_ * _)
+            .toList
 
         def apply(idxs: Int*): T = {
           if (idxs.size != N)

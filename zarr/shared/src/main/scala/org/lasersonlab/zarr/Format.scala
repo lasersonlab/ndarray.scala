@@ -1,7 +1,7 @@
 package org.lasersonlab.zarr
 
 import io.circe.Decoder.Result
-import io.circe.{ Decoder, DecodingFailure, HCursor }
+import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
 
 sealed trait Format
 object Format {
@@ -33,5 +33,13 @@ object Format {
                 )
               )
           }
+    }
+
+  implicit val encoder: Encoder[Format] =
+    new Encoder[Format] {
+      def apply(a: Format): Json =
+        a match {
+          case `2` ⇒ Json.fromString("2")
+        }
     }
 }

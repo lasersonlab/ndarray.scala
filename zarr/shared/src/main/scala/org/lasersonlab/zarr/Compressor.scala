@@ -8,9 +8,10 @@ import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder.Result
 import io.circe.generic.auto._
-import io.circe.{ Decoder, DecodingFailure, HCursor }
+import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
 import org.apache.commons.io.IOUtils
 import org.blosc.JBlosc
+import shapeless.the
 
 sealed trait Compressor {
   def apply(path: Path, sizeHint: Opt[Int] = Non): Seq[Byte]
@@ -116,9 +117,19 @@ object Compressor {
         c
           .get[String]("id")
           .flatMap {
-            case "blosc" ⇒ implicitly[Decoder[Blosc]].apply(c)
-            case "zlib" ⇒ implicitly[Decoder[ZLib]].apply(c)
-            case null ⇒ Right(None)
+            case "blosc" ⇒ the[Decoder[Blosc]].apply(c)
+            case  "zlib" ⇒ the[Decoder[ZLib]].apply(c)
+            case   null  ⇒ Right(None)
           }
+    }
+
+  implicit val encoder: Encoder[Compressor] =
+    new Encoder[Compressor] {
+      def apply(a: Compressor): Json =
+        a match {
+          case None ⇒ Json.Null
+          case z:  ZLib ⇒ the[Encoder[ ZLib]].apply(z).mapObject(_ add ("id", Json.fromString( "zlib")))
+          case b: Blosc ⇒ the[Encoder[Blosc]].apply(b).mapObject(_ add ("id", Json.fromString("blosc")))
+        }
     }
 }

@@ -12,9 +12,13 @@ import scala.util.Try
 sealed trait FillValue[+T]
 
 object FillValue {
+
+  import org.relaxng.datatype.Datatype
+
   implicit def apply[T](t: T): FillValue[T] = NonNull(t)
 
-  case class NonNull[+T](value: T) extends FillValue[T] {
+  case object    Null               extends FillValue[Nothing]
+  case  class NonNull[+T](value: T) extends FillValue[T] {
     override def toString: String = value.toString
   }
 
@@ -22,8 +26,15 @@ object FillValue {
     implicit def unwrap[T](f: NonNull[T]): T = f.value
   }
 
-  case object Null extends FillValue[Nothing]
+  import DataType._
 
+  /**
+   * A partially-unapplied [[Decoder]] for [[FillValue]]s: given a [[DataType]] (parsed from [[Metadata]]), parse a
+   * [[T]] from some [[Json]]
+   *
+   * The [[DataType]] is necessary in the case of [[string]] fields, or structs that contain them, because they are
+   * encoded as taking up a specific number of bytes, which is discarded in the parsed type [[String]].
+   */
   sealed trait FillValueDecoder[T]  {
     def apply(json: Json, datatype: DataType.Aux[T]): Result[T]
   }
@@ -66,7 +77,11 @@ object FillValue {
 
     private def make[T](implicit d: Decoder[T]): FillValueDecoder[T] =
       new FillValueDecoder[T] {
-        override def apply(json: Json, datatype: DataType.Aux[T]): Result[T] =
+        /**
+         * Decoder for types where the [[DataType]] parameter is not necessary (because the JSON representation is
+         * always the same size), e.g. numeric types.
+         */
+        def apply(json: Json, unused: DataType.Aux[T]): Result[T] =
           d.decodeJson(json)
       }
 
@@ -76,9 +91,20 @@ object FillValue {
     implicit val    i64: FillValueDecoder[  Long] = make[  Long]
     implicit val  float: FillValueDecoder[ Float] = make[ Float]
     implicit val double: FillValueDecoder[Double] = make[Double]
-    implicit val string: FillValueDecoder[String] = make[String]  // TODO: string fill-values should be base64-decoded as well, I think?
   }
 
+  /**
+   * In general, decoding a [[FillValue]] requires a [[DataType]], even when the type [[T]] of the [[FillValue]] is
+   * known, because e.g. [[string]] fields are encoded as a specific length that is not captured in the decoded
+   * [[String]] type (which also affects parsing of [[Struct typed]] and [[struct untyped]] structs).
+   *
+   * We implement
+ *
+   * @param d
+   * @param datatype
+   * @tparam T
+   * @return
+   */
   implicit def decoder[T](
     implicit
     d: FillValueDecoder[T],
@@ -98,8 +124,12 @@ object FillValue {
         )
     }
 
+  /**
+   * When parsing [[untyped.Metadata untyped metadata]], the `fill_value` may be a literal (e.g. a number), or a
+   * base64-encoded string or struct; we store it as opaque [[Json]], and this [[Decoder]] parses it
+   */
   implicit val decodeJson: Decoder[FillValue[Json]] =
     new Decoder[FillValue[Json]] {
-      override def apply(c: HCursor): Result[FillValue[Json]] = Right(c.value)
+      def apply(c: HCursor): Result[FillValue[Json]] = Right(c.value)
     }
 }

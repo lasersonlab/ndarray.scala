@@ -76,7 +76,7 @@ object FillValue {
     implicit val    i64: FillValueDecoder[  Long] = make[  Long]
     implicit val  float: FillValueDecoder[ Float] = make[ Float]
     implicit val double: FillValueDecoder[Double] = make[Double]
-    implicit val string: FillValueDecoder[String] = make[String]
+    implicit val string: FillValueDecoder[String] = make[String]  // TODO: string fill-values should be base64-decoded as well, I think?
   }
 
   implicit def decoder[T](

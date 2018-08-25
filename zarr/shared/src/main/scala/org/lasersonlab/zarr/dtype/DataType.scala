@@ -1,12 +1,13 @@
 package org.lasersonlab.zarr.dtype
 
+import java.io.{ ByteArrayOutputStream, DataOutputStream }
 import java.nio.ByteBuffer
 
 import cats.Eq
 import io.circe.Decoder.Result
 import io.circe.DecodingFailure.fromThrowable
 import io.circe.{ Decoder, DecodingFailure, HCursor }
-import org.lasersonlab.ndarray.io.Read
+import org.lasersonlab.ndarray.io.{ Read, Write }
 import org.lasersonlab.zarr.{ untyped, | }
 import shapeless.the
 
@@ -23,6 +24,14 @@ sealed trait DataType {
     buff.position(size * idx)
     apply(buff)
   }
+  def apply(t: T): Array[Byte] = {
+    val baos = new ByteArrayOutputStream(size)
+    val data = new DataOutputStream(baos)
+    apply(data, t)
+    data.close()
+    baos.toByteArray
+  }
+  def apply(os: DataOutputStream, t: T): Unit
 }
 
 trait DataTypeStructDerivations {
@@ -58,17 +67,20 @@ trait DataTypeStructDerivations {
     val size: Int = entries.size
     override type T = S
     @inline def apply(buff: ByteBuffer): T = g.from(entries(buff))
+    @inline def apply(os: DataOutputStream, t: S): Unit = entries(os, g.to(t))
   }
 
   case class StructList[L <: HList](
     entries: List[StructEntry],
     size: Int
   )(
-    fn: ByteBuffer ⇒ L
+    read: ByteBuffer ⇒ L,
+    write: (DataOutputStream, L) ⇒ Unit
   )
   extends DataType {
     type T = L
-    @inline def apply(buff: ByteBuffer): T = fn(buff)
+    @inline def apply(buff: ByteBuffer): T = read(buff)
+    @inline def apply(os: DataOutputStream, t: L): Unit = write(os, t)
   }
 
   implicit val hnil: StructList[HNil] =
@@ -76,7 +88,8 @@ trait DataTypeStructDerivations {
       entries = Nil,
       size = 0
     )(
-      _ ⇒ HNil
+      _ ⇒ HNil,
+      (_, _) ⇒ ()
     )
 
   implicit def cons[
@@ -101,7 +114,12 @@ trait DataTypeStructDerivations {
     )(
       buff ⇒
         head(buff) ::
-        tail(buff)
+        tail(buff),
+      {
+        case (os, h :: t) ⇒
+          head(os, h)
+          tail(os, t)
+      }
     )
   }
 
@@ -193,12 +211,17 @@ object DataType
 
   implicit def dataTypeDecoder[T](implicit parser: Parser[T]): Decoder[Aux[T]] =
     new Decoder[Aux[T]] {
-      override def apply(c: HCursor): Result[Aux[T]] = parser(c)
+      def apply(c: HCursor): Result[Aux[T]] = parser(c)
     }
 
   implicit def read[T](implicit dataType: DataType.Aux[T]): Read[T] =
     new Read[T] {
       @inline def apply(buff: ByteBuffer, idx: Int): T = dataType(buff, idx)
+    }
+
+  implicit def write[T](implicit dataType: DataType.Aux[T]): Write[T] =
+    new Write[T] {
+      @inline def apply(os: DataOutputStream, t: T): Unit = dataType(os, t)
     }
 
   import ByteOrder._
@@ -209,12 +232,12 @@ object DataType
   val `0` = 0.toByte
 
   // TODO: setting the buffer's order every time seems suboptimal; some different design that streamlines that would be nice
-  case object   byte                                 extends Primitive( None, d.   int,    1) { type T =   Byte; @inline def apply(buf: ByteBuffer): T = {                   buf.get       } }
-  case  class  short(override val order: Endianness) extends Primitive(order, d.   int,    2) { type T =  Short; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getShort  } }
-  case  class    int(override val order: Endianness) extends Primitive(order, d.   int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer): T = {buf.order(order); buf.getInt    } }
-  case  class   long(override val order: Endianness) extends Primitive(order, d.   int,    8) { type T =   Long; @inline def apply(buf: ByteBuffer): T = {buf.order(order); buf.getLong   } }
-  case  class  float(override val order: Endianness) extends Primitive(order, d. float,    4) { type T =  Float; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getFloat  } }
-  case  class double(override val order: Endianness) extends Primitive(order, d. float,    8) { type T = Double; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getDouble } }
+  case object   byte                                 extends Primitive( None, d.   int,    1) { type T =   Byte; @inline def apply(buf: ByteBuffer): T = {                   buf.get       }; @inline def apply(os: DataOutputStream, t: T) = os.write      (t); @inline override def apply(t: T) = ByteBuffer.allocate(size)             .put      (t).array }
+  case  class  short(override val order: Endianness) extends Primitive(order, d.   int,    2) { type T =  Short; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getShort  }; @inline def apply(os: DataOutputStream, t: T) = os.writeShort (t); @inline override def apply(t: T) = ByteBuffer.allocate(size).order(order).putShort (t).array }
+  case  class    int(override val order: Endianness) extends Primitive(order, d.   int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getInt    }; @inline def apply(os: DataOutputStream, t: T) = os.writeInt   (t); @inline override def apply(t: T) = ByteBuffer.allocate(size).order(order).putInt   (t).array }
+  case  class   long(override val order: Endianness) extends Primitive(order, d.   int,    8) { type T =   Long; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getLong   }; @inline def apply(os: DataOutputStream, t: T) = os.writeLong  (t); @inline override def apply(t: T) = ByteBuffer.allocate(size).order(order).putLong  (t).array }
+  case  class  float(override val order: Endianness) extends Primitive(order, d. float,    4) { type T =  Float; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getFloat  }; @inline def apply(os: DataOutputStream, t: T) = os.writeFloat (t); @inline override def apply(t: T) = ByteBuffer.allocate(size).order(order).putFloat (t).array }
+  case  class double(override val order: Endianness) extends Primitive(order, d. float,    8) { type T = Double; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getDouble }; @inline def apply(os: DataOutputStream, t: T) = os.writeDouble(t); @inline override def apply(t: T) = ByteBuffer.allocate(size).order(order).putDouble(t).array }
   case  class string(override val  size:        Int) extends Primitive( None, d.string, size) { type T = String
     import scala.Array.fill
     val arr = fill(size)(`0`)
@@ -230,6 +253,26 @@ object DataType
       }
       builder.result()
     }
+
+    override def apply(t: String): Array[Byte] = {
+      val arr = new Array[Byte](t.length)
+      var i = 0
+      if (t.length != size)
+        throw new IllegalArgumentException(
+          s"Expected string of size $size, found ${t.length}: '$t'"
+        )
+      while (i < t.length) {
+        val ch = t(i)
+        if (!ch.isValidByte)
+          throw new IllegalArgumentException(
+            s"Invalid character in string $t at position $i: $ch"
+          )
+        arr(i) = ch.toByte
+        i += 1
+      }
+      arr
+    }
+    override def apply(os: DataOutputStream, t: String): Unit = os.write(apply(t))
   }
 
   type byte = byte.type
@@ -267,6 +310,13 @@ object DataType
           }
           .result()
       )
+
+    override def apply(os: DataOutputStream, t: untyped.Struct): Unit =
+      for {
+        StructEntry(name, datatype) ← entries
+      } {
+        datatype(os, t(name))
+      }
   }
 
   implicit val   _byte                                               =   byte

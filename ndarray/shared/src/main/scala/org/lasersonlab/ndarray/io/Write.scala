@@ -3,19 +3,40 @@ package org.lasersonlab.ndarray.io
 import java.io.{ ByteArrayOutputStream, DataOutputStream }
 import java.nio.ByteBuffer
 
-import cats.Functor
+import cats.{ Foldable, Functor }
+import cats.implicits._
 
 /**
  * Type-class for writing elements to a [[DataOutputStream]]
  */
 trait Write[T] {
-  def apply(t: T): Array[Byte]
+  def apply(t: T): Array[Byte] = {
+    val baos = new ByteArrayOutputStream()
+    val data = new DataOutputStream(baos)
+    apply(data, t)
+    data.close()
+    baos.toByteArray
+  }
   def apply(os: DataOutputStream, t: T): Unit
 }
-object Write {
+trait LowPriWrite {
+  implicit def functor[T[_] : Functor, E](
+    implicit
+    write: Write[E]
+  ):
+    Write[T[E]] =
+    new Write[T[E]] {
+      def apply(os: DataOutputStream, t: T[E]): Unit =
+        t.map {
+          write(os, _)
+        }
+    }
+}
+object Write
+  extends LowPriWrite {
   implicit val int: Write[Int] =
     new Write[Int] {
-      def apply(t: Int): Array[Byte] =
+      override def apply(t: Int): Array[Byte] =
         // TODO: endianness
         ByteBuffer
           .allocate(4)
@@ -25,29 +46,17 @@ object Write {
       override def apply(os: DataOutputStream, t: Int): Unit = os.writeInt(t)
     }
 
-  implicit def traverse[T[_], E](
+  implicit def foldable[T[_] : Foldable, E](
     implicit
-    functor: Functor[T],
-    elem: Write[E]
+    write: Write[E]
   ):
     Write[T[E]] =
     new Write[T[E]] {
-      def apply(t: T[E]): Array[Byte] = {
-        val baos = new ByteArrayOutputStream()
-        val data = new DataOutputStream(baos)
-        functor.map(
-          t
+      def apply(os: DataOutputStream, t: T[E]): Unit =
+        t.foldLeft(
+          ()
         )(
-          elem(data, _)
-        )
-        data.close()
-        baos.toByteArray
-      }
-      override def apply(os: DataOutputStream, t: T[E]): Unit =
-        functor.map(
-          t
-        )(
-          elem(os, _)
+          (_, elem) ⇒ write(os, elem)
         )
     }
 
@@ -79,7 +88,7 @@ object Write {
     }
 
   implicit class Ops[T](val t: T) extends AnyVal {
-    def write(implicit ev: Write[T]): Unit = ev(t)
+    def write(implicit ev: Write[T]): Array[Byte] = ev(t)
     def write(os: DataOutputStream)(implicit ev: Write[T]): Unit = ev(os, t)
   }
 }

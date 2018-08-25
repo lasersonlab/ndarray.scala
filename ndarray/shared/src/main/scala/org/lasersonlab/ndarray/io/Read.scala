@@ -11,10 +11,3 @@ trait Read[T] {
    */
   def apply(buff: ByteBuffer, idx: Int): T
 }
-object Read {
-  implicit val int: Read[Int] =
-    new Read[Int] {
-      val size = 4
-      @inline def apply(buff: ByteBuffer, idx: Int): Int = buff.getInt(idx * size)
-    }
-}

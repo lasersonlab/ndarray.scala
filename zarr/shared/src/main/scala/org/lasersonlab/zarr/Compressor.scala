@@ -2,7 +2,7 @@ package org.lasersonlab.zarr
 
 import java.io.{ ByteArrayOutputStream, IOException }
 import java.nio.ByteBuffer
-import java.util.zip.InflaterInputStream
+import java.util.zip.{ DeflaterOutputStream, InflaterInputStream }
 
 import hammerlab.option._
 import hammerlab.path._
@@ -12,10 +12,13 @@ import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
 import org.apache.commons.io.IOUtils
 import org.blosc.JBlosc
 import shapeless.the
+
+import scala.util.Try
 import scala.{ Array ⇒ Arr }
 
 sealed trait Compressor {
   def apply(path: Path, sizeHint: Opt[Int] = Non): Arr[Byte]
+  def apply(bytes: Arr[Byte], path: Path): Throwable | Unit
 }
 object Compressor {
 
@@ -25,10 +28,24 @@ object Compressor {
       IOUtils.copy(new InflaterInputStream(path.inputStream), baos)
       baos.toByteArray
     }
+    def apply(bytes: Arr[Byte], path: Path): Throwable | Unit =
+      Try {
+        val os = new DeflaterOutputStream(path.outputStream(mkdirs = true))
+        os.write(bytes)
+        os.close()
+      }
+      .toEither
   }
 
   case object None extends Compressor {
     def apply(path: Path, sizeHint: Opt[Int] = Non): Arr[Byte] = path.readBytes
+    def apply(bytes: Arr[Byte], path: Path): Throwable | Unit =
+      Try {
+        val os = path.outputStream(mkdirs = true)
+        os.write(bytes)
+        os.close()
+      }
+      .toEither
   }
 
   import Blosc._
@@ -86,6 +103,63 @@ object Compressor {
       }
 
       ???  // unreachable
+    }
+
+    @inline def apply(
+      bytes: Arr[Byte],
+      path: Path
+    ):
+      Throwable | Unit
+    =
+      Try {
+        withHint(
+          bytes,
+          path,
+          bytes.length / 2,
+          1
+        )
+      }
+      .toEither
+
+    private def withHint(
+      bytes: Arr[Byte],
+      path: Path,
+      destSize: Int,
+      attempts: Int
+    ):
+      Unit
+    = {
+      val dest = ByteBuffer.allocateDirect(destSize)
+      val compressed =
+        blosc.compress(
+          clevel,
+          shuffle,
+          blocksize,
+          ByteBuffer.wrap(bytes),
+          bytes.length,
+          dest,
+          destSize
+        )
+      if (compressed > 0) {
+        val os = path.outputStream(mkdirs = true)
+        os.write(dest.array(), 0, compressed)
+        os.close()
+      } else if (compressed == 0)
+        if (destSize > bytes.length)
+          throw new IllegalStateException(
+            s"Blosc buffer apparently too small ($destSize) for data of size ${bytes.length} after $attempts attempts"
+          )
+        else
+          withHint(
+            bytes,
+            path,
+            destSize * 2,
+            attempts + 1
+          )
+      else
+        throw new Exception(
+          s"Blosc error compressing ${bytes.length} bytes into buffer of size $destSize on attempt $attempts"
+        )
     }
   }
 

@@ -56,7 +56,4 @@ object ArrayLike {
   implicit val vector4toArray: Aux[Vector4, Ints4] = makeArrayLike[Vector3, Ints3]
   implicit val vector5toArray: Aux[Vector5, Ints5] = makeArrayLike[Vector4, Ints4]
   implicit val vector6toArray: Aux[Vector6, Ints6] = makeArrayLike[Vector5, Ints5]
-
-  implicitly[Aux[Vector2, Ints2]]
-  implicitly[Aux[Vector3, Ints3]]
 }

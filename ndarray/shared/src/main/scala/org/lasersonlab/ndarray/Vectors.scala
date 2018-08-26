@@ -15,7 +15,19 @@ trait Vectors[T] {
 object Vectors {
   type Aux[T, _R[_]] = Vectors[T] { type Row[U] = _R[U] }
 
-  def make[T, _Row[U]](_rows: Vector[_Row[T]])(implicit _traverseRow: Traverse[_Row]): Aux[T, _Row] =
+  /**
+   * Convenience constructor for [[Vectors]] instances
+   */
+  def make[
+    T,
+    _Row[U]
+  ](
+    _rows: Vector[_Row[T]]
+  )(
+    implicit
+    _traverseRow: Traverse[_Row]
+  ):
+    Aux[T, _Row] =
     new Vectors[T] {
       type Row[U] = _Row[U]
       val rows = _rows
@@ -25,7 +37,19 @@ object Vectors {
 
   implicit val traverse: Traverse[Vectors] =
     new Traverse[Vectors] {
-      override def traverse[G[_], A, B](fa: Vectors[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[Vectors[B]] = {
+      override def traverse[
+        G[_],
+        A,
+        B
+      ](
+        fa: Vectors[A]
+      )(
+        f: A ⇒ G[B]
+      )(
+        implicit
+        ev: Applicative[G]
+      ):
+        G[Vectors[B]] = {
         implicit val tr = fa.traverseRow
         fa
           .rows
@@ -61,18 +85,6 @@ object Vectors {
           }
       }
     }
-
-  def apply[In](args: In*)(implicit arg: Arg[In]): Aux[arg.Elem, Aux[?, arg.Row]] =
-    make[
-      arg.Elem,
-      Aux[?, arg.Row]
-    ](
-      args
-        .map(arg(_))
-        .toVector
-    )(
-      makeTraverse[arg.Row]
-    )
 
   type Nested[A, Row[_]] = Vector[Row[A]]
 
@@ -153,6 +165,10 @@ object Vectors {
       @inline def foldRight[A, B](fa: Vector[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.foldRight(lb)(f)
     }
 
+  // TODO: manually unroll 6 dimesions' worth for now; couldn't get implicit derivations to work.
+  // HOPE: reversing the order of the type-params in [[Aux]] will allow partial-unification to actually work and make
+  // many of these cases smoother, allow removing the Vectors.traverseRow member, etc.
+
   type Vector1[T] = Vector[T]
   type Vector2[T] = Vectors.Aux[T, Vector1]
   type Vector3[T] = Vectors.Aux[T, Vector2]
@@ -166,6 +182,27 @@ object Vectors {
   implicit val traverseV5: Traverse[Vector5] = makeTraverse[Vector4]
   implicit val traverseV6: Traverse[Vector6] = makeTraverse[Vector5]
 
+  /**
+   * Convenience-constructor in terms of the [[Arg]] DSL / magnet-pattern
+   *
+   * Any sequence of arguments whose least upper-bound [[In]] has an [[Arg]] instance can be made into a [[Vectors]]
+   */
+  def apply[In](args: In*)(implicit arg: Arg[In]): Aux[arg.Elem, Aux[?, arg.Row]] =
+    make[
+      arg.Elem,
+      Aux[?, arg.Row]
+    ](
+      args
+        .map(arg(_))
+        .toVector
+    )(
+      makeTraverse[arg.Row]
+    )
+
+  /**
+   * (Vestigial?) DSL for converting a variety of nested-[[Seq]]-like types to [[Vectors]]
+   * @tparam In an "input" type that can be massaged into a [[Vectors]]
+   */
   trait Arg[In] {
     type Elem
     type Row[_]
@@ -195,6 +232,10 @@ object Vectors {
 
   object Arg
     extends LowPriArg {
+    /**
+     * If [[Prev]] is an [[Arg]], then wrapping in another level of [[Seq]]-subclass gives an [[Arg]] for a [[Vectors]]
+     * that is one level further nested
+     */
     implicit def cons[
       Prev,
       I[U] <: Seq[U]

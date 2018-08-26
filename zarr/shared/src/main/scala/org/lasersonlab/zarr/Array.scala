@@ -5,7 +5,7 @@ import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder
 import io.circe.generic.auto._
-import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, Bytes, ScanRight, Sum }
+import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.FillValue.FillValueDecoder
 import org.lasersonlab.zarr.dtype.DataType

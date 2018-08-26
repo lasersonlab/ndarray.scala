@@ -11,7 +11,7 @@ import org.lasersonlab.zarr.{ Suite, untyped }
 
 class GroupTest
   extends Suite {
-  test("dir") {
+  test("load") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr")
 
     val group @
@@ -34,12 +34,12 @@ class GroupTest
     ==(metadata, Group.Metadata(`2`))
 
     val `var` = group.array('var)
-    `var`.shape should be(27998 :: Nil)
+    `var`. shape should be(27998 :: Nil)
     `var`.chunks should be(27998 :: Nil)
 
     `var`.metadata should be(
       untyped.Metadata(
-        shape = Seq(27998),
+         shape = Seq(27998),
         chunks = Seq(27998),
         dtype =
           struct(
@@ -70,5 +70,9 @@ class GroupTest
         zarr_format = `2`
       )
     )
+  }
+
+  test("save") {
+
   }
 }

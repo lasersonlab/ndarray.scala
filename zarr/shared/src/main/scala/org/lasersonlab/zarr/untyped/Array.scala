@@ -28,15 +28,14 @@ object Array {
 
         type T = _metadata.dtype.T
 
-        val shape = metadata.shape
+        val      shape = metadata.shape
         val chunkShape = metadata.chunks
 
-        // TODO: should probably key this off of integers to avoid constructing strings on every index-lookup?
-        private val _chunks = mutable.Map[String, ByteBuffer]()
-        def chunk(idx: String): ByteBuffer =
+        private val _chunks = mutable.Map[Seq[Int], ByteBuffer]()
+        def chunk(idx: Seq[Int]): ByteBuffer =
           _chunks.getOrElseUpdate(
             idx,
-            ByteBuffer.wrap(dir / idx readBytes)
+            ByteBuffer.wrap(dir / idx.mkString(".") readBytes)
           )
 
         require(
@@ -59,17 +58,12 @@ object Array {
 
           var idx = 0
           var sum = 0
-          val chunkIdxBuilder = new StringBuilder
           while (idx < N) {
-            if (idx == 0) chunkIdxBuilder += '.'
-            chunkIdxBuilder ++= (idxs(idx) / chunkShape(idx)).toString
             sum += (idxs(idx) % chunkShape(idx)) * products(idx)
             idx += 1
           }
 
-          val chunkIdx = chunkIdxBuilder.result
-
-          metadata.dtype(chunk(chunkIdx), sum)
+          metadata.dtype(chunk(idxs), sum)
         }
       }
 }

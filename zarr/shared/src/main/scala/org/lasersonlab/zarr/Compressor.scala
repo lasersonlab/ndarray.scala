@@ -12,25 +12,23 @@ import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
 import org.apache.commons.io.IOUtils
 import org.blosc.JBlosc
 import shapeless.the
+import scala.{ Array ⇒ Arr }
 
 sealed trait Compressor {
-  def apply(path: Path, sizeHint: Opt[Int] = Non): Seq[Byte]
+  def apply(path: Path, sizeHint: Opt[Int] = Non): Arr[Byte]
 }
 object Compressor {
 
   case class ZLib(level: Int) extends Compressor {
-    def apply(path: Path, sizeHint: Opt[Int] = Non): Seq[Byte] = {
+    def apply(path: Path, sizeHint: Opt[Int] = Non): Arr[Byte] = {
       val baos = new ByteArrayOutputStream(sizeHint.getOrElse(1 << 20))
       IOUtils.copy(new InflaterInputStream(path.inputStream), baos)
-      baos.toByteArray.toSeq
+      baos.toByteArray
     }
   }
 
   case object None extends Compressor {
-    def apply(path: Path, sizeHint: Opt[Int] = Non): Seq[Byte] =
-      path
-        .readBytes
-        .toSeq
+    def apply(path: Path, sizeHint: Opt[Int] = Non): Arr[Byte] = path.readBytes
   }
 
   import Blosc._
@@ -47,12 +45,13 @@ object Compressor {
 
     val MAX_BUFFER_SIZE = (1 << 31) - 1
 
-    def apply(path: Path, sizeHint: Opt[Int] = Non): Seq[Byte] = {
+    def apply(path: Path, sizeHint: Opt[Int] = Non): Arr[Byte] = {
 
       val arr = path.readBytes
       val size = arr.length
       val src = ByteBuffer.wrap(arr)
 
+      var expansions = 0
       var bufferSize = sizeHint.getOrElse(1 << 21)  // 2 MB
       while (true) {
         val buffer = ByteBuffer.allocate(bufferSize)
@@ -75,8 +74,15 @@ object Compressor {
             s"WARN: increasing buffer from $bufferSize to $newBufferSize while decompressing $path"
           )
           bufferSize = newBufferSize
+          expansions += 1
         } else
-          return buffer.array().view(0, decompressed)
+          if (expansions == 0)
+            return buffer.array()
+          else {
+            val arr = new Arr[Byte](decompressed)
+            buffer.get(arr)
+            return arr
+          }
       }
 
       ???  // unreachable

@@ -6,6 +6,7 @@ import hammerlab.path._
 import io.circe.Decoder
 import io.circe.generic.auto._
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, Bytes, ScanRight, Sum }
+import org.lasersonlab.zarr
 import org.lasersonlab.zarr.FillValue.FillValueDecoder
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.group.Load.Ops
@@ -87,7 +88,7 @@ object Array {
      compressor: Compressor,
   ):
     Exception |
-    A[Bytes.Aux[Shape, T]]
+    A[Chunk[Shape, T]]
   = {
 
     val chunkRanges = (arrShape + chunkShape - 1) / chunkShape
@@ -112,6 +113,8 @@ object Array {
                 start,
                 end,
                 compressor
+              )(
+                chunkShape
               )
           }
 
@@ -119,7 +122,7 @@ object Array {
     chunks
       .sequence[
         Exception | ?,
-        Bytes.Aux[Shape, T]
+        Chunk[Shape, T]
       ]
   }
 
@@ -172,7 +175,7 @@ object Array {
     dt: FillValueDecoder[T],
   ):
     Exception |
-    Aux[v.Shape, v.A, Bytes.Aux[v.Shape, ?], T]
+    Aux[v.Shape, v.A, Chunk[v.Shape, ?], T]
   = {
     import v._
     apply[T, v.Shape, v.A](dir)(
@@ -212,7 +215,7 @@ object Array {
     ds: Decoder[_Shape],
   ):
     Exception |
-    Aux[_Shape, _A, Bytes.Aux[_Shape, ?], T]  // TODO: replace Bytes with something lazy / network-based
+    Aux[_Shape, _A, Chunk[_Shape, ?], T]  // TODO: replace Bytes with something lazy / network-based
   =
     for {
       _metadata ← dir.load[Metadata[T, _Shape]]
@@ -230,10 +233,10 @@ object Array {
       new Array[T] {
         type Shape = _Shape
         type A[U] = _A[U]
-        type Chunk[U] = Bytes.Aux[Shape, U]
+        type Chunk[U] = zarr.Chunk[Shape, U]
 
         override val traverseA = traverse
-        override val foldableChunk = Bytes.foldableAux
+        override val foldableChunk = Chunk.foldable
 
         val metadata = _metadata
         val   chunks =   _chunks
@@ -243,7 +246,7 @@ object Array {
         val chunkShape = metadata.chunks
 
         def apply(idx: Shape): T =
-          Bytes.arrayLike(
+          Chunk.arrayLike(
             arrayLike(
               chunks,
               idx / chunkShape

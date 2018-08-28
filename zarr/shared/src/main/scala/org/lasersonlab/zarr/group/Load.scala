@@ -117,6 +117,6 @@ object Load
     }
 
   implicit class Ops(val dir: Path) extends AnyVal {
-    def load[T](implicit l: Load[T]) = l(dir)
+    def load[T](implicit l: Load[T]): Exception | T = l(dir)
   }
 }

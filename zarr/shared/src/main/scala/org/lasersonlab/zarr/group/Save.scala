@@ -1,6 +1,8 @@
 package org.lasersonlab.zarr.group
 
 import hammerlab.either._
+import hammerlab.{ either, option }
+import hammerlab.option._
 import hammerlab.path._
 import io.circe.Encoder
 import hammerlab.str._
@@ -35,4 +37,17 @@ object Save {
         .toEither
 
     }
+
+  implicit def opt[T](implicit save: Save[T]): Save[Opt[T]] =
+    new Save[Opt[T]] {
+      def apply(t: option.Opt[T], dir: Path): Throwable | Unit =
+        Right(t)
+          .map {
+            _.save(dir)
+          }
+    }
+
+  implicit class Ops[T](val t: T) extends AnyVal {
+    def save(dir: Path)(implicit save: Save[T]): Throwable | Unit = save(t, dir)
+  }
 }

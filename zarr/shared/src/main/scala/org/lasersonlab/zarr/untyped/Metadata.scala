@@ -1,14 +1,16 @@
 package org.lasersonlab.zarr.untyped
 
+import hammerlab.either._
 import hammerlab.option._
 import hammerlab.path._
 import io.circe._
 import io.circe.generic.auto._
 import io.circe.parser._
+import org.lasersonlab.zarr.{ Compressor, FillValue, Filter, Format, Order }
 import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.Metadata._
-import org.lasersonlab.zarr._
+//import org.lasersonlab.zarr._
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.group.Basename
 

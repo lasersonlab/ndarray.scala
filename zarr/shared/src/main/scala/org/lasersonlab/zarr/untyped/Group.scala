@@ -1,13 +1,16 @@
 package org.lasersonlab.zarr.untyped
 
+import hammerlab.{ either, option }
 import hammerlab.option._
 import hammerlab.path._
 import hammerlab.str._
 import io.circe.generic.auto._
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr._
-import org.lasersonlab.zarr.group.{ Basename, Load }
+import org.lasersonlab.zarr.group.{ Basename, Save }
 import org.lasersonlab.zarr.group.Load.Ops
+
+import scala.util.Try
 
 case class Group(
   arrays: Map[String, Array],
@@ -102,4 +105,40 @@ object Group {
           }
     } yield
       group
+
+  implicit val save: Save[Group] =
+    new Save[Group] {
+      def apply(t: Group, dir: Path): Throwable | Unit = {
+        import cats.implicits._
+
+        import Save.Ops
+
+        val groups =
+          (
+            for {
+              (name, group) ← t.groups.toList
+            } yield
+              group.save(dir / name)
+          )
+          .sequence
+
+        val arrays =
+          (
+            for {
+              (name, array) ← t.arrays.toList
+            } yield {
+              array.save(dir / name)
+            }
+          )
+          .sequence
+
+        for {
+          _ ← groups
+          _ ← arrays
+          _ ← t.attrs.save(dir)
+          _ ← t.metadata.save(dir)
+        } yield
+          ()
+      }
+    }
 }

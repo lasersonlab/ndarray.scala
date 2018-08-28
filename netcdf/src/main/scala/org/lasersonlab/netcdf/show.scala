@@ -3,26 +3,29 @@ package org.lasersonlab.netcdf
 import hammerlab.lines._
 import hammerlab.show._
 import ucar.ma2.DataType
-import ucar.nc2.{ Attribute, NetcdfFile }
+import ucar.nc2.NetcdfFile
 
+/**
+ * Helpers for displaying various data-types
+ */
 trait show {
   implicit val showDataType: Show[DataType] = Show { _.toString }
 
   implicit def attributeLines: ToLines[Attribute] =
     ToLines {
-      attr ⇒
-        attr.getLength match {
+      case Attribute.Vals(name, datatype, values) ⇒
+        values.size match {
           case 1 ⇒
-            s"${attr.getShortName}: ${attr.getValue(0)}"
+            s"$name ($datatype): ${values.head}"
           case n ⇒
             Lines(
-              s"${attr.getShortName} (${attr.getLength}):",
+              s"$name ($datatype; $n):",
               indent(
                 if (n < 10)
-                  (0 until n).map(attr.getValue(_).toString)
+                  (0 until n).map(values(_).toString)
                 else
                   Lines(
-                    (0 until 10).map(attr.getValue(_).toString),
+                    (0 until 10).map(values(_).toString),
                     "…"
                   )
               )

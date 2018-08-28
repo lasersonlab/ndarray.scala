@@ -1,7 +1,7 @@
 package org.lasersonlab.netcdf
 
 import java.net.URI
-import java.nio.file.FileSystems
+import java.nio.file.FileSystems.newFileSystem
 
 import com.google.cloud.storage.contrib.nio.CloudStorageConfiguration
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystemProvider.setDefaultCloudStorageConfiguration
@@ -11,7 +11,7 @@ import hammerlab.cli._
 import hammerlab.indent.tab
 import hammerlab.lines._
 import hammerlab.option._
-import hammerlab.path.Path
+import hammerlab.path._
 import hammerlab.show._
 import org.lasersonlab.netcdf.show._
 import ucar.nc2.NetcdfFile
@@ -45,7 +45,7 @@ object Main
         setGCPUserProject(opts.gcpUserProject)
 
         // Initialize S3 Filesystem
-        FileSystems.newFileSystem(
+        newFileSystem(
           new URI(s"s3:///"),
           Map.empty[String, String].asJava,
           Thread.currentThread().getContextClassLoader

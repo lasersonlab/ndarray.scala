@@ -2,12 +2,25 @@
 default(
   group("org.lasersonlab"),
   versions(
+    hammerlab.          bytes → "1.2.0",
+    hammerlab.       cli.base → "1.0.1",
     hammerlab.     math.utils → "2.3.0".snapshot,
     hammerlab.          paths → "1.6.0".snapshot,
     hammerlab.          types → "1.4.0".snapshot,
     hammerlab.shapeless_utils → "1.6.0".snapshot,
     hammerlab.             io → "5.2.0"
   )
+)
+
+lazy val convert = project.settings(
+dep(
+  hammerlab.cli.base,
+  hammerlab.io,
+  hammerlab.paths,
+)
+).dependsOn(
+  netcdf,
+  zarr
 )
 
 lazy val ndarray = crossProject.settings(
@@ -28,8 +41,8 @@ lazy val netcdf = project.settings(
     `google-cloud-nio`,
     s3fs,
 
-    hammerlab.bytes % "1.2.0",
-    hammerlab.cli.base % "1.0.1",
+    hammerlab.bytes,
+    hammerlab.cli.base,
     hammerlab.io,
     hammerlab.paths,
     hammerlab.types
@@ -58,6 +71,13 @@ lazy val utils = project.settings(
     junit
   )
 )
+
+lazy val viewerCommon = crossProject.settings()
+lazy val viewerCommonJVM = viewerCommon.jvm
+lazy val viewerCommonJS  = viewerCommon.js
+
+lazy val viewerServer = project.settings().dependsOn(viewerCommon.jvm)
+lazy val viewerClient = project.settings().dependsOn(viewerCommon.js )
 
 lazy val zarr = project.in(new File("zarr/shared")).settings(
   dep(

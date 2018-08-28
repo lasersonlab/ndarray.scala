@@ -4,19 +4,19 @@ import hammerlab.lines._
 import hammerlab.show._
 import org.lasersonlab.netcdf.show._
 import ucar.ma2.DataType
-import ucar.nc2.Attribute
 
 import scala.collection.JavaConverters._
 
 case class Variable(
   name: String,
   description: Option[String],
-  dtype: DataType,
+  dtype: DataType,  // TODO: replace with own DataType
   attrs: Seq[Attribute],
   dimensions: Seq[Dimension],
   rank: Int,
   shape: Seq[Int],
-  size: Long
+  size: Long,
+  data: ucar.ma2.Array
 )
 
 object Variable {
@@ -25,11 +25,12 @@ object Variable {
       v.getShortName,
       Option(v.getDescription),
       v.getDataType,
-      v.getAttributes.asScala,
+      v.getAttributes.asScala.map { Attribute(_) },
       v.getDimensions.asScala.map { Dimension(_) },
       v.getRank,
       v.getShape,
-      v.getSize
+      v.getSize,
+      v.read()
     )
 
   implicit def lines: ToLines[Variable] =
@@ -42,10 +43,17 @@ object Variable {
         dimensions,
         rank,
         _,
-        size
+        size,
+        _
       ) ⇒
+        val descriptionString =
+          description
+          .filter(_.nonEmpty)
+          .fold("") {
+            d ⇒ show" ($d)"
+          }
         Lines(
-          show"$name:${ description.filter(_.nonEmpty).fold("") { d ⇒ show" ($d)" } } ($dtype, $size)",
+          show"$name:$descriptionString ($dtype, $size)",
           indent(
             show"dimensions ($rank): $dimensions",
             attrs

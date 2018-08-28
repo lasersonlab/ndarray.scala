@@ -15,6 +15,7 @@ import scala.util.Try
 
 trait Array {
   type T
+  def rank = metadata.rank
   def metadata: Metadata.Aux[T]
   def datatype: DataType.Aux[T]
   def attrs: Opt[Attrs]
@@ -45,16 +46,22 @@ trait Array {
           h :: t
     }
 
-  def chunkRange(chunkIdx: Seq[Int]): List[Range] =
+  def chunkRange(chunkIdx: Seq[Int]): List[Range] = {
+    require(chunkIdx.size == rank)
     metadata
       .shape
       .zip(metadata.chunks)
       .zip(chunkIdx)
       .map {
         case ((shape, chunkShape), chunkIdx) ⇒
-          (chunkIdx * chunkShape) until math.min(shape, (chunkIdx + 1) * chunkShape)
+          (chunkIdx * chunkShape) until
+          math.min(
+            shape,
+            (chunkIdx + 1) * chunkShape
+          )
       }
       .toList
+  }
 
   def chunkElems(chunkIdx: Seq[Int]): Iterator[T] =
     indices(

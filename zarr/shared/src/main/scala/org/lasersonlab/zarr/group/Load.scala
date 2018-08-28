@@ -59,26 +59,6 @@ object Load
       }
     }
 
-  implicit def array[T, N <: Nat, Shape](
-    implicit
-    v: VectorInts.Ax[N, Shape],
-    d: Decoder[DataType.Aux[T]],
-    dt: FillValueDecoder[T]
-  ):
-    Load[
-      Arr.S[Shape, T]
-    ] =
-    new Load[Arr.S[Shape, T]] {
-      override def apply(dir: Path): Exception | Arr.S[Shape, T] =
-        Arr[T, N](dir)
-    }
-
-  implicit val group: Load[Group] =
-    new Load[Group] {
-      override def apply(dir: Path): Exception | Group =
-        Group(dir)
-    }
-
   implicit val hnil: Load[HNil] = new Load[HNil] {
     def apply(dir: Path): Exception | HNil = Right(HNil)
   }

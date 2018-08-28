@@ -7,7 +7,7 @@ import hammerlab.str._
 import io.circe.generic.auto._
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr._
-import org.lasersonlab.zarr.group.{ Basename, Save }
+import org.lasersonlab.zarr.group.{ Basename, Load, Save }
 import org.lasersonlab.zarr.group.Load.Ops
 
 import scala.util.Try
@@ -105,6 +105,12 @@ object Group {
           }
     } yield
       group
+
+  implicit val group: Load[Group] =
+    new Load[Group] {
+      override def apply(dir: Path): Exception | Group =
+        Group(dir)
+    }
 
   implicit val save: Save[Group] =
     new Save[Group] {

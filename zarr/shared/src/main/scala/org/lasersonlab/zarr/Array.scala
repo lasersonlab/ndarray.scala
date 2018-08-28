@@ -9,6 +9,7 @@ import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.FillValue.FillValueDecoder
 import org.lasersonlab.zarr.dtype.DataType
+import org.lasersonlab.zarr.group.Load
 import org.lasersonlab.zarr.group.Load.Ops
 import shapeless.Nat
 
@@ -337,5 +338,19 @@ object Array {
                   f
                 )
           }
+    }
+
+  implicit def array[T, N <: Nat, Shape](
+    implicit
+    v: VectorInts.Ax[N, Shape],
+    d: Decoder[DataType.Aux[T]],
+    dt: FillValueDecoder[T]
+  ):
+    Load[
+      S[Shape, T]
+    ] =
+    new Load[S[Shape, T]] {
+      override def apply(dir: Path): Exception | S[Shape, T] =
+        Array[T, N](dir)
     }
 }

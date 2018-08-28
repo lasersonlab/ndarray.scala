@@ -1,17 +1,21 @@
 package org.lasersonlab.zarr
 
+import java.io.DataOutputStream
+
 import cats.{ Eval, Foldable, Traverse }
 import hammerlab.option._
 import hammerlab.path._
-import io.circe.Decoder
+import io.circe.{ Decoder, Encoder }
 import io.circe.generic.auto._
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
 import org.lasersonlab.zarr
-import org.lasersonlab.zarr.FillValue.FillValueDecoder
+import org.lasersonlab.zarr.FillValue.{ FillValueDecoder, FillValueEncoder }
 import org.lasersonlab.zarr.dtype.DataType
-import org.lasersonlab.zarr.group.Load
+import org.lasersonlab.zarr.group.{ Load, Save }
 import org.lasersonlab.zarr.group.Load.Ops
 import shapeless.Nat
+
+import scala.util.Try
 
 /**
  * A Zarr N-dimensional array
@@ -37,6 +41,8 @@ trait Array[T] {
 
   // TODO: this should be type-parameterizable, and validated accordingly during JSON-parsing
   def attrs: Opt[Attrs]
+
+  def save(dir: Path): Throwable | Unit
 }
 
 object Array {
@@ -142,7 +148,9 @@ object Array {
     implicit
     v: VectorInts[N],
     d: Decoder[DataType.Aux[T]],
+    e: Encoder[DataType.Aux[T]],
     dt: FillValueDecoder[T],
+    et: FillValueEncoder[T]
   ):
     Exception |
     S[v.Shape, T]
@@ -173,15 +181,18 @@ object Array {
     implicit
     v: VectorInts[N],
     d: Decoder[DataType.Aux[T]],
+    e: Encoder[DataType.Aux[T]],
     dt: FillValueDecoder[T],
+    et: FillValueEncoder[T]
   ):
     Exception |
     Aux[v.Shape, v.A, Chunk[v.Shape, ?], T]
   = {
     import v._
     apply[T, v.Shape, v.A](dir)(
-      // shouldn't have to do list all these explicitly: https://github.com/scala/bug/issues/11086
+      // shouldn't have to list all these explicitly: https://github.com/scala/bug/issues/11086
       d = d,
+      e = e,
       ti = ti,
       traverse = traverse,
       arrayLike = arrayLike,
@@ -189,9 +200,11 @@ object Array {
       scanRight = scanRight,
       sum = sum,
       dt = dt,
+      et = et,
       arithmetic = arithmetic,
       key = key,
-      ds = ds
+      ds = ds,
+      es = es
     )
   }
 
@@ -204,6 +217,7 @@ object Array {
   )(
     implicit
     d: Decoder[DataType.Aux[T]],
+    e: Encoder[DataType.Aux[T]],
     ti: Indices.Aux[_A, _Shape],
     traverse: Traverse[_A],
     arrayLike: ArrayLike.Aux[_A, _Shape],
@@ -211,9 +225,11 @@ object Array {
     scanRight: ScanRight.Aux[_Shape, Int, Int, _Shape],
     sum: Sum.Aux[_Shape, Int],
     dt: FillValueDecoder[T],
+    et: FillValueEncoder[T],
     arithmetic: Arithmetic.Id[_Shape],
     key: Key[_Shape],
     ds: Decoder[_Shape],
+    es: Encoder[_Shape]
   ):
     Exception |
     Aux[_Shape, _A, Chunk[_Shape, ?], T]  // TODO: replace Bytes with something lazy / network-based
@@ -254,6 +270,42 @@ object Array {
             ),
             idx % chunkShape
           )
+
+        def save(dir: Path): Throwable | Unit = {
+          import Save.Ops
+          import cats.implicits._
+
+          val chunkRanges = (shape + chunkShape - 1) / chunkShape
+
+          def chunkResults: Throwable | Unit = {
+            ti(chunkRanges)
+              .map {
+                idx ⇒
+                  val chunk = arrayLike(chunks, idx)
+                  val path = dir / key(idx)
+                  Try {
+                    val os = new DataOutputStream(path.outputStream(mkdirs = true))
+                    chunk.foldLeft[Unit](()) {
+                      (_, elem) ⇒
+                        metadata.dtype(os, elem)
+
+                        ()
+                    }
+                    os.close()
+                  }
+                  .toEither
+              }
+              .sequence
+              .map { _ ⇒ () }
+          }
+
+          for {
+            _ ← metadata.save(dir)
+            _ ← attrs.save(dir)
+            _ ← chunkResults
+          } yield
+            ()
+        }
       }
 
   import cats.implicits._
@@ -340,11 +392,13 @@ object Array {
           }
     }
 
-  implicit def array[T, N <: Nat, Shape](
+  implicit def load[T, N <: Nat, Shape](
     implicit
     v: VectorInts.Ax[N, Shape],
     d: Decoder[DataType.Aux[T]],
-    dt: FillValueDecoder[T]
+    e: Encoder[DataType.Aux[T]],
+    dt: FillValueDecoder[T],
+    et: FillValueEncoder[T]
   ):
     Load[
       S[Shape, T]
@@ -352,5 +406,16 @@ object Array {
     new Load[S[Shape, T]] {
       override def apply(dir: Path): Exception | S[Shape, T] =
         Array[T, N](dir)
+    }
+
+  implicit def save[
+    T,
+    Shape
+  ]:
+    Save[
+      S[Shape, T]
+    ] =
+    new Save[S[Shape, T]] {
+      def apply(t: S[Shape, T], dir: Path): Throwable | Unit = t.save(dir)
     }
 }

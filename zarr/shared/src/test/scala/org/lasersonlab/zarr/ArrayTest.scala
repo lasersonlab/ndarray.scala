@@ -4,11 +4,13 @@ import cats.Foldable
 import cats.implicits._
 import hammerlab.path._
 import hammerlab.shapeless.tlist.{ Map ⇒ _, _ }
+import io.circe.{ Decoder, Encoder }
 import org.lasersonlab.anndata.loom.{ Obs, Var }
 import org.lasersonlab.ndarray.Bytes
 import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.Compressor.Blosc.CName
+import org.lasersonlab.zarr.FillValue.{ FillValueDecoder, FillValueEncoder }
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian

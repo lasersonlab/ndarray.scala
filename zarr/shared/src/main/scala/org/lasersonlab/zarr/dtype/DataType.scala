@@ -214,8 +214,8 @@ object DataType
       def apply(c: HCursor): Result[Aux[T]] = parser(c)
     }
 
-  implicit val dataTypeEncoder: Encoder[DataType] =
-    new Encoder[DataType] {
+  implicit def dataTypeEncoder[D <: DataType]: Encoder[D] =
+    new Encoder[D] {
       def apply(entries: Seq[StructEntry]): Json =
         Json.arr(
           entries
@@ -228,7 +228,7 @@ object DataType
             }:
             _*
         )
-      def apply(a: DataType): Json =
+      def apply(a: D): Json =
         a match {
           case p: Primitive ⇒ Json.fromString(p.toString)
           case        StructList(entries, _)  ⇒ apply(entries)

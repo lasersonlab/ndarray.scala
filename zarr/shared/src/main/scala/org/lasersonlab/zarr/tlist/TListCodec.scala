@@ -57,8 +57,8 @@ object TListDecoders extends TListDecoders
 trait TListEncoders {
   implicit def encodeAsSeq[T <: TList, E](
     implicit
-    encode: Encoder[E],
-    tolist: ToList.Aux[E, T]
+    tolist: ToList.Aux[E, T],
+    encode: Encoder[E]
   ):
     Encoder[T] =
     new Encoder[T] {

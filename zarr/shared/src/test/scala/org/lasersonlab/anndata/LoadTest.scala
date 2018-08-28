@@ -33,8 +33,6 @@ class LoadTest
     ==(uns.groups.size, 0)
     ==(uns.attrs, None)
 
-    !![Generic[DataType.Primitive]]
-
     val arrays = uns.arrays
     ==(
       arrays

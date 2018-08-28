@@ -28,6 +28,7 @@ case class Metadata(
 }
 object Metadata {
   type Aux[_T] = Metadata { type T = _T }
+
   def apply(dir: Path): Exception | Metadata =
     dir ? basename flatMap {
       path ⇒
@@ -35,4 +36,5 @@ object Metadata {
     }
 
   implicit val _basename = Basename[Metadata](basename)
+  implicit def _basenameAux[T] = Basename[Aux[T]](basename)
 }

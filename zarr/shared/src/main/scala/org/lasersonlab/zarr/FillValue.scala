@@ -169,7 +169,7 @@ object FillValue {
   sealed class FillValueEncoder[T](val apply: (T, DataType.Aux[T]) ⇒ Json)
   trait LowPriorityFillValueEncoder {
     case class Make[T](f: (T, DataType.Aux[T]) ⇒ Json) extends FillValueEncoder(f)
-    implicit def default[T](implicit e: Encoder[T]): FillValueEncoder[T] =
+    implicit def default[T]: FillValueEncoder[T] =
       Make {
         (t, datatype) ⇒
           Json.fromString(

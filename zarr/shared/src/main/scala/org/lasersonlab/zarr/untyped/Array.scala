@@ -6,9 +6,11 @@ import java.nio.ByteBuffer
 import cats.implicits._
 import hammerlab.option._
 import hammerlab.path._
+import io.circe.{ Encoder, Json }
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.group.Save
-import org.lasersonlab.zarr.{ Attrs, | }
+import org.lasersonlab.zarr.{ Attrs, FillValue, Filter, | }
+import shapeless.the
 
 import scala.collection.mutable
 import scala.util.Try

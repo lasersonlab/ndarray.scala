@@ -1,11 +1,11 @@
 package org.lasersonlab.zarr
 
 import cats.Traverse
-import io.circe.Decoder
+import io.circe.{ Decoder, Encoder }
 import org.lasersonlab.ndarray.Vectors._
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
 import org.lasersonlab.ndarray.Ints._
-import shapeless.Nat
+import shapeless.{ Nat, the }
 
 /**
  * Type- and value-level function from a [[Nat type-level natural number]] [[N]] to corresponding types and implicit
@@ -17,6 +17,7 @@ trait VectorInts[N <: Nat] {
 
   implicit def arithmetic: Arithmetic.Id[Shape]
   implicit def ds: Decoder[Shape]
+  implicit def es: Encoder[Shape]
   implicit def ti: Indices.Aux[A, Shape]
   implicit def traverse: Traverse[A]
   implicit def arrayLike: ArrayLike.Aux[A, Shape]
@@ -38,6 +39,7 @@ object VectorInts {
     implicit
     _arithmetic: Arithmetic.Id[_S],
     _ds: Decoder[_S],
+    _es: Encoder[_S],
     _key: Key[_S],
     _ti: Indices.Aux[_A, _S],
     _traverse: Traverse[_A],
@@ -53,6 +55,7 @@ object VectorInts {
 
       implicit val arithmetic = _arithmetic
       implicit val ds = _ds
+      implicit val es = _es
       implicit val key = _key
       implicit val ti = _ti
       implicit val traverse = _traverse
@@ -64,6 +67,9 @@ object VectorInts {
 
   import cats.implicits._
   import shapeless.nat._
+
+  encodeAsSeq[Ints1, Int]
+  the[Encoder[Ints1]]
 
   implicit val `1` = make[_1, Ints1, Vector1]
   implicit val `2` = make[_2, Ints2, Vector2]

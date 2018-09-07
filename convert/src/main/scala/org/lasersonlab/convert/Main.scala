@@ -3,19 +3,21 @@ package org.lasersonlab.convert
 import java.net.URI
 import java.nio.file.FileSystems.newFileSystem
 
-import com.tom_e_white.hdf5_java_cloud.NioReadOnlyRandomAccessFile
-import hammerlab.cli.Cmd
+import hammerlab.bytes._
+import hammerlab.cli._
 import hammerlab.path._
-import org.lasersonlab.netcdf.{ Attribute, Group, Variable }
-import org.lasersonlab.zarr
-import org.lasersonlab.zarr.untyped.Metadata.Aux
-import ucar.nc2.NetcdfFile
+import org.lasersonlab.zarr.Compressor
+import org.lasersonlab.zarr.Compressor.Blosc
+import org.lasersonlab.{ netcdf, zarr }
 
 import scala.collection.JavaConverters._
 
 object Main
   extends Cmd {
-  case class Opts()
+  case class Opts(
+    @O("c")  chunkSize:      Bytes = 64.MB,
+    @O("z") compressor: Compressor = Blosc()
+  )
   val main =
     Main(
       new App(_) {
@@ -27,63 +29,19 @@ object Main
         )
 
         val Seq(from, to) = args.args.map(Path(_))
+        implicit val Opts(chunkSize, compressor) = opts
 
+        val hdf5Group: netcdf.Group = from
+        val zarrGroup: zarr.untyped.Group = hdf5Group
 
-        val file =
-          NetcdfFile.open(
-            new NioReadOnlyRandomAccessFile(from),
-            from.toString,
-            null,
-            null
-          )
+        import org.lasersonlab.zarr.group.Save.Ops
 
-        val hdf5Group: Group = file.getRootGroup
-
-        def convertGroup(group: Group): zarr.untyped.Group =
-          zarr.untyped.Group(
-            hdf5Group
-              .vars
-              .map {
-                case Variable(
-                  name,
-                  description,
-                  dtype,
-                  attrs,
-                  dimensions,
-                  rank,
-                  shape,
-                  size,
-                  data
-                ) ⇒
-                  name →
-                    new zarr.untyped.Array {
-                      val datatype: zarr.dtype.DataType = ???
-                      override type T = datatype.T
-                      override def metadata: Aux[T] = ???
-                      override def apply(idxs: Int*): T = ???
-                    }
-              }
-              .toMap,
-            hdf5Group
-              .groups
-              .map {
-                g ⇒
-                  g.name →
-                    convertGroup(g)
-              }
-              .toMap
-            // TODO: convert attributes
-//            zarr.Attrs(
-//              hdf5Group
-//                .attributes
-//                .map {
-//                  case Attribute.Vals(name, datatype, values) ⇒
-//
-//                }
-//            )
-          )
-
-        val zarrGroup = convertGroup(hdf5Group)
+        println(s"${hdf5Group.vars.size} vars, ${hdf5Group.groups.size} groups -> ${zarrGroup.arrays.keys.mkString(",")}, ${zarrGroup.groups.keys.mkString(",")}")
+        println(s"Saving to: $to")
+        zarrGroup
+          .save(to)
+          .left
+          .foreach { throw _ }
       }
     )
 }

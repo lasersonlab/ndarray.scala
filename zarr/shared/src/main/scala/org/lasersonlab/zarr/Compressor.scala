@@ -1,9 +1,13 @@
 package org.lasersonlab.zarr
 
-import java.io.{ ByteArrayOutputStream, IOException }
+import java.io.{ ByteArrayOutputStream, IOException, OutputStream }
 import java.nio.ByteBuffer
-import java.util.zip.{ DeflaterOutputStream, InflaterInputStream }
+import java.nio.ByteBuffer._
+import java.util.zip.Deflater.DEFAULT_COMPRESSION
+import java.util.zip.{ Deflater, DeflaterOutputStream, InflaterInputStream }
 
+import caseapp.core.Error.UnrecognizedValue
+import caseapp.core.argparser.{ ArgParser, SimpleArgParser }
 import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder.Result
@@ -11,54 +15,62 @@ import io.circe.generic.auto._
 import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
 import org.apache.commons.io.IOUtils
 import org.blosc.JBlosc
+import JBlosc._
+import org.hammerlab.str.Name
+import org.lasersonlab.zarr.Compressor.Blosc.CName.lz4
 import shapeless.the
 
-import scala.util.Try
 import scala.{ Array ⇒ Arr }
 
 sealed trait Compressor {
   def apply(path: Path, sizeHint: Opt[Int] = Non): Arr[Byte]
-  def apply(bytes: Arr[Byte], path: Path): Throwable | Unit
+  def apply(os: OutputStream, itemsize: Int): OutputStream
 }
 object Compressor {
 
-  case class ZLib(level: Int) extends Compressor {
+  case class ZLib(level: Int = DEFAULT_COMPRESSION)
+    extends Compressor {
     def apply(path: Path, sizeHint: Opt[Int] = Non): Arr[Byte] = {
       val baos = new ByteArrayOutputStream(sizeHint.getOrElse(1 << 20))
       IOUtils.copy(new InflaterInputStream(path.inputStream), baos)
       baos.toByteArray
     }
-    def apply(bytes: Arr[Byte], path: Path): Throwable | Unit =
-      Try {
-        val os = new DeflaterOutputStream(path.outputStream(mkdirs = true))
-        os.write(bytes)
-        os.close()
-      }
-      .toEither
+    def apply(os: OutputStream, itemsize: Int): OutputStream =
+      new DeflaterOutputStream(
+        os,
+        new Deflater(
+          level
+        )
+      )
+  }
+  object ZLib {
+    val regex = """zlib(?:\((\d)\))""".r
+    object parse {
+      def unapply(str: String): Option[ZLib] =
+        str match {
+          case regex(level) ⇒ Some(ZLib(level.toInt))
+          case _ ⇒ scala.None
+        }
+    }
   }
 
-  case object None extends Compressor {
+  case object None
+    extends Compressor {
     def apply(path: Path, sizeHint: Opt[Int] = Non): Arr[Byte] = path.readBytes
-    def apply(bytes: Arr[Byte], path: Path): Throwable | Unit =
-      Try {
-        val os = path.outputStream(mkdirs = true)
-        os.write(bytes)
-        os.close()
-      }
-      .toEither
+    def apply(os: OutputStream, itemsize: Int): OutputStream = os
   }
 
   import Blosc._
 
   case class Blosc(
-    cname: CName,
-    clevel: Int,
-    shuffle: Int,
-    blocksize: Int
+        cname: CName = lz4,
+       clevel:   Int = 5,
+      shuffle:   Int = 1,
+    blocksize:   Int = 0
   )
   extends Compressor {
-    val blosc = new JBlosc
-    blosc.setCompressor(cname.toString)
+
+    val numThreads = 1  // TODO: support configuring this
 
     val MAX_BUFFER_SIZE = (1 << 31) - 1
 
@@ -69,13 +81,20 @@ object Compressor {
       val src = ByteBuffer.wrap(arr)
 
       var expansions = 0
-      var bufferSize = sizeHint.getOrElse(1 << 21)  // 2 MB
+      var bufferSize =
+//        max(
+          sizeHint.getOrElse(1 << 21)  // 2 MB
+//        )
       while (true) {
-        val buffer = ByteBuffer.allocate(bufferSize)
+        val buffer = allocate(bufferSize)
 
         buffer.clear()
-        val decompressed = blosc.decompress(src, buffer, bufferSize)
-        if (decompressed <= 0) {
+        val decompressed = JBlosc.decompressCtx(src, buffer, bufferSize, numThreads)
+        if (decompressed < 0)
+          throw new IOException(
+            s"Internal error in Blosc decompression of $path (size: ${arr.length}) into buffer of size $bufferSize"
+          )
+        else if (decompressed == 0) {
           if (bufferSize == MAX_BUFFER_SIZE) {
             throw new IOException(
               s"Blosc decompression failed ($decompressed) on path $path with maximum buffer-size 2GB"
@@ -105,69 +124,106 @@ object Compressor {
       ???  // unreachable
     }
 
-    @inline def apply(
-      bytes: Arr[Byte],
-      path: Path
-    ):
-      Throwable | Unit
-    =
-      Try {
-        withHint(
-          bytes,
-          path,
-          bytes.length / 2,
-          1
-        )
+    def apply(os: OutputStream, itemsize: Int): OutputStream =
+      new ByteArrayOutputStream() {
+        override def close(): Unit = {
+          super.close()
+          val bytes = toByteArray
+          apply(bytes, itemsize, os)
+          os.close()
+        }
       }
-      .toEither
 
-    private def withHint(
+    def apply(
       bytes: Arr[Byte],
-      path: Path,
-      destSize: Int,
-      attempts: Int
+      itemsize: Int,
+      os: OutputStream
     ):
       Unit
     = {
-      val dest = ByteBuffer.allocateDirect(destSize)
+      // JBlosc requires you give it at least this much space
+      val destLength =
+        math.min(
+          Integer.MAX_VALUE - OVERHEAD,
+          bytes.length
+        )
+        + OVERHEAD
+      val dest = allocate(destLength)
+
+      val srcLength = bytes.length
+      val src = allocateDirect(srcLength)
+      src.put(bytes)
+
       val compressed =
-        blosc.compress(
+        JBlosc.compressCtx(
           clevel,
           shuffle,
-          blocksize,
-          ByteBuffer.wrap(bytes),
-          bytes.length,
+          itemsize,
+          src,
+          srcLength,
           dest,
-          destSize
+          destLength,
+          cname,
+          blocksize,
+          numThreads
         )
+
       if (compressed > 0) {
-        val os = path.outputStream(mkdirs = true)
+        //dest.put
         os.write(dest.array(), 0, compressed)
         os.close()
       } else if (compressed == 0)
-        if (destSize > bytes.length)
+        if (destLength > bytes.length)
           throw new IllegalStateException(
-            s"Blosc buffer apparently too small ($destSize) for data of size ${bytes.length} after $attempts attempts"
+            s"Blosc buffer apparently too small ($destLength) for data of size ${bytes.length}"
           )
         else
-          withHint(
+          apply(
             bytes,
-            path,
-            destSize * 2,
-            attempts + 1
+            itemsize,
+            os
           )
       else
         throw new Exception(
-          s"Blosc error compressing ${bytes.length} bytes into buffer of size $destSize on attempt $attempts"
+          s"Blosc error compressing ${bytes.length} bytes into buffer of size $destLength"
         )
     }
   }
 
   object Blosc {
+    val regex = """blosc(?:\((\d)\))""".r
+    object parse {
+      def unapply(s: String): Option[Blosc] =
+        s match {
+          case regex(level) ⇒
+            Some(
+              Option(level)
+                .map(_.toInt)
+                .fold(
+                  Blosc( )
+                ) {
+                  level ⇒
+                    Blosc(clevel = level)
+                }
+            )
+          case _ ⇒ scala.None
+        }
+    }
+
     sealed trait CName
     object CName {
-      case object lz4 extends CName
+      case object lz4 extends CName { override val toString: String = "lz4" }
       // TODO: others
+
+      implicit def toName(cname: CName): String = cname.toString
+
+      implicit val encoder: Encoder[CName] =
+        new Encoder[CName] {
+          def apply(a: CName): Json =
+            a match {
+              case _: lz4.type ⇒ Json.fromString("lz4")
+            }
+        }
 
       implicit val decoder: Decoder[CName] =
         new Decoder[CName] {
@@ -212,4 +268,15 @@ object Compressor {
           case b: Blosc ⇒ the[Encoder[Blosc]].apply(b).mapObject(_ add ("id", Json.fromString("blosc")))
         }
     }
+
+  implicit val argParser: ArgParser[Compressor] =
+    SimpleArgParser(
+      "Compressor to use on zarr chunks",
+      {
+        case ZLib.parse(zlib) ⇒ Right(zlib)
+        case Blosc.parse(blosc) ⇒ Right(blosc)
+        case "none" ⇒ Right(None)
+        case s ⇒ Left(UnrecognizedValue(s))
+      }
+    )
 }

@@ -4,7 +4,7 @@ import hammerlab.either._
 import hammerlab.{ either, option }
 import hammerlab.option._
 import hammerlab.path._
-import io.circe.Encoder
+import io.circe.{ Encoder, Printer }
 import hammerlab.str._
 
 import scala.util.Try
@@ -19,6 +19,7 @@ trait Save[T] {
   def apply(t: T, dir: Path): Throwable | Unit
 }
 object Save {
+  val print = Printer.spaces4.copy(colonLeft = "").pretty _
   implicit def withBasenameAsJSON[T](
     implicit
     basename: Basename[T],
@@ -28,10 +29,13 @@ object Save {
     new Save[T] {
       def apply(t: T, dir: Path): Throwable | Unit =
         Try {
-          (dir / basename)
+          val path = dir / basename
+          path.mkdirs
+          path
             .write(
-              encoder(t)
-                .spaces2
+              print(
+                encoder(t)
+              )
             )
         }
         .toEither
@@ -40,11 +44,11 @@ object Save {
 
   implicit def opt[T](implicit save: Save[T]): Save[Opt[T]] =
     new Save[Opt[T]] {
-      def apply(t: option.Opt[T], dir: Path): Throwable | Unit =
-        Right(t)
-          .map {
-            _.save(dir)
-          }
+      def apply(t: Opt[T], dir: Path): Throwable | Unit =
+        t match {
+          case Som(t) ⇒ save(t, dir)
+          case _ ⇒ Right(())
+        }
     }
 
   implicit class Ops[T](val t: T) extends AnyVal {

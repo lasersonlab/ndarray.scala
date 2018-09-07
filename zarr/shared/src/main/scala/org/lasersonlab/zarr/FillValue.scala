@@ -32,6 +32,8 @@ object FillValue {
    *
    * The [[DataType]] is necessary in the case of [[string]] fields, or structs that contain them, because they are
    * encoded as taking up a specific number of bytes, which is discarded in the parsed type [[String]].
+   *
+   * TODO: make this FillValue.Decoder, likewise for Encoder
    */
   sealed trait FillValueDecoder[T]  {
     def apply(json: Json, datatype: DataType.Aux[T]): Result[T]
@@ -199,6 +201,15 @@ object FillValue {
           )
       }
   }
+
+  implicit val encodeJson: Encoder[FillValue[Json]] =
+    new Encoder[FillValue[Json]] {
+      def apply(a: FillValue[Json]): Json =
+        a match {
+          case Null ⇒ Json.Null
+          case NonNull(json) ⇒ json
+        }
+    }
 
   implicit def encoder[T](
     implicit

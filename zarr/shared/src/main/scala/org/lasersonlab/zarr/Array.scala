@@ -7,6 +7,7 @@ import hammerlab.option._
 import hammerlab.path._
 import io.circe.{ Decoder, Encoder }
 import io.circe.generic.auto._
+import org.hammerlab.iterator.util.SimpleIterator
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.FillValue.{ FillValueDecoder, FillValueEncoder }
@@ -30,6 +31,18 @@ trait Array[T] {
 
   implicit def traverseA: Traverse[A]
   implicit def foldableChunk: Foldable[Chunk]
+
+  def chunksIterator: Iterator[Chunk[T]] =
+    traverseA
+      .toList(chunks)
+      .iterator
+
+  def elems: Iterator[T] =
+    for {
+      chunk ← chunksIterator
+      elem ← foldableChunk.toList(chunk).iterator
+    } yield
+      elem
 
   def shape: Shape
   def chunkShape: Shape
@@ -284,13 +297,23 @@ object Array {
                   val chunk = arrayLike(chunks, idx)
                   val path = dir / key(idx)
                   Try {
-                    val os = new DataOutputStream(path.outputStream(mkdirs = true))
+                    import java.nio.ByteBuffer._
+                    val datatype = metadata.dtype
+                    val buffer = allocate(datatype.size * chunk.size)
                     chunk.foldLeft[Unit](()) {
                       (_, elem) ⇒
-                        metadata.dtype(os, elem)
+                        datatype(buffer, elem)
 
                         ()
                     }
+
+                    val os =
+                      metadata.compressor(
+                        path.outputStream(mkdirs = true),
+                        datatype.size
+                      )
+
+                    os.write(buffer.array())
                     os.close()
                   }
                   .toEither

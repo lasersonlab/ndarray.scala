@@ -13,8 +13,9 @@ trait show {
 
   implicit def attributeLines: ToLines[Attribute] =
     ToLines {
-      case Attribute.Vals(name, datatype, values) ⇒
-        values.size match {
+      attr ⇒
+        val (name, values, datatype) = (attr.name, attr.values, attr.datatype)
+        attr.values.size match {
           case 1 ⇒
             s"$name ($datatype): ${values.head}"
           case n ⇒

@@ -1,24 +1,21 @@
 package org.lasersonlab.zarr.untyped
 
-import java.io.DataOutputStream
 import java.nio.ByteBuffer
+import java.nio.ByteBuffer._
 
 import cats.implicits._
 import hammerlab.option._
 import hammerlab.path._
-import io.circe.{ Encoder, Json }
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.group.Save
-import org.lasersonlab.zarr.{ Attrs, FillValue, Filter, | }
-import shapeless.the
+import org.lasersonlab.zarr.{ Attrs, | }
 
 import scala.collection.mutable
 import scala.util.Try
 
 trait Array {
   type T
-  def rank = metadata.rank
-  def metadata: Metadata.Aux[T]
+  def metadata: Metadata  // TODO: make this Aux[T]; HDF5 conversions made it hard to get the types to line up
   def datatype: DataType.Aux[T]
   def attrs: Opt[Attrs]
   def apply(idxs: Int*): T
@@ -39,7 +36,7 @@ trait Array {
 
   def indices(ranges: List[Range]): Iterator[List[Int]] =
     ranges match {
-      case Nil ⇒ Iterator()
+      case Nil ⇒ Iterator(Nil)
       case h :: t ⇒
         for {
           h ← h.iterator
@@ -49,7 +46,7 @@ trait Array {
     }
 
   def chunkRange(chunkIdx: Seq[Int]): List[Range] = {
-    require(chunkIdx.size == rank)
+    require(chunkIdx.size == metadata.rank)
     metadata
       .shape
       .zip(metadata.chunks)
@@ -72,12 +69,20 @@ trait Array {
     .map(
       apply(_: _*)
     )
+
+  def elems: Iterator[T] =
+    for {
+      chunkIdx <- chunkIndices
+      elem ← chunkElems(chunkIdx)
+    } yield
+      elem
 }
 
 object Array {
   type Aux[_T] = Array { type T = _T }
 
-  implicit def unwrap[T](a: Aux[T]): Metadata.Aux[T] = a.metadata
+  //implicit def unwrap[T](a: Aux[T]): Metadata.Aux[T] = a.metadata
+  implicit def unwrap[T](a: Aux[T]): Metadata = a.metadata
 
   import org.lasersonlab.zarr.group.Load.Ops
 
@@ -129,7 +134,7 @@ object Array {
             idx += 1
           }
 
-          metadata.dtype(chunk(idxs), sum)
+          datatype.read(chunk(idxs), sum)
         }
       }: Array
 
@@ -144,14 +149,27 @@ object Array {
             } yield
               Try {
                 val path = dir / chunkIdx.mkString(".")
-                val os = new DataOutputStream(path.outputStream(mkdirs = true))
-                t
-                  .chunkElems(chunkIdx)
-                  .foreach {
-                    t.datatype.apply(os, _)
-                  }
+                path.mkdirs
 
-                ()
+                val datatype = t.datatype
+                val elems =
+                  t
+                    .chunkElems(chunkIdx)
+                    .toVector
+
+                val buffer = allocate(datatype.size * elems.length)
+                elems
+                  .foreach { datatype(buffer, _) }
+
+                val os =
+                  t.compressor(
+                    path.outputStream,
+                    t.dtype.size
+                  )
+
+                os.write(buffer.array())
+
+                os.close()
               }
               .toEither
           )

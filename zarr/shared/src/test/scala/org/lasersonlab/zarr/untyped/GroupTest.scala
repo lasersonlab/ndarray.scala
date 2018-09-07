@@ -3,7 +3,6 @@ package org.lasersonlab.zarr.untyped
 import hammerlab.path._
 import io.circe.Json
 import org.lasersonlab.zarr.Compressor.Blosc
-import org.lasersonlab.zarr.Compressor.Blosc.CName.lz4
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.DataType._
@@ -54,13 +53,7 @@ class GroupTest
               StructEntry("_Valid", long)
             )
           ),
-        compressor =
-          Blosc(
-            cname = lz4,
-            clevel = 5,
-            shuffle = 1,
-            blocksize = 0
-          ),
+        compressor = Blosc(),
         order = C,
         fill_value =
           Json.fromString(

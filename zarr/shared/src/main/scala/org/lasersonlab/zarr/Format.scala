@@ -39,7 +39,7 @@ object Format {
     new Encoder[Format] {
       def apply(a: Format): Json =
         a match {
-          case `2` ⇒ Json.fromString("2")
+          case `2` ⇒ Json.fromInt(2)
         }
     }
 }

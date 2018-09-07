@@ -1,7 +1,7 @@
 package org.lasersonlab.zarr.dtype
 
-import java.io.{ ByteArrayOutputStream, DataOutputStream }
 import java.nio.ByteBuffer
+import java.nio.ByteBuffer._
 
 import cats.Eq
 import io.circe.Decoder.Result
@@ -20,18 +20,16 @@ sealed trait DataType {
   def size: Int
   type T
   def apply(buff: ByteBuffer): T
-  def apply(buff: ByteBuffer, idx: Int): T = {
+  def read(buff: ByteBuffer, idx: Int): T = {
     buff.position(size * idx)
     apply(buff)
   }
+  def apply(buffer: ByteBuffer, t: T): Unit
   def apply(t: T): Array[Byte] = {
-    val baos = new ByteArrayOutputStream(size)
-    val data = new DataOutputStream(baos)
-    apply(data, t)
-    data.close()
-    baos.toByteArray
+    val buff = allocate(size)
+    apply(buff, t)
+    buff.array()
   }
-  def apply(os: DataOutputStream, t: T): Unit
 }
 
 trait DataTypeStructDerivations {
@@ -67,7 +65,7 @@ trait DataTypeStructDerivations {
     val size: Int = entries.size
     override type T = S
     @inline def apply(buff: ByteBuffer): T = g.from(entries(buff))
-    @inline def apply(os: DataOutputStream, t: S): Unit = entries(os, g.to(t))
+    @inline def apply(buffer: ByteBuffer, t: S): Unit = entries(buffer, g.to(t))
   }
 
   case class StructList[L <: HList](
@@ -75,12 +73,12 @@ trait DataTypeStructDerivations {
     size: Int
   )(
     read: ByteBuffer ⇒ L,
-    write: (DataOutputStream, L) ⇒ Unit
+    write: (ByteBuffer, L) ⇒ Unit
   )
   extends DataType {
     type T = L
     @inline def apply(buff: ByteBuffer): T = read(buff)
-    @inline def apply(os: DataOutputStream, t: L): Unit = write(os, t)
+    @inline def apply(buffer: ByteBuffer, t: L): Unit = write(buffer, t)
   }
 
   implicit val hnil: StructList[HNil] =
@@ -116,9 +114,9 @@ trait DataTypeStructDerivations {
         head(buff) ::
         tail(buff),
       {
-        case (os, h :: t) ⇒
-          head(os, h)
-          tail(os, t)
+        case (buffer, h :: t) ⇒
+          head(buffer, h)
+          tail(buffer, t)
       }
     )
   }
@@ -239,12 +237,12 @@ object DataType
 
   implicit def read[T](implicit dataType: DataType.Aux[T]): Read[T] =
     new Read[T] {
-      @inline def apply(buff: ByteBuffer, idx: Int): T = dataType(buff, idx)
+      @inline def apply(buff: ByteBuffer, idx: Int): T = dataType.read(buff, idx)
     }
 
   implicit def write[T](implicit dataType: DataType.Aux[T]): Write[T] =
     new Write[T] {
-      @inline def apply(os: DataOutputStream, t: T): Unit = dataType(os, t)
+      @inline def apply(buffer: ByteBuffer, t: T): Unit = dataType(buffer, t)
     }
 
   import ByteOrder._
@@ -255,12 +253,12 @@ object DataType
   val `0` = 0.toByte
 
   // TODO: setting the buffer's order every time seems suboptimal; some different design that streamlines that would be nice
-  case object   byte                                 extends Primitive( None, d.   int,    1) { type T =   Byte; @inline def apply(buf: ByteBuffer): T = {                   buf.get       }; @inline def apply(os: DataOutputStream, t: T) = os.write      (t); @inline override def apply(t: T) = ByteBuffer.allocate(size)             .put      (t).array }
-  case  class  short(override val order: Endianness) extends Primitive(order, d.   int,    2) { type T =  Short; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getShort  }; @inline def apply(os: DataOutputStream, t: T) = os.writeShort (t); @inline override def apply(t: T) = ByteBuffer.allocate(size).order(order).putShort (t).array }
-  case  class    int(override val order: Endianness) extends Primitive(order, d.   int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getInt    }; @inline def apply(os: DataOutputStream, t: T) = os.writeInt   (t); @inline override def apply(t: T) = ByteBuffer.allocate(size).order(order).putInt   (t).array }
-  case  class   long(override val order: Endianness) extends Primitive(order, d.   int,    8) { type T =   Long; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getLong   }; @inline def apply(os: DataOutputStream, t: T) = os.writeLong  (t); @inline override def apply(t: T) = ByteBuffer.allocate(size).order(order).putLong  (t).array }
-  case  class  float(override val order: Endianness) extends Primitive(order, d. float,    4) { type T =  Float; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getFloat  }; @inline def apply(os: DataOutputStream, t: T) = os.writeFloat (t); @inline override def apply(t: T) = ByteBuffer.allocate(size).order(order).putFloat (t).array }
-  case  class double(override val order: Endianness) extends Primitive(order, d. float,    8) { type T = Double; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getDouble }; @inline def apply(os: DataOutputStream, t: T) = os.writeDouble(t); @inline override def apply(t: T) = ByteBuffer.allocate(size).order(order).putDouble(t).array }
+  case object   byte                                 extends Primitive( None, d.   int,    1) { type T =   Byte; @inline def apply(buf: ByteBuffer): T = {                   buf.get       }; @inline override def apply(b: ByteBuffer, t: T) = b             .put      (t) }
+  case  class  short(override val order: Endianness) extends Primitive(order, d.   int,    2) { type T =  Short; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getShort  }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putShort (t) }
+  case  class    int(override val order: Endianness) extends Primitive(order, d.   int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getInt    }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putInt   (t) }
+  case  class   long(override val order: Endianness) extends Primitive(order, d.   int,    8) { type T =   Long; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getLong   }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putLong  (t) }
+  case  class  float(override val order: Endianness) extends Primitive(order, d. float,    4) { type T =  Float; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getFloat  }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putFloat (t) }
+  case  class double(override val order: Endianness) extends Primitive(order, d. float,    8) { type T = Double; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getDouble }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putDouble(t) }
   case  class string(override val  size:        Int) extends Primitive( None, d.string, size) { type T = String
     import scala.Array.fill
     val arr = fill(size)(`0`)
@@ -277,8 +275,26 @@ object DataType
       builder.result()
     }
 
-    override def apply(t: String): Array[Byte] = {
-      val arr = new Array[Byte](t.length)
+//    override def apply(t: String): Array[Byte] = {
+//      val arr = new Array[Byte](t.length)
+//      var i = 0
+//      if (t.length != size)
+//        throw new IllegalArgumentException(
+//          s"Expected string of size $size, found ${t.length}: '$t'"
+//        )
+//      while (i < t.length) {
+//        val ch = t(i)
+//        if (!ch.isValidByte)
+//          throw new IllegalArgumentException(
+//            s"Invalid character in string $t at position $i: $ch"
+//          )
+//        arr(i) = ch.toByte
+//        i += 1
+//      }
+//      arr
+//    }
+
+    override def apply(buffer: ByteBuffer, t: String): Unit = {
       var i = 0
       if (t.length != size)
         throw new IllegalArgumentException(
@@ -290,12 +306,10 @@ object DataType
           throw new IllegalArgumentException(
             s"Invalid character in string $t at position $i: $ch"
           )
-        arr(i) = ch.toByte
+        buffer.put(ch.toByte)
         i += 1
       }
-      arr
     }
-    override def apply(os: DataOutputStream, t: String): Unit = os.write(apply(t))
   }
 
   type byte = byte.type
@@ -334,11 +348,11 @@ object DataType
           .result()
       )
 
-    override def apply(os: DataOutputStream, t: untyped.Struct): Unit =
+    override def apply(buffer: ByteBuffer, t: untyped.Struct): Unit =
       for {
         StructEntry(name, datatype) ← entries
       } {
-        datatype(os, t(name))
+        datatype(buffer, t[datatype.T](name))
       }
   }
 

@@ -1,6 +1,7 @@
 package org.lasersonlab.netcdf
 
 import hammerlab.lines._
+import hammerlab.str._
 import org.lasersonlab.netcdf.show._
 
 import scala.collection.JavaConverters._
@@ -10,7 +11,25 @@ case class Group(
   attributes: Seq[Attribute],
   vars: Seq[Variable],
   groups: Seq[Group]
-)
+) {
+  def group(name: Str): Group =
+    groups
+      .find(_.name == name.toString)
+      .getOrElse {
+        throw new IllegalArgumentException(
+          s"No group found with name $name: ${groups.map(_.name).mkString(",")}"
+        )
+      }
+
+  def array(name: Str): Variable =
+    vars
+      .find(_.name == name.toString)
+      .getOrElse {
+        throw new IllegalArgumentException(
+          s"No variable found with name $name: ${vars.map(_.name).mkString(",")}"
+        )
+      }
+}
 
 object Group {
   implicit def apply(g: ucar.nc2.Group): Group =

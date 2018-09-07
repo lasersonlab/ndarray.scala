@@ -1,16 +1,11 @@
 package org.lasersonlab.zarr
 
-import cats.Foldable
 import cats.implicits._
 import hammerlab.path._
 import hammerlab.shapeless.tlist.{ Map ⇒ _, _ }
-import io.circe.{ Decoder, Encoder }
 import org.lasersonlab.anndata.loom.{ Obs, Var }
-import org.lasersonlab.ndarray.Bytes
 import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.zarr.Compressor.Blosc
-import org.lasersonlab.zarr.Compressor.Blosc.CName
-import org.lasersonlab.zarr.FillValue.{ FillValueDecoder, FillValueEncoder }
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
@@ -26,13 +21,7 @@ class ArrayTest
 
     implicit val arr = Array.chunks[Float, _2](path).get
 
-    val blosc =
-      Blosc(
-        cname = CName.lz4,
-        clevel = 5,
-        shuffle = 1,
-        blocksize = 0
-      )
+    val blosc = Blosc()
 
     arr.metadata should be(
       Metadata(
@@ -134,13 +123,7 @@ class ArrayTest
          shape = 27998 :: TNil,
         chunks = 27998 :: TNil,
         dtype = long(LittleEndian),
-        compressor =
-          Blosc(
-            cname = CName.lz4,
-            clevel = 5,
-            shuffle = 1,
-            blocksize = 0
-          ),
+        compressor = Blosc(),
         order = C,
         fill_value = 0L,
         zarr_format = `2`,
@@ -178,13 +161,7 @@ class ArrayTest
          shape = 5425 :: TNil,
         chunks = 5425 :: TNil,
         dtype = string(5),
-        compressor =
-          Blosc(
-            cname = CName.lz4,
-            clevel = 5,
-            shuffle = 1,
-            blocksize = 0
-          ),
+        compressor = Blosc(),
         order = C,
         fill_value = "",
         zarr_format = `2`,
@@ -235,13 +212,7 @@ class ArrayTest
          shape = 27998 :: TNil,
         chunks = 27998 :: TNil,
         dtype = dtype,
-        compressor =
-          Blosc(
-            cname = CName.lz4,
-            clevel = 5,
-            shuffle = 1,
-            blocksize = 0
-          ),
+        compressor = Blosc(),
         order = C,
         fill_value = Var.empty,
         zarr_format = `2`,
@@ -422,13 +393,7 @@ class ArrayTest
               StructEntry(name, datatype)
             }
           ),
-        compressor =
-          Blosc(
-            cname = CName.lz4,
-            clevel = 5,
-            shuffle = 1,
-            blocksize = 0
-          ),
+        compressor = Blosc(),
         order = C,
         fill_value =
           untyped.Struct(

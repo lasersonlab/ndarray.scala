@@ -8,6 +8,7 @@ import io.circe.parser._
 import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.Metadata._
+import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr._
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.group.Basename
@@ -17,13 +18,16 @@ case class Metadata(
   chunks: Seq[Int],
   dtype: DataType,
   compressor: Compressor,
-  order: Order,
+  order: Order = C,
   fill_value: FillValue[Json] = Null,
   zarr_format: Format = `2`,
   filters: Opt[Seq[Filter]] = None
 ) {
   type T = dtype.T
-  require(shape.size == chunks.size)
+  require(
+    shape.size == chunks.size,
+    s"Mismatched dimension-arity: shape ${shape.mkString(",")}, chunk shape ${chunks.mkString(",")}"
+  )
   val rank = shape.size
 }
 object Metadata {

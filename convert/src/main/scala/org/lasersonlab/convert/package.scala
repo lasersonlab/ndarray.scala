@@ -126,8 +126,6 @@ package object convert {
           _datatype match {
             case s @ string(size) ⇒
               idxs ⇒
-                val index = data.getIndex
-
                 val sectionSize = fill(rank)(0)
                 sectionSize(rank - 1) = size
 

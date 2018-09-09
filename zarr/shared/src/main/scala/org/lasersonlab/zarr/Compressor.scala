@@ -146,8 +146,8 @@ object Compressor {
         math.min(
           Integer.MAX_VALUE - OVERHEAD,
           bytes.length
-        )
-        + OVERHEAD
+        ) + OVERHEAD
+
       val dest = allocate(destLength)
 
       val srcLength = bytes.length

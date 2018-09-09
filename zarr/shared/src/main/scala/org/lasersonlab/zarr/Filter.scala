@@ -3,7 +3,7 @@ package org.lasersonlab.zarr
 import io.circe.Decoder.Result
 import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
 
-// TODO: filter support
+// TODO: add filters
 sealed trait Filter
 object Filter {
   implicit val decoder: Decoder[Filter] =

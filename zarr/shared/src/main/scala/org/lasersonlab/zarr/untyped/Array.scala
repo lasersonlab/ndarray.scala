@@ -11,11 +11,12 @@ import org.lasersonlab.zarr.group.Save
 import org.lasersonlab.zarr.{ Attrs, | }
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 
 trait Array {
   type T
-  def metadata: Metadata  // TODO: make this Aux[T]; HDF5 conversions made it hard to get the types to line up
+  def metadata: Metadata  // TODO: make this Aux[T]; so far unable to get the types to line up in HDF5-conversion code
   def datatype: DataType.Aux[T]
   def attrs: Opt[Attrs]
   def apply(idxs: Int*): T
@@ -72,7 +73,7 @@ trait Array {
 
   def elems: Iterator[T] =
     for {
-      chunkIdx <- chunkIndices
+      chunkIdx ← chunkIndices
       elem ← chunkElems(chunkIdx)
     } yield
       elem
@@ -106,7 +107,12 @@ object Array {
         def chunk(idx: Seq[Int]): ByteBuffer =
           _chunks.getOrElseUpdate(
             idx,
-            ByteBuffer.wrap(dir / idx.mkString(".") readBytes)
+            ByteBuffer.wrap(
+              metadata.compressor(
+                dir / idx.mkString("."),
+                sizeHint = total * datatype.size
+              )
+            )
           )
 
         require(
@@ -129,12 +135,29 @@ object Array {
 
           var idx = 0
           var sum = 0
+          val chunkIdx = ArrayBuffer[Int]()
+
+          val shape = chunkShape.iterator
+          val is = idxs.iterator
+          val ps = products.iterator
           while (idx < N) {
-            sum += (idxs(idx) % chunkShape(idx)) * products(idx)
+            val i = is.next
+            val chunkDimension = shape.next
+            val stride = ps.next
+            chunkIdx += i / chunkDimension
+            sum += (i % chunkDimension) * stride
             idx += 1
           }
 
-          datatype.read(chunk(idxs), sum)
+          try {
+            datatype.read(chunk(chunkIdx), sum)
+          } catch {
+            case e: Exception ⇒
+              throw new RuntimeException(
+                s"Failed to read index ${idxs.mkString(",")} (chunk ${chunkIdx.mkString(",")}, path ${dir / chunkIdx.mkString(".")}, offset $sum (${products.mkString(",")}))",
+                e
+              )
+          }
         }
       }: Array
 
@@ -157,9 +180,12 @@ object Array {
                     .chunkElems(chunkIdx)
                     .toVector
 
-                val buffer = allocate(datatype.size * elems.length)
+                val buffer = allocate(datatype.size * t.metadata.chunks.product)
+
                 elems
-                  .foreach { datatype(buffer, _) }
+                  .foreach {
+                    datatype(buffer, _)
+                  }
 
                 val os =
                   t.compressor(

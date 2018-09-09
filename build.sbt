@@ -13,14 +13,17 @@ default(
 )
 
 lazy val convert = project.settings(
-dep(
-  hammerlab.cli.base,
-  hammerlab.io,
-  hammerlab.paths,
-)
+  dep(
+    hammerlab.cli.base,
+    hammerlab.io,
+    hammerlab.paths,
+  ),
+  // Test-resources include "hidden" (basenames starting with ".") Zarr-metadata files that we need to include on the
+  // test classpath for tests to be able to read them
+  excludeFilter in sbt.Test := NothingFilter
 ).dependsOn(
   netcdf,
-  zarr
+  zarr andTest
 )
 
 lazy val ndarray = crossProject.settings(

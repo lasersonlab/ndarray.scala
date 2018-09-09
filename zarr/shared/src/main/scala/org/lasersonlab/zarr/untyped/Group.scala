@@ -55,7 +55,12 @@ object Group {
         dir
           .list
           .filter {
-            _.basename != Metadata.basename
+            _.basename match {
+              case
+                Metadata.basename |
+                   Attrs.basename ⇒ false
+              case _ ⇒ true
+            }
           }
           .map {
             path: Path ⇒

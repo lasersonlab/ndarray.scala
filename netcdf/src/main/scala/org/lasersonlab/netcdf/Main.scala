@@ -25,6 +25,7 @@ object Main
     for {
       userProject ← userProject
     } {
+      println(s"Using user-project $userProject for GCP requests")
       setDefaultCloudStorageConfiguration(
         CloudStorageConfiguration
           .builder()

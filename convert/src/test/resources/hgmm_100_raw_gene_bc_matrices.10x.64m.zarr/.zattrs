@@ -1,0 +1,29 @@
+{
+    "TITLE": [
+        ""
+    ],
+    "CLASS": [
+        "GROUP"
+    ],
+    "VERSION": [
+        "1.0"
+    ],
+    "FILTERS": [
+        65793
+    ],
+    "PYTABLES_FORMAT_VERSION": [
+        "2.1"
+    ],
+    "filetype": [
+        "matrix"
+    ],
+    "chemistry_description": [
+        "Single Cell 3' v2"
+    ],
+    "library_ids": [
+        "hgmm_100"
+    ],
+    "original_gem_groups": [
+        1
+    ]
+}

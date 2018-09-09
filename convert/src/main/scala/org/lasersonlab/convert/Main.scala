@@ -15,28 +15,42 @@ import scala.collection.JavaConverters._
 object Main
   extends Cmd {
   case class Opts(
-    @O("c")  chunkSize:      Bytes = 64.MB,
-    @O("z") compressor: Compressor = Blosc()
+    @O("c")  chunkSize:            Bytes =              64 MB  ,
+    @O("z") compressor:       Compressor =              Blosc(),
+    @R         gcpOpts: netcdf.Main.Opts =   netcdf.Main.Opts()
   )
+
+  // Initialize S3 Filesystem
+  newFileSystem(
+    new URI(s"s3:///"),
+    Map.empty[String, String].asJava,
+    Thread.currentThread().getContextClassLoader
+  )
+
   val main =
     Main(
       new App(_) {
-        // Initialize S3 Filesystem
-        newFileSystem(
-          new URI(s"s3:///"),
-          Map.empty[String, String].asJava,
-          Thread.currentThread().getContextClassLoader
-        )
+
+        implicit val
+          Opts(
+            chunkSize,
+            compressor,
+            netcdf.Main.Opts(
+              gcpUserProject
+            )
+          )
+          = opts
+
+        netcdf.Main.setGCPUserProject(gcpUserProject)
 
         val Seq(from, to) = args.args.map(Path(_))
-        implicit val Opts(chunkSize, compressor) = opts
 
         val hdf5Group: netcdf.Group = from
         val zarrGroup: zarr.untyped.Group = hdf5Group
 
         import org.lasersonlab.zarr.group.Save.Ops
 
-        println(s"${hdf5Group.vars.size} vars, ${hdf5Group.groups.size} groups -> ${zarrGroup.arrays.keys.mkString(",")}, ${zarrGroup.groups.keys.mkString(",")}")
+        println(s"${hdf5Group.vars.size} vars: ${zarrGroup.arrays.keys.mkString(",")}, ${hdf5Group.groups.size} groups: ${zarrGroup.groups.keys.mkString(",")}")
         println(s"Saving to: $to")
         zarrGroup
           .save(to)

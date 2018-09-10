@@ -32,8 +32,8 @@ object StructParser {
     }
 
   implicit def cons[
-    Head,
-    Tail <: HList,
+     Head,
+     Tail <: HList,
     DTail <: HList
   ](
     implicit

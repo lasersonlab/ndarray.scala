@@ -48,16 +48,16 @@ class ArrayTest
 
     val expected =
       Seq(
-        Chunk[Ints2, Float](path / "0", 3092 :: 5425 :: TNil, 0 :: 0 :: TNil,     0 :: 0:: TNil,  3092 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "1", 3092 :: 5425 :: TNil, 1 :: 0 :: TNil,  3092 :: 0:: TNil,  6184 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "2", 3092 :: 5425 :: TNil, 2 :: 0 :: TNil,  6184 :: 0:: TNil,  9276 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "3", 3092 :: 5425 :: TNil, 3 :: 0 :: TNil,  9276 :: 0:: TNil, 12368 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "4", 3092 :: 5425 :: TNil, 4 :: 0 :: TNil, 12368 :: 0:: TNil, 15460 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "5", 3092 :: 5425 :: TNil, 5 :: 0 :: TNil, 15460 :: 0:: TNil, 18552 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "6", 3092 :: 5425 :: TNil, 6 :: 0 :: TNil, 18552 :: 0:: TNil, 21644 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "7", 3092 :: 5425 :: TNil, 7 :: 0 :: TNil, 21644 :: 0:: TNil, 24736 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "8", 3092 :: 5425 :: TNil, 8 :: 0 :: TNil, 24736 :: 0:: TNil, 27828 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "9",  170 :: 5425 :: TNil, 9 :: 0 :: TNil, 27828 :: 0:: TNil, 27998 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil)
+        Chunk[Ints2, Float](path / "0", 3092 :: 5425 :: TNil, 0 :: 0 :: TNil,     0 :: 0 :: TNil,  3092 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
+        Chunk[Ints2, Float](path / "1", 3092 :: 5425 :: TNil, 1 :: 0 :: TNil,  3092 :: 0 :: TNil,  6184 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
+        Chunk[Ints2, Float](path / "2", 3092 :: 5425 :: TNil, 2 :: 0 :: TNil,  6184 :: 0 :: TNil,  9276 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
+        Chunk[Ints2, Float](path / "3", 3092 :: 5425 :: TNil, 3 :: 0 :: TNil,  9276 :: 0 :: TNil, 12368 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
+        Chunk[Ints2, Float](path / "4", 3092 :: 5425 :: TNil, 4 :: 0 :: TNil, 12368 :: 0 :: TNil, 15460 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
+        Chunk[Ints2, Float](path / "5", 3092 :: 5425 :: TNil, 5 :: 0 :: TNil, 15460 :: 0 :: TNil, 18552 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
+        Chunk[Ints2, Float](path / "6", 3092 :: 5425 :: TNil, 6 :: 0 :: TNil, 18552 :: 0 :: TNil, 21644 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
+        Chunk[Ints2, Float](path / "7", 3092 :: 5425 :: TNil, 7 :: 0 :: TNil, 21644 :: 0 :: TNil, 24736 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
+        Chunk[Ints2, Float](path / "8", 3092 :: 5425 :: TNil, 8 :: 0 :: TNil, 24736 :: 0 :: TNil, 27828 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
+        Chunk[Ints2, Float](path / "9",  170 :: 5425 :: TNil, 9 :: 0 :: TNil, 27828 :: 0 :: TNil, 27998 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil)
       )
 
     chunks

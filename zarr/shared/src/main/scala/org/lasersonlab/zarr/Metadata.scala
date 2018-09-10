@@ -5,7 +5,7 @@ import _root_.io.circe._
 import _root_.io.circe.parser._
 import hammerlab.option._
 import hammerlab.path._
-import org.lasersonlab.zarr.FillValue.{ FillValueDecoder, FillValueEncoder, Null }
+import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Basename
@@ -31,8 +31,8 @@ object Metadata {
   implicit def   _datatype[T, Shape](implicit md: Metadata[T, _]): DataType.Aux[T] = md.dtype
 
   def apply[
-        T : FillValueDecoder,
-    Shape :          Decoder
+        T : FillValue.Decoder,
+    Shape :           Decoder
   ](
     dir: Path
   )(
@@ -63,8 +63,8 @@ object Metadata {
    * - running a normal generic auto-derivation to get a [[Metadata]]-[[Decoder]]
    */
   implicit def decoder[
-        T: FillValueDecoder,
-    Shape:          Decoder
+        T: FillValue.Decoder,
+    Shape:           Decoder
   ](
     implicit
     datatypeDecoder: Decoder[DataType.Aux[T]]
@@ -109,8 +109,8 @@ object Metadata {
     }
 
   implicit def encoder[
-    T: FillValueEncoder,
-    Shape: Encoder
+        T: FillValue.Encoder,
+    Shape:           Encoder
   ](
     implicit
     datatypeEncoder: Encoder[DataType.Aux[T]]

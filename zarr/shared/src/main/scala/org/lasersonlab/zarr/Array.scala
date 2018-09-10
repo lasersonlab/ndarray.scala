@@ -6,7 +6,7 @@ import hammerlab.path._
 import _root_.io.circe.{ Decoder, Encoder }
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
 import org.lasersonlab.zarr
-import org.lasersonlab.zarr.FillValue.{ FillValueDecoder, FillValueEncoder }
+import org.lasersonlab.zarr.FillValue
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.{ Load, Save }
 import shapeless.Nat
@@ -154,11 +154,11 @@ object Array {
     dir: Path
   )(
     implicit
-    v: VectorInts[N],
-    d: Decoder[DataType.Aux[T]],
-    e: Encoder[DataType.Aux[T]],
-    dt: FillValueDecoder[T],
-    et: FillValueEncoder[T]
+     v: VectorInts[N],
+     d: Decoder[DataType.Aux[T]],
+     e: Encoder[DataType.Aux[T]],
+    dt: FillValue.Decoder[T],
+    et: FillValue.Encoder[T]
   ):
     Exception |
     S[v.Shape, T]
@@ -187,11 +187,11 @@ object Array {
     dir: Path
   )(
     implicit
-    v: VectorInts[N],
-    d: Decoder[DataType.Aux[T]],
-    e: Encoder[DataType.Aux[T]],
-    dt: FillValueDecoder[T],
-    et: FillValueEncoder[T]
+     v: VectorInts[N],
+     d: Decoder[DataType.Aux[T]],
+     e: Encoder[DataType.Aux[T]],
+    dt: FillValue.Decoder[T],
+    et: FillValue.Encoder[T]
   ):
     Exception |
     Aux[v.Shape, v.A, Chunk[v.Shape, ?], T]
@@ -232,8 +232,8 @@ object Array {
     ai: Arithmetic[_Shape, Int],
     scanRight: ScanRight.Aux[_Shape, Int, Int, _Shape],
     sum: Sum.Aux[_Shape, Int],
-    dt: FillValueDecoder[T],
-    et: FillValueEncoder[T],
+    dt: FillValue.Decoder[T],
+    et: FillValue.Encoder[T],
     arithmetic: Arithmetic.Id[_Shape],
     key: Key[_Shape],
     ds: Decoder[_Shape],
@@ -414,8 +414,8 @@ object Array {
     v: VectorInts.Ax[N, Shape],
     d: Decoder[DataType.Aux[T]],
     e: Encoder[DataType.Aux[T]],
-    dt: FillValueDecoder[T],
-    et: FillValueEncoder[T]
+    dt: FillValue.Decoder[T],
+    et: FillValue.Encoder[T]
   ):
     Load[
       S[Shape, T]

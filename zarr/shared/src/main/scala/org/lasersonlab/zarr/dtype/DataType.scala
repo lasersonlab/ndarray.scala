@@ -51,7 +51,6 @@ trait DataTypeStructDerivations {
       )
   }
 
-  // TODO: make the parsing just use the entries?
   case class Struct[
     S,
     L <: HList

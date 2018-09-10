@@ -3,8 +3,9 @@ package org.lasersonlab.zarr
 import java.nio.ByteBuffer
 import java.util.Base64
 
+import _root_.io.circe
 import _root_.io.circe._
-import org.lasersonlab.zarr.FillValue.FillValueDecoder.Result
+import org.lasersonlab.zarr.FillValue.Decoder.Result
 import org.lasersonlab.zarr.dtype.DataType
 
 import scala.util.Try
@@ -27,20 +28,18 @@ object FillValue {
   import DataType._
 
   /**
-   * A partially-unapplied [[Decoder]] for [[FillValue]]s: given a [[DataType]] (parsed from [[Metadata]]), parse a
-   * [[T]] from some [[Json]]
+   * A partially-unapplied [[circe.Decoder]] for [[FillValue]]s: given a [[DataType]] (parsed from [[Metadata]]), parse
+   * a [[T]] from some [[Json]]
    *
    * The [[DataType]] is necessary in the case of [[string]] fields, or structs that contain them, because they are
    * encoded as taking up a specific number of bytes, which is discarded in the parsed type [[String]].
-   *
-   * TODO: make this FillValue.Decoder, likewise for Encoder
    */
-  sealed trait FillValueDecoder[T]  {
+  sealed trait Decoder[T]  {
     def apply(json: Json, datatype: DataType.Aux[T]): Result[T]
   }
   trait StructDecoder {
-    implicit def decoder[T]: FillValueDecoder[T] =
-      new FillValueDecoder[T] {
+    implicit def decoder[T]: Decoder[T] =
+      new Decoder[T] {
         def apply(
           json: Json,
           datatype: DataType.Aux[T]
@@ -75,13 +74,13 @@ object FillValue {
               }
       }
   }
-  object FillValueDecoder
+  object Decoder
     extends StructDecoder {
 
-    type Result[T] = Decoder.Result[FillValue[T]]
+    type Result[T] = circe.Decoder.Result[FillValue[T]]
 
-    private def make[T](implicit d: Decoder[T]): FillValueDecoder[T] =
-      new FillValueDecoder[T] {
+    private def make[T](implicit d: circe.Decoder[T]): Decoder[T] =
+      new Decoder[T] {
         /**
          * Decoder for types where the [[DataType]] parameter is not necessary (because the JSON representation is
          * always the same size), e.g. numeric types.
@@ -95,14 +94,14 @@ object FillValue {
               .map(FillValue(_))
       }
 
-    implicit val   byte: FillValueDecoder[  Byte] = make[  Byte]
-    implicit val  short: FillValueDecoder[ Short] = make[ Short]
-    implicit val    int: FillValueDecoder[   Int] = make[   Int]
-    implicit val   long: FillValueDecoder[  Long] = make[  Long]
-    implicit val  float: FillValueDecoder[ Float] = make[ Float]
-    implicit val double: FillValueDecoder[Double] = make[Double]
-    implicit val string: FillValueDecoder[String] =
-      new FillValueDecoder[String] {
+    implicit val   byte: Decoder[  Byte] = make[  Byte]
+    implicit val  short: Decoder[ Short] = make[ Short]
+    implicit val    int: Decoder[   Int] = make[   Int]
+    implicit val   long: Decoder[  Long] = make[  Long]
+    implicit val  float: Decoder[ Float] = make[ Float]
+    implicit val double: Decoder[Double] = make[Double]
+    implicit val string: Decoder[String] =
+      new Decoder[String] {
         val base64Decoder = decoder[String]
         def apply(json: Json, datatype: DataType.Aux[String]): Result[String] =
           if (json.isNull)
@@ -145,13 +144,13 @@ object FillValue {
    */
   implicit def decoder[T](
     implicit
-    d: FillValueDecoder[T],
+    d: Decoder[T],
     datatype: DataType.Aux[T]
   ):
-    Decoder[
+    circe.Decoder[
       FillValue[T]
     ] =
-    new Decoder[FillValue[T]] {
+    new circe.Decoder[FillValue[T]] {
       def apply(c: HCursor): Result[T] =
         d(
           c.value,
@@ -163,15 +162,15 @@ object FillValue {
    * When parsing [[untyped.Metadata untyped metadata]], the `fill_value` may be a literal (e.g. a number), or a
    * base64-encoded string or struct; we store it as opaque [[Json]], and this [[Decoder]] parses it
    */
-  implicit val decodeJson: Decoder[FillValue[Json]] =
-    new Decoder[FillValue[Json]] {
+  implicit val decodeJson: circe.Decoder[FillValue[Json]] =
+    new circe.Decoder[FillValue[Json]] {
       def apply(c: HCursor): Result[Json] = Right(c.value)
     }
 
-  sealed class FillValueEncoder[T](val apply: (T, DataType.Aux[T]) ⇒ Json)
-  trait LowPriorityFillValueEncoder {
-    case class Make[T](f: (T, DataType.Aux[T]) ⇒ Json) extends FillValueEncoder(f)
-    implicit def default[T]: FillValueEncoder[T] =
+  sealed class Encoder[T](val apply: (T, DataType.Aux[T]) ⇒ Json)
+  trait LowPriorityEncoder {
+    case class Make[T](f: (T, DataType.Aux[T]) ⇒ Json) extends Encoder(f)
+    implicit def default[T]: Encoder[T] =
       Make {
         (t, datatype) ⇒
           Json.fromString(
@@ -181,16 +180,16 @@ object FillValue {
           )
       }
   }
-  object FillValueEncoder
-    extends LowPriorityFillValueEncoder {
-    import Encoder._
-    implicit val _encodeByte  : FillValueEncoder[  Byte] = Make { (t, _) ⇒ encodeByte  (t) }
-    implicit val _encodeShort : FillValueEncoder[ Short] = Make { (t, _) ⇒ encodeShort (t) }
-    implicit val _encodeInt   : FillValueEncoder[   Int] = Make { (t, _) ⇒ encodeInt   (t) }
-    implicit val _encodeLong  : FillValueEncoder[  Long] = Make { (t, _) ⇒ encodeLong  (t) }
-    implicit val _encodeFloat : FillValueEncoder[ Float] = Make { (t, _) ⇒ encodeFloat (t) }
-    implicit val _encodeDouble: FillValueEncoder[Double] = Make { (t, _) ⇒ encodeDouble(t) }
-    implicit val _encodeString: FillValueEncoder[String] =
+  object Encoder
+    extends LowPriorityEncoder {
+    import circe.Encoder._
+    implicit val _encodeByte  : Encoder[  Byte] = Make { (t, _) ⇒ encodeByte  (t) }
+    implicit val _encodeShort : Encoder[ Short] = Make { (t, _) ⇒ encodeShort (t) }
+    implicit val _encodeInt   : Encoder[   Int] = Make { (t, _) ⇒ encodeInt   (t) }
+    implicit val _encodeLong  : Encoder[  Long] = Make { (t, _) ⇒ encodeLong  (t) }
+    implicit val _encodeFloat : Encoder[ Float] = Make { (t, _) ⇒ encodeFloat (t) }
+    implicit val _encodeDouble: Encoder[Double] = Make { (t, _) ⇒ encodeDouble(t) }
+    implicit val _encodeString: Encoder[String] =
       Make {
         case ("", _) ⇒ Json.fromString("")
         case (t, datatype) ⇒
@@ -202,8 +201,8 @@ object FillValue {
       }
   }
 
-  implicit val encodeJson: Encoder[FillValue[Json]] =
-    new Encoder[FillValue[Json]] {
+  implicit val encodeJson: circe.Encoder[FillValue[Json]] =
+    new circe.Encoder[FillValue[Json]] {
       def apply(a: FillValue[Json]): Json =
         a match {
           case Null ⇒ Json.Null
@@ -213,19 +212,19 @@ object FillValue {
 
   implicit def encoder[T](
     implicit
-    fillValueEncoder: FillValueEncoder[T],
+    encoder: Encoder[T],
     datatype: DataType.Aux[T]
   ):
-    Encoder[
+    circe.Encoder[
       FillValue[T]
     ]
   =
-    new Encoder[FillValue[T]] {
+    new circe.Encoder[FillValue[T]] {
       def apply(t: FillValue[T]): Json =
         t match {
           case Null ⇒ Json.Null
           case NonNull(t) ⇒
-            fillValueEncoder.apply(
+            encoder.apply(
               t,
               datatype
             )

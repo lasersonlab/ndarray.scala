@@ -13,7 +13,7 @@ import org.lasersonlab.zarr.tlist.TListCodec
  * as ≈opaque blobs and not requiring filesystem-semantics in a backing store?
  *
  * Is "" an allowed fill_value for a fixed-length string datatype, e.g. "|S12"? See question in
- * [[org.lasersonlab.zarr.FillValue.FillValueDecoder.string]]'s docs
+ * [[zarr.FillValue.Decoder.string]]'s docs
  *
  * When is `fill_value` used? Are there sparseness facilities baked in to Zarr? Aren't chunks read in always of size
  * ${datatype.size} * $num_records?

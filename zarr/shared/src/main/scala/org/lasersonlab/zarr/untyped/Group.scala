@@ -6,7 +6,7 @@ import hammerlab.str._
 import io.circe.generic.auto._
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr._
-import org.lasersonlab.zarr.group.{ Basename, Load, Save }
+import org.lasersonlab.zarr.io._
 
 case class Group(
   arrays: Map[String, Array],

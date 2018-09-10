@@ -1,8 +1,8 @@
 package org.lasersonlab.zarr
 
+import _root_.io.circe.DecodingFailure
+import _root_.io.circe.parser.decode
 import hammerlab.shapeless.tlist._
-import io.circe.DecodingFailure
-import io.circe.parser.decode
 import org.lasersonlab.ndarray.Ints._
 
 class TListDecoderTest

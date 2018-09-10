@@ -8,7 +8,7 @@ import hammerlab.cli._
 import hammerlab.path._
 import org.lasersonlab.zarr.Compressor
 import org.lasersonlab.zarr.Compressor.Blosc
-import org.lasersonlab.zarr.group.Save
+import org.lasersonlab.zarr.io.Save
 import org.lasersonlab.{ netcdf, zarr }
 
 import scala.collection.JavaConverters._

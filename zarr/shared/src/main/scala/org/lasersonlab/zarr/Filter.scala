@@ -1,7 +1,7 @@
 package org.lasersonlab.zarr
 
-import io.circe.Decoder.Result
-import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
+import _root_.io.circe.Decoder.Result
+import _root_.io.circe._
 
 // TODO: add filters
 sealed trait Filter

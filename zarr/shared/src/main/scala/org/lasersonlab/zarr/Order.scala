@@ -1,7 +1,7 @@
 package org.lasersonlab.zarr
 
-import io.circe.Decoder.Result
-import io.circe._
+import _root_.io.circe.Decoder.Result
+import _root_.io.circe._
 
 /**
  * Either “C” or “F”, defining the layout of bytes within each chunk of the array.

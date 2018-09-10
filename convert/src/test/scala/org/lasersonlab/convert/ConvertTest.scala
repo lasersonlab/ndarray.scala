@@ -4,7 +4,7 @@ import hammerlab.path._
 import org.hammerlab.test.resources.File
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.HasGetOps
-import org.lasersonlab.zarr.group.Load
+import org.lasersonlab.zarr.io.Load
 import org.lasersonlab.zarr.untyped.Group
 
 class ConvertTest

@@ -11,7 +11,7 @@ import org.lasersonlab.zarr.Metadata._
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr._
 import org.lasersonlab.zarr.dtype.DataType
-import org.lasersonlab.zarr.group.Basename
+import org.lasersonlab.zarr.io.Basename
 
 case class Metadata(
    shape: Seq[Int],

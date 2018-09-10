@@ -1,14 +1,10 @@
-package org.lasersonlab.zarr.group
+package org.lasersonlab.zarr.io
 
 import hammerlab.either._
 import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder
 import io.circe.parser.parse
-import org.lasersonlab.zarr.FillValue.FillValueDecoder
-import org.lasersonlab.zarr.dtype.DataType
-import org.lasersonlab.zarr.untyped.Group
-import org.lasersonlab.zarr.{ VectorInts, Array ⇒ Arr }
 import shapeless.labelled._
 import shapeless.{ Witness ⇒ W, Path ⇒ _, _ }
 
@@ -27,7 +23,7 @@ trait LowPriorityLoad {
       def apply(dir: Path): Exception | T =
         dir ? basename flatMap {
           path ⇒
-            import Decoder._
+
             parse(path.read)
               .flatMap {
                 decoder.decodeJson

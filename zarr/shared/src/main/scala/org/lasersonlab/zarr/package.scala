@@ -2,7 +2,7 @@ package org.lasersonlab
 
 import org.hammerlab.paths.HasPathOps
 import org.lasersonlab.ndarray.Arithmetic
-import org.lasersonlab.zarr.group.{ Load, Save }
+import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.opt.OptCodec
 import org.lasersonlab.zarr.tlist.TListCodec
 

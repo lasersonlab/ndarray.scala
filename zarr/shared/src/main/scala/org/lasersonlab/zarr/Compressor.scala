@@ -6,17 +6,16 @@ import java.nio.ByteBuffer._
 import java.util.zip.Deflater.DEFAULT_COMPRESSION
 import java.util.zip.{ Deflater, DeflaterOutputStream, InflaterInputStream }
 
+import _root_.io.circe.Decoder.Result
+import _root_.io.circe.generic.auto._
+import _root_.io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
 import caseapp.core.Error.UnrecognizedValue
 import caseapp.core.argparser.{ ArgParser, SimpleArgParser }
 import hammerlab.option._
 import hammerlab.path._
-import io.circe.Decoder.Result
-import io.circe.generic.auto._
-import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
 import org.apache.commons.io.IOUtils
 import org.blosc.JBlosc
-import JBlosc._
-import org.hammerlab.str.Name
+import org.blosc.JBlosc._
 import org.lasersonlab.zarr.Compressor.Blosc.CName.lz4
 import shapeless.the
 

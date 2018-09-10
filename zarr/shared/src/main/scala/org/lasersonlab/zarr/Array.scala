@@ -3,12 +3,12 @@ package org.lasersonlab.zarr
 import cats.{ Eval, Foldable, Traverse }
 import hammerlab.option._
 import hammerlab.path._
-import io.circe.{ Decoder, Encoder }
+import _root_.io.circe.{ Decoder, Encoder }
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.FillValue.{ FillValueDecoder, FillValueEncoder }
 import org.lasersonlab.zarr.dtype.DataType
-import org.lasersonlab.zarr.group.{ Load, Save }
+import org.lasersonlab.zarr.io.{ Load, Save }
 import shapeless.Nat
 
 import scala.util.Try

@@ -1,7 +1,7 @@
 package org.lasersonlab.zarr
 
+import _root_.io.circe.parser._
 import hammerlab.shapeless.tlist._
-import io.circe.parser._
 import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.Format.`2`

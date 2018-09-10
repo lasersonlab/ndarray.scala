@@ -1,7 +1,7 @@
 package org.lasersonlab.zarr
 
 import cats.Traverse
-import io.circe.{ Decoder, Encoder }
+import _root_.io.circe.{ Decoder, Encoder }
 import org.lasersonlab.ndarray.Vectors._
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
 import org.lasersonlab.ndarray.Ints._

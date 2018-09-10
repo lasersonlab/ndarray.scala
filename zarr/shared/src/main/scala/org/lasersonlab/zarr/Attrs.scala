@@ -1,9 +1,9 @@
 package org.lasersonlab.zarr
 
-import io.circe.{ Decoder, Encoder }
-import org.lasersonlab.zarr.group.Basename
+import _root_.io.circe._
+import org.lasersonlab.zarr.io.Basename
 
-case class Attrs(json: io.circe.Json)
+case class Attrs(json: Json)
 
 object Attrs {
   val basename = ".zattrs"

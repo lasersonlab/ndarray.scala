@@ -1,4 +1,4 @@
-package org.lasersonlab.zarr.group
+package org.lasersonlab.zarr.io
 
 import hammerlab.either._
 import hammerlab.option._

@@ -10,6 +10,7 @@ trait FromRows {
   type Row[_]
   def apply[T](rows: Seq[Row[T]]): A[T]
 }
+
 object FromRows {
   type Aux[_A[_], R[_]] = FromRows { type A[U] = _A[U]; type Row[U] = R[U] }
   type A[_A[_]] = FromRows { type   A[U] = _A[U] }

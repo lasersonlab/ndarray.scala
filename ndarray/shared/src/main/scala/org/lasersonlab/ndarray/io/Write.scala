@@ -36,14 +36,7 @@ object Write
   extends LowPriWrite {
   implicit val int: Write[Int] =
     new Write[Int] {
-//      override def apply(t: Int): Array[Byte] =
-//        // TODO: endianness
-//        ByteBuffer
-//          .allocate(4)
-//          .putInt(t)
-//          .array()
-
-      override def apply(os: ByteBuffer, t: Int): Unit = os.putInt(t)
+      def apply(os: ByteBuffer, t: Int): Unit = os.putInt(t)
     }
 
   implicit def foldable[T[_] : Foldable, E](

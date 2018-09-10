@@ -240,7 +240,7 @@ object Array {
     es: Encoder[_Shape]
   ):
     Exception |
-    Aux[_Shape, _A, Chunk[_Shape, ?], T]  // TODO: replace Bytes with something lazy / network-based
+    Aux[_Shape, _A, Chunk[_Shape, ?], T]
   =
     for {
       _metadata ← dir.load[Metadata[T, _Shape]]

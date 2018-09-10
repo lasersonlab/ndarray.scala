@@ -18,6 +18,9 @@ import org.blosc.JBlosc
 import org.blosc.JBlosc._
 import org.lasersonlab.zarr.Compressor.Blosc.CName.lz4
 import shapeless.the
+import Runtime.getRuntime
+
+import org.hammerlab.shapeless.instances.InstanceMap
 
 import scala.{ Array ⇒ Arr }
 
@@ -61,15 +64,26 @@ object Compressor {
 
   import Blosc._
 
+  case class NumThreads(value: Int)
+  object NumThreads {
+    implicit def unwrap(n: NumThreads): Int = n.value
+  }
+
   case class Blosc(
         cname: CName = lz4,
        clevel:   Int = 5,
       shuffle:   Int = 1,
     blocksize:   Int = 0
+  )(
+    implicit numThreads: NumThreads =
+      NumThreads(
+        math.min(
+          8,
+          getRuntime.availableProcessors
+        )
+      )
   )
   extends Compressor {
-
-    val numThreads = 1  // TODO: support configuring this
 
     val MAX_BUFFER_SIZE = (1 << 31) - 1
 
@@ -80,10 +94,8 @@ object Compressor {
       val src = ByteBuffer.wrap(arr)
 
       var expansions = 0
-      var bufferSize =
-//        max(
-          sizeHint.getOrElse(1 << 21)  // 2 MB
-//        )
+      var bufferSize = sizeHint.getOrElse(1 << 21)  // 2 MB
+
       while (true) {
         val buffer = allocate(bufferSize)
 
@@ -168,7 +180,6 @@ object Compressor {
         )
 
       if (compressed > 0) {
-        //dest.put
         os.write(dest.array(), 0, compressed)
         os.close()
       } else if (compressed == 0)
@@ -199,7 +210,7 @@ object Compressor {
               Option(level)
                 .map(_.toInt)
                 .fold(
-                  Blosc( )
+                  Blosc()
                 ) {
                   level ⇒
                     Blosc(clevel = level)
@@ -209,19 +220,28 @@ object Compressor {
         }
     }
 
-    sealed trait CName
+    trait Named {
+      override val toString: String =
+        getClass
+          .getSimpleName
+          .filterNot(_ == '$')
+    }
+
+    sealed trait CName extends Named
     object CName {
-      case object lz4 extends CName { override val toString: String = "lz4" }
-      // TODO: others
+      case object    lz4   extends CName
+      case object    lz4hc extends CName
+      case object   zlib   extends CName
+      case object   zstd   extends CName
+      case object snappy   extends CName
 
       implicit def toName(cname: CName): String = cname.toString
 
+      val instances = InstanceMap[CName]
+
       implicit val encoder: Encoder[CName] =
         new Encoder[CName] {
-          def apply(a: CName): Json =
-            a match {
-              case _: lz4.type ⇒ Json.fromString("lz4")
-            }
+          def apply(a: CName): Json = Json.fromString(a.toString)
         }
 
       implicit val decoder: Decoder[CName] =
@@ -231,20 +251,20 @@ object Compressor {
               .value
               .as[String]
               .flatMap {
-                case "lz4" ⇒ Right(lz4)
-                case s ⇒
-                  Left(
-                    DecodingFailure(
-                      s"Unrecognized blosc cname: $s",
-                      c.history
-                    )
-                  )
+                str ⇒
+                  instances(str)
+                    .left
+                    .map {
+                      _ ⇒
+                        DecodingFailure(
+                          s"Unrecognized blosc cname: $str",
+                          c.history
+                        )
+                    }
               }
         }
     }
   }
-
-  // TODO: add other Compressors
 
   implicit val decoder: Decoder[Compressor] =
     new Decoder[Compressor] {

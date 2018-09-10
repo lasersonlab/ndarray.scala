@@ -10,13 +10,13 @@ import scala.collection.JavaConverters._
 case class Variable(
   name: String,
   description: Option[String],
-  dtype: DataType,  // TODO: replace with own DataType
+  dtype: DataType,  // TODO: replace with our own DataType, for cross-compilation
   attrs: Seq[Attribute],
   dimensions: Seq[Dimension],
   rank: Int,
   shape: Seq[Int],
   size: Long,
-  data: ucar.ma2.Array
+  data: ucar.ma2.Array  // TODO: make this lazy / disk-backed
 )
 
 object Variable {

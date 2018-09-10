@@ -85,7 +85,7 @@ package object convert {
   )(
     implicit
     compressor: Compressor,
-    chunkSize: Bytes
+    _chunkSize: Bytes
   ):
     zarr.untyped.Array =
     variable match {
@@ -102,6 +102,14 @@ package object convert {
       ) ⇒
         import DataType._
         import ucar.ma2.DataType._
+
+        val chunkSize =
+          if (_chunkSize.bytes > Int.MaxValue)
+            throw new IllegalArgumentException(
+              s"Chunks should be <2GB; got ${Bytes.format(_chunkSize)}"
+            )
+          else
+            _chunkSize.bytes.toInt
 
         val (_shape, _datatype, fill_value): (Seq[Int], DataType, FillValue[Json]) =
           dtype match {
@@ -125,6 +133,7 @@ package object convert {
         val get: Seq[Int] ⇒ _datatype.T =
           _datatype match {
             case s @ string(size) ⇒
+              // fixed-length strings come in as CHARs with an extra dimensions
               idxs ⇒
                 val sectionSize = fill(rank)(0)
                 sectionSize(rank - 1) = size
@@ -161,19 +170,19 @@ package object convert {
                 data.getObject(index).asInstanceOf[_datatype.T]
           }
 
-        val elemsPerChunk = chunkSize.bytes / _datatype.size
-        val shapeTail = _shape.tail
-        val majorAxisRowSize = shapeTail.foldLeft(1L)(_ * _)
+        val elemsPerChunk = chunkSize / _datatype.size
+        val shapeTail = _shape.tail.toList
+        val rowSize = shapeTail.foldLeft(1L)(_ * _)
         val rowsPerChunk =
           min(
             _shape.head,
             max(
               1,
-              // TODO: guard against integer overflow
-              (elemsPerChunk / majorAxisRowSize).toInt
+              (elemsPerChunk / rowSize).toInt
             )
           )
-        val chunkShape = rowsPerChunk :: shapeTail.toList
+
+        val chunkShape = rowsPerChunk :: shapeTail
 
         val _metadata =
           Metadata(

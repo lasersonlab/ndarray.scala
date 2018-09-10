@@ -8,12 +8,15 @@ import hammerlab.cli._
 import hammerlab.path._
 import org.lasersonlab.zarr.Compressor
 import org.lasersonlab.zarr.Compressor.Blosc
+import org.lasersonlab.zarr.group.Save
 import org.lasersonlab.{ netcdf, zarr }
 
 import scala.collection.JavaConverters._
 
 object Main
-  extends Cmd {
+  extends Cmd
+     with Save.syntax {
+
   case class Opts(
     @O("c")  chunkSize:            Bytes =              64 MB  ,
     @O("z") compressor:       Compressor =              Blosc(),
@@ -47,8 +50,6 @@ object Main
 
         val hdf5Group: netcdf.Group = from
         val zarrGroup: zarr.untyped.Group = hdf5Group
-
-        import org.lasersonlab.zarr.group.Save.Ops
 
         println(s"${hdf5Group.vars.size} vars: ${zarrGroup.arrays.keys.mkString(",")}, ${hdf5Group.groups.size} groups: ${zarrGroup.groups.keys.mkString(",")}")
         println(s"Saving to: $to")

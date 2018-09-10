@@ -116,7 +116,6 @@ object Group {
   implicit val save: Save[Group] =
     new Save[Group] {
       def apply(t: Group, dir: Path): Throwable | Unit = {
-        import Save.Ops
         import cats.implicits._
 
         val groups =

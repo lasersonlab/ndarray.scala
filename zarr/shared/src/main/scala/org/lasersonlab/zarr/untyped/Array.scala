@@ -161,7 +161,6 @@ object Array {
 
   implicit val save: Save[Array] =
     new Save[Array] {
-      import Save.Ops
       def apply(t: Array, dir: Path): Throwable | Unit = {
         def chunks: Throwable | List[Unit] =
           (

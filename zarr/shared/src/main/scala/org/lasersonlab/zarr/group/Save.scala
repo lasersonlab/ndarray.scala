@@ -1,11 +1,10 @@
 package org.lasersonlab.zarr.group
 
 import hammerlab.either._
-import hammerlab.{ either, option }
 import hammerlab.option._
 import hammerlab.path._
-import io.circe.{ Encoder, Printer }
 import hammerlab.str._
+import io.circe.{ Encoder, Printer }
 
 import scala.util.Try
 
@@ -53,5 +52,9 @@ object Save {
 
   implicit class Ops[T](val t: T) extends AnyVal {
     def save(dir: Path)(implicit save: Save[T]): Throwable | Unit = save(t, dir)
+  }
+
+  trait syntax {
+    @inline implicit def zarrSaveOps[T](t: T) = Ops(t)
   }
 }

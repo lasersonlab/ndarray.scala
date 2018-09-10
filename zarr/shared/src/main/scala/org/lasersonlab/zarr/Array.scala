@@ -280,7 +280,6 @@ object Array {
           )
 
         def save(dir: Path): Throwable | Unit = {
-          import Save.Ops
           import cats.implicits._
 
           val chunkRanges = (shape + chunkShape - 1) / chunkShape

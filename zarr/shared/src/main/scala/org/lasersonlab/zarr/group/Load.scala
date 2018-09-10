@@ -99,4 +99,7 @@ object Load
   implicit class Ops(val dir: Path) extends AnyVal {
     def load[T](implicit l: Load[T]): Exception | T = l(dir)
   }
+  trait syntax {
+    @inline implicit def zarrLoadOps(dir: Path) = Ops(dir)
+  }
 }

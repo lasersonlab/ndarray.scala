@@ -1,19 +1,14 @@
 package org.lasersonlab.zarr
 
-import java.io.DataOutputStream
-
 import cats.{ Eval, Foldable, Traverse }
 import hammerlab.option._
 import hammerlab.path._
 import io.circe.{ Decoder, Encoder }
-import io.circe.generic.auto._
-import org.hammerlab.iterator.util.SimpleIterator
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.FillValue.{ FillValueDecoder, FillValueEncoder }
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.group.{ Load, Save }
-import org.lasersonlab.zarr.group.Load.Ops
 import shapeless.Nat
 
 import scala.util.Try

@@ -1,5 +1,6 @@
 package org.lasersonlab.zarr
 
+import org.lasersonlab.zarr.group.Load
 import org.scalatest.FunSuite
 
 trait HasGetOps {
@@ -12,3 +13,4 @@ trait HasGetOps {
 abstract class Suite
   extends hammerlab.Suite
      with HasGetOps
+     with Load.syntax

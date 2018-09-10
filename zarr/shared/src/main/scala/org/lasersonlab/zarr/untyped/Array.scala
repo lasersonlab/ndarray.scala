@@ -85,8 +85,6 @@ object Array {
   //implicit def unwrap[T](a: Aux[T]): Metadata.Aux[T] = a.metadata
   implicit def unwrap[T](a: Aux[T]): Metadata = a.metadata
 
-  import org.lasersonlab.zarr.group.Load.Ops
-
   def apply(dir: Path): Exception | Array =
     for {
       _metadata ← Metadata(dir)

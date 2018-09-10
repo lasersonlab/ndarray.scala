@@ -4,11 +4,13 @@ import hammerlab.path._
 import org.hammerlab.test.resources.File
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.HasGetOps
+import org.lasersonlab.zarr.group.Load
 import org.lasersonlab.zarr.untyped.Group
 
 class ConvertTest
   extends hammerlab.test.Suite
      with HasGetOps
+     with Load.syntax
      with zarr.cmp.all {
 
   // TODO: move to test-utils
@@ -22,8 +24,6 @@ class ConvertTest
 
     Main.main(            hdf5, `64m-path`)
     Main.main("-c", "2m", hdf5,  `2m-path`)
-
-    import org.lasersonlab.zarr.group.Load.Ops
 
     val  `2m` =  `2m-path`.load[Group].get
     val `64m` = `64m-path`.load[Group].get

@@ -6,7 +6,6 @@ import hammerlab.str._
 import io.circe.generic.auto._
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr._
-import org.lasersonlab.zarr.group.Load.Ops
 import org.lasersonlab.zarr.group.{ Basename, Load, Save }
 
 case class Group(

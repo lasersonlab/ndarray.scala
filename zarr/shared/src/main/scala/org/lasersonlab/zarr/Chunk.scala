@@ -5,8 +5,7 @@ import java.nio.ByteBuffer
 
 import cats.{ Eval, Foldable }
 import hammerlab.path._
-import org.lasersonlab.ndarray.io.Read
-import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
+import org.lasersonlab.ndarray.{ Arithmetic, ScanRight, Sum }
 import org.lasersonlab.zarr.dtype.DataType
 
 case class Chunk[
@@ -41,19 +40,39 @@ case class Chunk[
     bytes
   }
 
-  implicit val read: Read[T] = DataType.read(dtype)
-
   lazy val buff = ByteBuffer.wrap(bytes)
 
-  @inline def apply(idx: Int): T = read(buff, idx)
+  @inline def apply(idx: Int): T = dtype.read(buff, idx)
 
   def apply(idx: Shape): T =
-    read(
+    dtype.read(
       buff,
       sum(
         idx * sizeProducts
       )
     )
+
+  def foldLeft[V](base: V)(fn: (V, T) ⇒ V): V = {
+    buff.reset()
+    var v = base
+    var i = 0
+    while (i < size) {
+      v = fn(v, dtype(buff))
+      i += 1
+    }
+    v
+  }
+
+  def foldRight[V](base: V)(fn: (T, V) ⇒ V): V = {
+    buff.reset()
+    var v = base
+    var i = size - 1
+    while (i >= 0) {
+      v = fn(dtype(buff), v)
+      i -= 1
+    }
+    v
+  }
 }
 
 object Chunk {
@@ -106,22 +125,7 @@ object Chunk {
   implicit def foldable[Shape]: Foldable[Chunk[Shape, ?]] =
     new Foldable[Chunk[Shape, ?]] {
       type F[A] = Chunk[Shape, A]
-      def foldLeft[A, B](fa: F[A], b: B)(f: (B, A) ⇒ B): B = {
-        var ret = b
-        var idx = 0
-        while (idx < fa.size) {
-          ret = f(ret, fa(idx))
-          idx += 1
-        }
-        ret
-      }
-      def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = ???
-    }
-
-  implicit def arrayLike[S]: ArrayLike.Aux[Chunk[S, ?], S] =
-    new ArrayLike[Chunk[S, ?]] {
-      type Shape = S
-      @inline def shape(a: Chunk[S, _]): Shape = a.shape
-      @inline def apply[T](a: Chunk[Shape, T], idx: Shape): T = a(idx)
+      def foldLeft[A, B](fa: F[A], b: B)(f: (B, A) ⇒ B): B = fa.foldLeft(b)(f)
+      def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.foldRight(lb)(f)
     }
 }

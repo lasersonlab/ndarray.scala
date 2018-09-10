@@ -74,7 +74,8 @@ package object convert {
                 case  Floats(name, values) ⇒ name → encodeSeq[ Float].apply(values)
                 case Doubles(name, values) ⇒ name → encodeSeq[Double].apply(values)
                 case Strings(name, values) ⇒ name → encodeSeq[String].apply(values)
-              }: _*
+              }
+              : _*
           )
         }
       )

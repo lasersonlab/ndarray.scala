@@ -6,7 +6,6 @@ import hammerlab.path._
 import _root_.io.circe.{ Decoder, Encoder }
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
 import org.lasersonlab.zarr
-import org.lasersonlab.zarr.FillValue
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.{ Load, Save }
 import shapeless.Nat
@@ -271,11 +270,10 @@ object Array {
         val chunkShape = metadata.chunks
 
         def apply(idx: Shape): T =
-          Chunk.arrayLike(
-            arrayLike(
-              chunks,
-              idx / chunkShape
-            ),
+          arrayLike(
+            chunks,
+            idx / chunkShape
+          )(
             idx % chunkShape
           )
 
@@ -294,7 +292,7 @@ object Array {
                     import java.nio.ByteBuffer._
                     val datatype = metadata.dtype
                     val buffer = allocate(datatype.size * chunk.size)
-                    chunk.foldLeft[Unit](()) {
+                    chunk.foldLeft(()) {
                       (_, elem) ⇒
                         datatype(buffer, elem)
 

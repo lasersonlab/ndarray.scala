@@ -93,6 +93,8 @@ lazy val zarr = project.in(new File("zarr/shared")).settings(
     hammerlab.shapeless_utils,
     hammerlab.types,
 
+    sourcecode,
+
     "org.typelevel" ^^ "kittens" ^ "1.1.0",
     "org.blosc" ^ "jblosc" ^ "1.0.1" snapshot
   ),

@@ -220,14 +220,9 @@ object Compressor {
         }
     }
 
-    trait Named {
-      override val toString: String =
-        getClass
-          .getSimpleName
-          .filterNot(_ == '$')
+    sealed abstract class CName(implicit name: sourcecode.Name) {
+      override val toString: String = name.value
     }
-
-    sealed trait CName extends Named
     object CName {
       case object    lz4   extends CName
       case object    lz4hc extends CName

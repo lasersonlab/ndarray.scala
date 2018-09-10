@@ -101,6 +101,7 @@ object Array {
         val      shape = metadata.shape
         val chunkShape = metadata.chunks
 
+        // TODO: LRU this / cap maximum size
         private val _chunks = mutable.Map[Seq[Int], ByteBuffer]()
         def chunk(idx: Seq[Int]): ByteBuffer =
           _chunks.getOrElseUpdate(
@@ -157,7 +158,8 @@ object Array {
               )
           }
         }
-      }: Array
+      }
+      : Array
 
   implicit val save: Save[Array] =
     new Save[Array] {
@@ -201,9 +203,10 @@ object Array {
 
         import io.circe.generic.auto._
 
+        // TODO: optionally write to a tmp dir then "commit" to intended destination
         for {
-          _ ← (t.metadata: Metadata).save(dir)
-          _ ← t.attrs.save(dir)
+          _ ← t.metadata.save(dir)
+          _ ← t.  attrs.save(dir)
           _ ← chunks
         } yield
           ()

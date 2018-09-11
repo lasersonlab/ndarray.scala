@@ -18,7 +18,8 @@ import scala.util.Try
  * Storage of the ND-array of chunks, as well as the records in each chunk, are each a configurable type-param; see
  * companion-object for some convenient constructors
  */
-trait Array[T] {
+trait Array {
+  type T
   type Shape
   type A[_]
   type Chunk[_]
@@ -54,16 +55,18 @@ trait Array[T] {
 
 object Array {
 
-  type S[S, T] = Array[T] { type Shape = S }
+  type T[_T] = Array { type T = _T }
+  type S[S, _T] = Array { type Shape = S; type T = _T }
 
-  type Aux[S, _A[_], _Chunk[_], T] =
-    Array[T] {
+  type Aux[S, _A[_], _Chunk[_], _T] =
+    Array {
+      type T = _T
       type Shape = S
       type     A[U] =     _A[U]
       type Chunk[U] = _Chunk[U]
     }
 
-  def unapply[T](a: Array[T]):
+  def unapply[T](a: Array.T[T]):
     Option[
       (
         Metadata[T, a.Shape],
@@ -216,45 +219,46 @@ object Array {
   }
 
   def apply[
-    T,
+    _T,
     _Shape,
     _A[U]
   ](
     dir: Path
   )(
     implicit
-    d: Decoder[DataType.Aux[T]],
-    e: Encoder[DataType.Aux[T]],
+    d: Decoder[DataType.Aux[_T]],
+    e: Encoder[DataType.Aux[_T]],
     ti: Indices.Aux[_A, _Shape],
     traverse: Traverse[_A],
     arrayLike: ArrayLike.Aux[_A, _Shape],
     ai: Arithmetic[_Shape, Int],
     scanRight: ScanRight.Aux[_Shape, Int, Int, _Shape],
     sum: Sum.Aux[_Shape, Int],
-    dt: FillValue.Decoder[T],
-    et: FillValue.Encoder[T],
+    dt: FillValue.Decoder[_T],
+    et: FillValue.Encoder[_T],
     arithmetic: Arithmetic.Id[_Shape],
     key: Key[_Shape],
     ds: Decoder[_Shape],
     es: Encoder[_Shape]
   ):
     Exception |
-    Aux[_Shape, _A, Chunk[_Shape, ?], T]
+    Aux[_Shape, _A, Chunk[_Shape, ?], _T]
   =
     for {
-      _metadata ← dir.load[Metadata[T, _Shape]]
+      _metadata ← dir.load[Metadata[_T, _Shape]]
          _attrs ← dir.load[Opt[Attrs]]
       _chunks ← {
         implicit val md = _metadata
         import Metadata._
-        chunks[T, _Shape, _A](
+        chunks[_T, _Shape, _A](
           dir,
           md.shape,
           md.chunks
         )
       }
     } yield
-      new Array[T] {
+      new Array {
+        type T = _T
         type Shape = _Shape
         type A[U] = _A[U]
         type Chunk[U] = zarr.Chunk[Shape, U]
@@ -366,7 +370,7 @@ object Array {
           }
     }
 
-  implicit def foldableDerived[T](implicit a: Array[T]): Foldable[Aux[a.Shape, a.A, a.Chunk, ?]] =
+  implicit def foldableDerived[T](implicit a: Array.T[T]): Foldable[Aux[a.Shape, a.A, a.Chunk, ?]] =
     new Foldable[Aux[a.Shape, a.A, a.Chunk, ?]] {
       type F[A] = Aux[a.Shape, a.A, a.Chunk, A]
 

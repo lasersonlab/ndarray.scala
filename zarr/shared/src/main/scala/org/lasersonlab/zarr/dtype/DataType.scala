@@ -8,7 +8,7 @@ import io.circe.Decoder.Result
 import io.circe.DecodingFailure.fromThrowable
 import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
 import org.lasersonlab.ndarray.io.{ Read, Write }
-import org.lasersonlab.zarr.{ untyped, | }
+import org.lasersonlab.zarr.{ dtype, untyped, | }
 import shapeless.the
 
 import scala.util.Try
@@ -178,6 +178,11 @@ object DataType
         }
     }
 
+  implicit def auxEq[T]: Eq[Aux[T]] =
+    new Eq[Aux[T]] {
+      def eqv(x: Aux[T], y: Aux[T]): Boolean = dataTypeEq.eqv(x, y)
+    }
+
   implicit lazy val dataTypeEq: Eq[DataType] =
     new Eq[DataType] {
       import cats.derived.auto.eq._
@@ -188,12 +193,34 @@ object DataType
         (x, y) match {
           case (x: Primitive, y: Primitive) ⇒ primitive.eqv(x, y)
           case (x: struct, y: struct) ⇒ structEq.eqv(x, y)
-          case (Struct(StructList(xEntries, xSize)), Struct(StructList(yEntries, ySize))) ⇒
+          case (
+            Struct(
+              StructList(
+                xEntries,
+                xSize
+              )
+            ),
+            Struct(
+              StructList(
+                yEntries,
+                ySize
+              )
+            )
+          ) ⇒
             structEntriesEq.eqv(xEntries, yEntries) &&
             x.size == y.size
-          case (StructList(xEntries, xSize), StructList(yEntries, ySize)) ⇒
+          case (
+            StructList(
+              xEntries,
+              xSize
+            ),
+            StructList(
+              yEntries,
+              ySize
+            )
+          ) ⇒
             structEntriesEq.eqv(xEntries, yEntries) &&
-              x.size == y.size
+            x.size == y.size
           case _ ⇒ false
         }
     }
@@ -274,26 +301,9 @@ object DataType
       builder.result()
     }
 
-//    override def apply(t: String): Array[Byte] = {
-//      val arr = new Array[Byte](t.length)
-//      var i = 0
-//      if (t.length != size)
-//        throw new IllegalArgumentException(
-//          s"Expected string of size $size, found ${t.length}: '$t'"
-//        )
-//      while (i < t.length) {
-//        val ch = t(i)
-//        if (!ch.isValidByte)
-//          throw new IllegalArgumentException(
-//            s"Invalid character in string $t at position $i: $ch"
-//          )
-//        arr(i) = ch.toByte
-//        i += 1
-//      }
-//      arr
-//    }
+    val maxValue = Byte.MaxValue.toChar
 
-    override def apply(buffer: ByteBuffer, t: String): Unit = {
+    def apply(buffer: ByteBuffer, t: String): Unit = {
       var i = 0
       if (t.length != size)
         throw new IllegalArgumentException(
@@ -301,7 +311,7 @@ object DataType
         )
       while (i < t.length) {
         val ch = t(i)
-        if (!ch.isValidByte)
+        if (ch > maxValue)
           throw new IllegalArgumentException(
             s"Invalid character in string $t at position $i: $ch"
           )
@@ -313,12 +323,33 @@ object DataType
 
   type byte = byte.type
 
-  object  short { implicit def apply(v:  short.type)(implicit endianness: Endianness): Aux[ Short] =  short(endianness) }
-  object    int { implicit def apply(v:    int.type)(implicit endianness: Endianness): Aux[   Int] =    int(endianness) }
-  object   long { implicit def apply(v:   long.type)(implicit endianness: Endianness): Aux[  Long] =   long(endianness) }
-  object  float { implicit def apply(v:  float.type)(implicit endianness: Endianness): Aux[ Float] =  float(endianness) }
-  object double { implicit def apply(v: double.type)(implicit endianness: Endianness): Aux[Double] = double(endianness) }
+  /**
+   * Construct primitive data-types, in the presence of an implicit [[Endianness]], either from an un-applied reference
+   * to the companion object (e.g. `float` instead of `float(LittleEndian)`)
+   */
 
+  type <>! = Endianness
+
+  object  short { implicit def apply(v:  short.type)(implicit e: <>!): Aux[ Short] =  short(e) }
+  object    int { implicit def apply(v:    int.type)(implicit e: <>!): Aux[   Int] =    int(e) }
+  object   long { implicit def apply(v:   long.type)(implicit e: <>!): Aux[  Long] =   long(e) }
+  object  float { implicit def apply(v:  float.type)(implicit e: <>!): Aux[ Float] =  float(e) }
+  object double { implicit def apply(v: double.type)(implicit e: <>!): Aux[Double] = double(e) }
+
+  /**
+   * Expose implicit [[Primitive]] instances for derivations (assuming sufficient [[Endianness]] evidence)
+   */
+
+  implicit val   _byte                               =   byte
+  implicit def  _short(implicit e: <>!): Aux[ Short] =  short(e)
+  implicit def    _int(implicit e: <>!): Aux[   Int] =    int(e)
+  implicit def   _long(implicit e: <>!): Aux[  Long] =   long(e)
+  implicit def  _float(implicit e: <>!): Aux[ Float] =  float(e)
+  implicit def _double(implicit e: <>!): Aux[Double] = double(e)
+
+  /**
+   * [[untyped.Struct "Untyped" struct]] [[DataType]]
+   */
   case class struct(entries: Seq[StructEntry])
     extends DataType {
     type T = untyped.Struct
@@ -347,7 +378,7 @@ object DataType
           .result()
       )
 
-    override def apply(buffer: ByteBuffer, t: untyped.Struct): Unit =
+    def apply(buffer: ByteBuffer, t: untyped.Struct): Unit =
       for {
         StructEntry(name, datatype) ← entries
       } {
@@ -355,22 +386,15 @@ object DataType
       }
   }
 
-  implicit val   _byte                                               =   byte
-  implicit def  _short(implicit endianness: Endianness): Aux[ Short] =  short(endianness)
-  implicit def    _int(implicit endianness: Endianness): Aux[   Int] =    int(endianness)
-  implicit def   _long(implicit endianness: Endianness): Aux[  Long] =   long(endianness)
-  implicit def  _float(implicit endianness: Endianness): Aux[ Float] =  float(endianness)
-  implicit def _double(implicit endianness: Endianness): Aux[Double] = double(endianness)
-
   def get(order: ByteOrder, dtype: DType, size: Int): String | DataType =
     (order, dtype, size) match {
-      case (         None, _: d.   int,    1) ⇒ Right(  byte      )
-      case (e: Endianness, _: d.   int,    2) ⇒ Right( short(   e))
-      case (e: Endianness, _: d.   int,    4) ⇒ Right(   int(   e))
-      case (e: Endianness, _: d.   int,    8) ⇒ Right(  long(   e))
-      case (e: Endianness, _: d. float,    4) ⇒ Right( float(   e))
-      case (e: Endianness, _: d. float,    8) ⇒ Right(double(   e))
-      case (         None, _: d.string, size) ⇒ Right(string(size))
+      case (  None, _: d.   int,    1) ⇒ Right(  byte      )
+      case (e: <>!, _: d.   int,    2) ⇒ Right( short(   e))
+      case (e: <>!, _: d.   int,    4) ⇒ Right(   int(   e))
+      case (e: <>!, _: d.   int,    8) ⇒ Right(  long(   e))
+      case (e: <>!, _: d. float,    4) ⇒ Right( float(   e))
+      case (e: <>!, _: d. float,    8) ⇒ Right(double(   e))
+      case (  None, _: d.string, size) ⇒ Right(string(size))
       case _ ⇒
         Left(
           s"Unrecognized data type: $order$dtype$size"

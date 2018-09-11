@@ -5,8 +5,10 @@ import _root_.io.circe._
 import _root_.io.circe.parser._
 import hammerlab.option._
 import hammerlab.path._
+import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Format._
+import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Basename
 
@@ -14,8 +16,8 @@ case class Metadata[T, Shape](
    shape: Shape,
   chunks: Shape,
   dtype: DataType.Aux[T],
-  compressor: Compressor,
-  order: Order,
+  compressor: Compressor = Blosc(),
+  order: Order = C,
   fill_value: FillValue[T] = Null,
   zarr_format: Format = `2`,
   filters: Opt[Seq[Filter]] = None

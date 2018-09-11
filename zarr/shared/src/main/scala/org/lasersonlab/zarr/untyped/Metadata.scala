@@ -5,6 +5,7 @@ import hammerlab.path._
 import io.circe._
 import io.circe.generic.auto._
 import io.circe.parser._
+import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.Metadata._
@@ -17,7 +18,7 @@ case class Metadata(
    shape: Seq[Int],
   chunks: Seq[Int],
   dtype: DataType,
-  compressor: Compressor,
+  compressor: Compressor = Blosc(),
   order: Order = C,
   fill_value: FillValue[Json] = Null,
   zarr_format: Format = `2`,

@@ -2,6 +2,7 @@ package org.lasersonlab.zarr
 
 import _root_.io.circe.Decoder.Result
 import _root_.io.circe._
+import shapeless.{ CNil, Generic }
 
 // TODO: add filters
 sealed trait Filter
@@ -11,13 +12,23 @@ object Filter {
       override def apply(c: HCursor): Result[Filter] =
         Left(
           DecodingFailure(
-            "Filters not supported",
+            s"Filters not supported:\n${c.value.spaces2}",
             c.history
           )
         )
     }
   implicit val encoder: Encoder[Filter] =
     new Encoder[Filter] {
-      override def apply(f: Filter): Json = Json.Null
+      override def apply(f: Filter): Json = ???
+    }
+
+  /**
+   * Placeholder while [[Filter]] remains uninhabited; lets downstream derivations work
+   */
+  implicit val generic: Generic.Aux[Filter, CNil] =
+    new Generic[Filter] {
+      type Repr = CNil
+      override def to(t: Filter): CNil = ???
+      override def from(r: CNil): Filter = ???
     }
 }

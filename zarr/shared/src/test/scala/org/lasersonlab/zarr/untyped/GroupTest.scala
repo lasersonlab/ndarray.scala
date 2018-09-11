@@ -2,9 +2,7 @@ package org.lasersonlab.zarr.untyped
 
 import hammerlab.path._
 import io.circe.Json
-import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.Format.`2`
-import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.{ Suite, untyped }
 
@@ -53,14 +51,11 @@ class GroupTest
               StructEntry("_Valid", long)
             )
           ),
-        compressor = Blosc(),
-        order = C,
         fill_value =
           Json.fromString(
             // 68 0-bytes, base64-encoded
             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-          ),
-        zarr_format = `2`
+          )
       )
     )
   }

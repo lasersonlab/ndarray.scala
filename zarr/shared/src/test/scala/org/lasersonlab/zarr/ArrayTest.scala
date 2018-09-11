@@ -3,16 +3,12 @@ package org.lasersonlab.zarr
 import cats.implicits._
 import hammerlab.path._
 import hammerlab.shapeless.tlist.{ Map ⇒ _, _ }
-import org.hammerlab.test.Cmp
 import org.lasersonlab.anndata.loom.{ Obs, Var }
 import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.zarr.Compressor.Blosc
-import org.lasersonlab.zarr.Format.`2`
-import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.dtype.DataType._
-import shapeless.Generic
 import shapeless.nat._
 
 class ArrayTest
@@ -23,18 +19,13 @@ class ArrayTest
 
     implicit val arr = Array.chunks[Float, _2](path).get
 
-    val blosc = Blosc()
-
-    arr.metadata should be(
+    ==(
+      arr.metadata,
       Metadata(
-        shape = 27998 :: 5425 :: TNil,
-        chunks = 3092 :: 5425 :: TNil,
-        dtype = float(LittleEndian),
-        compressor = blosc,
-        order = C,
-        fill_value = 0.0f,
-        zarr_format = `2`,
-        filters = None
+         shape = 27998 :: 5425 :: TNil,
+        chunks =  3092 :: 5425 :: TNil,
+         dtype = float,
+        fill_value = 0.0f
       )
     )
 
@@ -47,6 +38,8 @@ class ArrayTest
     val rows = chunks.rows
     rows.length should be(10)
     rows.foreach(_.size should be(1))
+
+    val blosc = Blosc()
 
     val expected =
       Seq(
@@ -97,7 +90,7 @@ class ArrayTest
     )
 
     arr.foldLeft(0) {
-      case (numNonZero, elem) ⇒
+      (numNonZero, elem) ⇒
         numNonZero + (
           if (elem > 0.0f)
             1
@@ -116,14 +109,10 @@ class ArrayTest
 
     metadata should be(
       Metadata(
-         shape = 27998 :: TNil,
-        chunks = 27998 :: TNil,
-        dtype = long(LittleEndian),
-        compressor = Blosc(),
-        order = C,
-        fill_value = 0L,
-        zarr_format = `2`,
-        filters = None
+             shape = 27998 :: TNil,
+            chunks = 27998 :: TNil,
+             dtype = long,
+        fill_value = 0L
       )
     )
 
@@ -157,11 +146,7 @@ class ArrayTest
          shape = 5425 :: TNil,
         chunks = 5425 :: TNil,
         dtype = string(5),
-        compressor = Blosc(),
-        order = C,
-        fill_value = "",
-        zarr_format = `2`,
-        filters = None
+        fill_value = ""
       )
     )
 
@@ -208,11 +193,7 @@ class ArrayTest
          shape = 27998 :: TNil,
         chunks = 27998 :: TNil,
         dtype = dtype,
-        compressor = Blosc(),
-        order = C,
-        fill_value = Var.empty,
-        zarr_format = `2`,
-        filters = None
+        fill_value = Var.empty
       )
     )
 
@@ -389,8 +370,6 @@ class ArrayTest
               StructEntry(name, datatype)
             }
           ),
-        compressor = Blosc(),
-        order = C,
         fill_value =
           untyped.Struct(
             Map(
@@ -523,9 +502,7 @@ class ArrayTest
               "cDNA_Lib_Ok" → 0.toByte,
               "ngperul_cDNA" → 0.toByte,
             )
-          ),
-        zarr_format = `2`,
-        filters = None
+          )
       )
     )
 

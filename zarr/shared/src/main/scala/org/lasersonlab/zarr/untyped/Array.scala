@@ -174,10 +174,7 @@ object Array {
                 path.mkdirs
 
                 val datatype = t.datatype
-                val elems =
-                  t
-                    .chunkElems(chunkIdx)
-                    .toVector
+                val elems = t.chunkElems(chunkIdx)
 
                 val buffer = allocate(datatype.size * t.metadata.chunks.product)
 

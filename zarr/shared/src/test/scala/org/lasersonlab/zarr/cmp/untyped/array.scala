@@ -2,10 +2,10 @@ package org.lasersonlab.zarr.cmp.untyped
 
 import hammerlab.either._
 import hammerlab.option._
+import org.hammerlab.cmp.CanEq
 import org.hammerlab.test.Cmp
 import org.lasersonlab.zarr.cmp.untyped.array.ElemsDiff.{ Index, Sizes }
 import org.lasersonlab.zarr.cmp.untyped.array.metadata.IgnoreChunks
-import org.lasersonlab.zarr.cmp.untyped.array.metadata.IgnoreChunks.{ Yes, No }
 import org.lasersonlab.zarr.untyped.Metadata
 import org.lasersonlab.zarr.{ Attrs, Filter, untyped }
 import shapeless.ops.hlist.Drop
@@ -14,17 +14,11 @@ import shapeless.nat._2
 
 object array {
 
-  object metadata {
-    def cmp(implicit ignoreChunks: IgnoreChunks): Cmp[Metadata] = {
-      implicit val filterCmp: Cmp[Filter] =
-        new Cmp[Filter] {
-          type Diff = Nothing
-          def cmp(l: Filter, r: Filter): Option[Nothing] = ???
-        }
-
+  trait metadata {
+    implicit def metadataCmp(implicit ignoreChunks: IgnoreChunks): Cmp[Metadata] = {
       ignoreChunks match {
-        case No ⇒ the[Cmp[Metadata]]
-        case Yes ⇒
+        case IgnoreChunks. No ⇒ CanEq.cmpCaseClass
+        case IgnoreChunks.Yes ⇒
           /**
            * drop the second field (chunk size) from the [[Generic]]/[[shapeless.HList]] representation of [[Metadata]]
            */
@@ -43,7 +37,8 @@ object array {
           }
       }
     }
-
+  }
+  object metadata {
     sealed trait IgnoreChunks
     object IgnoreChunks {
       // Default: don't ignore chunk size when testing equality
@@ -60,17 +55,18 @@ object array {
     case class Index(i: Int, l: Any, r: Any) extends ElemsDiff
   }
 
-  trait cmp {
+  trait cmp
+    extends metadata {
 
     object metadata {
       // import this to allow metadata to have different chunk-size fields when comparing arrays
-      implicit val ignoreChunks = Yes
+      implicit val ignoreChunks = IgnoreChunks.Yes
     }
 
     implicit def arrayCmp(implicit i: IgnoreChunks): Cmp[untyped.Array] =
       new Cmp[untyped.Array] {
 
-        val _metadata = array.metadata.cmp(i)
+        val _metadata = metadataCmp(i)
 
         type Diff =
           _metadata.Diff |

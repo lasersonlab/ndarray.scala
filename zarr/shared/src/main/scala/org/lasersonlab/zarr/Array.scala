@@ -85,7 +85,7 @@ object Array {
    * Each chunk lives in a file with basename given by the provided [[Key]] ('.'-joined indices)
    */
   private def chunks[
-        T: DataType.Aux,
+        T,
     Shape: Arithmetic.Id,
      A[U]: Traverse
   ](
@@ -93,13 +93,14 @@ object Array {
       arrShape: Shape,
     chunkShape: Shape
   )(
-     implicit
-     indices: Indices.Aux[A, Shape],
-     ai: Arithmetic[Shape, Int],
-     key: Key[Shape],
-     scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
-     sum: Sum.Aux[Shape, Int],
-     compressor: Compressor,
+   implicit
+   indices: Indices.Aux[A, Shape],
+   ai: Arithmetic[Shape, Int],
+   key: Key[Shape],
+   scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
+   sum: Sum.Aux[Shape, Int],
+   compressor: Compressor,
+   datatype: DataType.Aux[T],
   ):
     Exception |
     A[Chunk[Shape, T]]
@@ -109,6 +110,8 @@ object Array {
 
     // We use Traverse and Applicative instances for Either, Traverse[A], and Functor syntax
     import cats.implicits._
+
+    val (sizeHint, _) = scanRight(chunkShape, 1, _ * _)
 
     val chunks =
       indices(chunkRanges)
@@ -124,11 +127,8 @@ object Array {
                 dir / key(idx),
                 shape,
                 idx,
-                start,
-                end,
-                compressor
-              )(
-                chunkShape
+                compressor,
+                sizeHint * datatype.size
               )
           }
 

@@ -4,39 +4,62 @@ import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 
 import cats.{ Eval, Foldable }
+import hammerlab.option._
 import hammerlab.path._
 import org.lasersonlab.ndarray.{ Arithmetic, ScanRight, Sum }
 import org.lasersonlab.zarr.dtype.DataType
 
+/**
+ * A Zarr "chunk" file, represented as a [[Path]] that bytes are lazily loaded from
+ *
+ * TODO: parameterize Shape by its coordinate type (presumably [[Int]] or [[Long]]); replace [[arithmetic]], [[sum]] by
+ * a "bi-fold"
+ *
+ * @param path path to chunk file
+ * @param shape shape of this chunk
+ * @param idx index of this chunk inside larger Zarr [[Array]]
+ * @param size number of elements in this chunk (product of elements of shape)
+ * @param strides number of elements in a flattened/linearized array that each component of [[shape]] corresponds to;
+ *                has same number of elements as [[shape]], last element is 1, and other elements are the result of a
+ *                scanRight-product from there
+ * @param arithmetic evidence for dot-product-ing [[Shape]]s
+ * @param sum evidence for summing each dimensions' stride-weighted component to find a 1-D address of a given N-D index
+ * @tparam Shape index/shape used for addressing individual elements in this chunk (and also the larger Zarr [[Array]])
+ * @tparam T element type
+ */
 case class Chunk[
   Shape,
   T
 ](
-   path: Path,
+  path: Path,
   shape: Shape,
-    idx: Shape,
-  start: Shape,
-    end: Shape,
-   size: Int,
-   sizeProducts: Shape,
-   compressor: Compressor
-)(
-  sizeHint: Shape
+  idx: Shape,
+  size: Int,
+  strides: Shape,
+  compressor: Compressor,
+  sizeHint: Opt[Int]
 )(
   implicit
   dtype: DataType.Aux[T],
-  val arithmetic: Arithmetic.Id[Shape],
-  scanRight: ScanRight.Aux[Shape, Int, Int, Shape],
-  val sum: Sum.Aux[Shape, Int]
+  arithmetic: Arithmetic.Id[Shape],
+  sum: Sum.Aux[Shape, Int]
 )
 {
   lazy val bytes = {
-    val chunkSize = scanRight(sizeHint, 1, _ * _)._1 * dtype.size
-    val bytes = compressor(path, chunkSize)
-    require(
-      chunkSize == bytes.length,
-      s"Expected $chunkSize bytes in chunk $idx (shape: $shape, sizeHint $sizeHint, dtype $dtype), found ${bytes.length}"
-    )
+    val bytes = compressor(path, size * dtype.size)
+    sizeHint
+      .fold {
+        require(
+          size * dtype.size <= bytes.length,
+          s"Expected at least ${size * dtype.size} bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
+        )
+      } {
+        expected ⇒
+          require(
+            expected == bytes.length,
+            s"Expected $expected bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
+          )
+      }
     bytes
   }
 
@@ -47,13 +70,11 @@ case class Chunk[
   def apply(idx: Shape): T =
     dtype.read(
       buff,
-      sum(
-        idx * sizeProducts
-      )
+      sum(idx * strides)
     )
 
   def foldLeft[V](base: V)(fn: (V, T) ⇒ V): V = {
-    buff.reset()
+    buff.clear()
     var v = base
     var i = 0
     while (i < size) {
@@ -64,7 +85,7 @@ case class Chunk[
   }
 
   def foldRight[V](base: V)(fn: (T, V) ⇒ V): V = {
-    buff.reset()
+    buff.clear()
     var v = base
     var i = size - 1
     while (i >= 0) {
@@ -77,6 +98,11 @@ case class Chunk[
 
 object Chunk {
 
+  /**
+   * Convenience-constructor for a chunk of a Zarr [[Array]]
+   *
+   * Does some error-checking, and computes the per-dimension strides and total size of the chunk
+   */
   def apply[
     T,
     Shape: Arithmetic.Id
@@ -84,11 +110,8 @@ object Chunk {
           path: Path,
          shape: Shape,
            idx: Shape,
-         start: Shape,
-           end: Shape,
-    compressor: Compressor
-  )(
-    sizeHint: Shape
+    compressor: Compressor,
+      sizeHint: Opt[Int] = None
   )(
     implicit
     dt: DataType.Aux[T],
@@ -111,12 +134,9 @@ object Chunk {
           path,
           shape,
           idx,
-          start,
-          end,
           size,
           sizeProducts,
-          compressor
-        )(
+          compressor,
           sizeHint
         )
       )

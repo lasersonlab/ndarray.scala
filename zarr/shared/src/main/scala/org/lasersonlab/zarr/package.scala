@@ -17,6 +17,9 @@ import org.lasersonlab.zarr.tlist.TListCodec
  *
  * When is `fill_value` used? Are there sparseness facilities baked in to Zarr? Aren't chunks read in always of size
  * ${datatype.size} * $num_records?
+ *
+ * Does the reference implementation write extremal/boundary chunks as smaller, or compress a them as a buffer the size
+ * of full-sized/interior chunks? Seems like the latter… some edges to check here around handling that as well.
  */
 package object zarr
   extends Arithmetic.HasOps

@@ -101,11 +101,7 @@ object Compressor {
 
         buffer.clear()
         val decompressed = JBlosc.decompressCtx(src, buffer, bufferSize, numThreads)
-        if (decompressed < 0)
-          throw new IOException(
-            s"Internal error in Blosc decompression of $path (size: ${arr.length}) into buffer of size $bufferSize"
-          )
-        else if (decompressed == 0) {
+        if (decompressed <= 0) {
           if (bufferSize == MAX_BUFFER_SIZE) {
             throw new IOException(
               s"Blosc decompression failed ($decompressed) on path $path with maximum buffer-size 2GB"

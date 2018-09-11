@@ -3,6 +3,7 @@ package org.lasersonlab.zarr
 import cats.implicits._
 import hammerlab.path._
 import hammerlab.shapeless.tlist.{ Map ⇒ _, _ }
+import org.hammerlab.test.Cmp
 import org.lasersonlab.anndata.loom.{ Obs, Var }
 import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.zarr.Compressor.Blosc
@@ -11,6 +12,7 @@ import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.dtype.DataType._
+import shapeless.Generic
 import shapeless.nat._
 
 class ArrayTest
@@ -48,28 +50,22 @@ class ArrayTest
 
     val expected =
       Seq(
-        Chunk[Ints2, Float](path / "0", 3092 :: 5425 :: TNil, 0 :: 0 :: TNil,     0 :: 0 :: TNil,  3092 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "1", 3092 :: 5425 :: TNil, 1 :: 0 :: TNil,  3092 :: 0 :: TNil,  6184 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "2", 3092 :: 5425 :: TNil, 2 :: 0 :: TNil,  6184 :: 0 :: TNil,  9276 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "3", 3092 :: 5425 :: TNil, 3 :: 0 :: TNil,  9276 :: 0 :: TNil, 12368 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "4", 3092 :: 5425 :: TNil, 4 :: 0 :: TNil, 12368 :: 0 :: TNil, 15460 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "5", 3092 :: 5425 :: TNil, 5 :: 0 :: TNil, 15460 :: 0 :: TNil, 18552 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "6", 3092 :: 5425 :: TNil, 6 :: 0 :: TNil, 18552 :: 0 :: TNil, 21644 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "7", 3092 :: 5425 :: TNil, 7 :: 0 :: TNil, 21644 :: 0 :: TNil, 24736 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "8", 3092 :: 5425 :: TNil, 8 :: 0 :: TNil, 24736 :: 0 :: TNil, 27828 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil),
-        Chunk[Ints2, Float](path / "9",  170 :: 5425 :: TNil, 9 :: 0 :: TNil, 27828 :: 0 :: TNil, 27998 :: 5425 :: TNil, 16774100, 5425 :: 1 :: TNil, blosc)(3092 :: 5425 :: TNil)
+        Chunk[Ints2, Float](path / "0.0", 3092 :: 5425 :: TNil, 0 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[Ints2, Float](path / "1.0", 3092 :: 5425 :: TNil, 1 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[Ints2, Float](path / "2.0", 3092 :: 5425 :: TNil, 2 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[Ints2, Float](path / "3.0", 3092 :: 5425 :: TNil, 3 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[Ints2, Float](path / "4.0", 3092 :: 5425 :: TNil, 4 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[Ints2, Float](path / "5.0", 3092 :: 5425 :: TNil, 5 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[Ints2, Float](path / "6.0", 3092 :: 5425 :: TNil, 6 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[Ints2, Float](path / "7.0", 3092 :: 5425 :: TNil, 7 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[Ints2, Float](path / "8.0", 3092 :: 5425 :: TNil, 8 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[Ints2, Float](path / "9.0",  170 :: 5425 :: TNil, 9 :: 0 :: TNil, size =   922250, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4)
       )
 
-    chunks
-      .toList
-      .zip(expected)
-      .foreach {
-        case (actual: Chunk[Ints2, Float], expected) ⇒
-          ==(actual.start, expected.start)
-          ==(actual.  end, expected.  end)
-          ==(actual.  idx, expected.  idx)
-          ==(actual.shape, expected.shape)
-      }
+    ==(
+      chunks.toList: Seq[Chunk[Ints2, Float]],
+      expected
+    )
 
     val chunkNonzeroCounts =
       arr

@@ -1,11 +1,14 @@
 package org.lasersonlab.zarr
 
 import org.hammerlab.paths.HasPathOps
+import org.lasersonlab.ndarray.Arithmetic
 import org.lasersonlab.zarr.io._
 import org.lasersonlab.zarr.opt.OptDecoder
 
 package object untyped
   extends HasPathOps
+     with Arithmetic.HasOps
      with OptDecoder
      with Load.syntax
      with Save.syntax
+     with hammerlab.either

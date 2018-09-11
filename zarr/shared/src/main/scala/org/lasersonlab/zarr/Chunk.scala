@@ -29,7 +29,7 @@ import org.lasersonlab.zarr.dtype.DataType
  */
 case class Chunk[
   Shape,
-  T
+  _T
 ](
   path: Path,
   shape: Shape,
@@ -40,60 +40,12 @@ case class Chunk[
   sizeHint: Opt[Int]
 )(
   implicit
-  dtype: DataType.Aux[T],
-  arithmetic: Arithmetic.Id[Shape],
-  sum: Sum.Aux[Shape, Int]
+  val dtype: DataType.Aux[_T],
+  val arithmetic: Arithmetic.Id[Shape],
+  val sum: Sum.Aux[Shape, Int]
 )
-{
-  lazy val bytes = {
-    val bytes = compressor(path, size * dtype.size)
-    sizeHint
-      .fold {
-        require(
-          size * dtype.size <= bytes.length,
-          s"Expected at least ${size * dtype.size} bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
-        )
-      } {
-        expected ⇒
-          require(
-            expected == bytes.length,
-            s"Expected $expected bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
-          )
-      }
-    bytes
-  }
-
-  lazy val buff = ByteBuffer.wrap(bytes)
-
-  @inline def apply(idx: Int): T = dtype.read(buff, idx)
-
-  def apply(idx: Shape): T =
-    dtype.read(
-      buff,
-      sum(idx * strides)
-    )
-
-  def foldLeft[V](base: V)(fn: (V, T) ⇒ V): V = {
-    buff.clear()
-    var v = base
-    var i = 0
-    while (i < size) {
-      v = fn(v, dtype(buff))
-      i += 1
-    }
-    v
-  }
-
-  def foldRight[V](base: V)(fn: (T, V) ⇒ V): V = {
-    buff.clear()
-    var v = base
-    var i = size - 1
-    while (i >= 0) {
-      v = fn(dtype(buff), v)
-      i -= 1
-    }
-    v
-  }
+extends untyped.Chunk[Shape] {
+  type T = _T
 }
 
 object Chunk {

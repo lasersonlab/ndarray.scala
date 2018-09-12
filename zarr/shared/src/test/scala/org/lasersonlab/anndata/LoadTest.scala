@@ -5,6 +5,7 @@ import hammerlab.path._
 import hammerlab.shapeless.tlist._
 import org.lasersonlab.anndata.loom.{ Obs, Var }
 import org.lasersonlab.zarr.Suite
+import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.dtype.DataType.string
 
 class LoadTest
@@ -40,7 +41,7 @@ class LoadTest
             val Seq(shape) = arr.shape
             shape → arr.dtype → k
         },
-      Seq(
+      Seq[((Int, DataType), String)](
            19 → string( 8) → "Age_categories",
             1 → string( 1) → "AnalysisPool_categories",
             1 → string( 1) → "AnalysisProject_categories",

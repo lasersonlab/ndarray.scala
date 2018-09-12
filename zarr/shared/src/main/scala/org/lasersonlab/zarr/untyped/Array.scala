@@ -6,9 +6,10 @@ import java.nio.ByteBuffer._
 import cats.implicits._
 import hammerlab.option._
 import hammerlab.path._
+import org.lasersonlab.zarr
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Save
-import org.lasersonlab.zarr.{ Attrs, | }
+import org.lasersonlab.zarr.Attrs
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -16,7 +17,7 @@ import scala.util.Try
 
 trait Array {
   type T
-  def metadata: Metadata  // TODO: make this Aux[T]; so far unable to get the types to line up in HDF5-conversion code
+  def metadata: Metadata.S[Seq[Int]]  // TODO: make this Aux[T]; so far unable to get the types to line up in HDF5-conversion code
   def datatype: DataType.Aux[T]
   def attrs: Opt[Attrs]
   def apply(idxs: Int*): T
@@ -47,7 +48,7 @@ trait Array {
     }
 
   def chunkRange(chunkIdx: Seq[Int]): List[Range] = {
-    require(chunkIdx.size == metadata.rank)
+    require(chunkIdx.size == metadata.chunks.size)
     metadata
       .shape
       .zip(metadata.chunks)
@@ -85,18 +86,19 @@ object Array {
   //implicit def unwrap[T](a: Aux[T]): Metadata.Aux[T] = a.metadata
   implicit def unwrap[T](a: Aux[T]): Metadata = a.metadata
 
-  def apply(dir: Path): Exception | Array =
+  def apply(dir: Path): Exception | zarr.Array =
     for {
       _metadata ← Metadata(dir)
       _attrs ← dir.load[Opt[Attrs]]
     } yield
-      new Array {
+      new zarr.Array {
+        type Shape = Seq[Int]
 
         val metadata = _metadata
         val datatype = _metadata.dtype
         val attrs = _attrs
 
-        type T = _metadata.dtype.T
+        final type T = _metadata.dtype.T
 
         val      shape = metadata.shape
         val chunkShape = metadata.chunks
@@ -126,7 +128,7 @@ object Array {
             .scanRight(1)(_ * _)
             .toList
 
-        def apply(idxs: Int*): T = {
+        def apply(idxs: Seq[Int]): T = {
           if (idxs.size != N)
             throw new IllegalArgumentException(
               s"Expected $N dimensions, found ${idxs.size}: ${idxs.mkString(",")}"
@@ -149,7 +151,7 @@ object Array {
           }
 
           try {
-            datatype.read(chunk(chunkIdx), sum)
+            _metadata.dtype.read(chunk(chunkIdx), sum)
           } catch {
             case e: Exception ⇒
               throw new RuntimeException(
@@ -158,8 +160,7 @@ object Array {
               )
           }
         }
-      }
-      : Array
+      }: zarr.Array
 
   implicit val save: Save[Array] =
     new Save[Array] {

@@ -12,16 +12,18 @@ import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Basename
 
-case class Metadata[T, Shape](
-   shape: Shape,
-  chunks: Shape,
-  dtype: DataType.Aux[T],
-  compressor: Compressor = Blosc(),
-  order: Order = C,
-  fill_value: FillValue[T] = Null,
-  zarr_format: Format = `2`,
-  filters: Opt[Seq[Filter]] = None
-)
+case class Metadata[_T, _Shape](
+   shape: _Shape,
+  chunks: _Shape,
+  dtype: DataType.Aux[_T],
+   override val compressor: Compressor = Blosc(),
+   override val order: Order = C,
+   override val fill_value: FillValue[_T] = Null,
+   override val zarr_format: Format = `2`,
+   override val filters: Opt[Seq[Filter]] = None
+) extends untyped.Metadata {
+  type Shape = _Shape
+}
 
 object Metadata {
 

@@ -10,6 +10,9 @@ import org.lasersonlab.zarr.dtype.DataType
 
 import scala.util.Try
 
+/**
+ * TODO: move this into [[DataType]]
+ */
 sealed trait FillValue[+T]
 
 object FillValue {

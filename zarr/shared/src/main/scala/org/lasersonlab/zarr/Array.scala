@@ -44,7 +44,7 @@ trait Array {
 
   def apply(idx: Shape): T
 
-  def metadata: Metadata[T, Shape]
+  val metadata: untyped.Metadata.Aux[T, Shape]
   def chunks: A[Chunk[T]]
 
   // TODO: this should be type-parameterizable, and validated accordingly during JSON-parsing
@@ -66,12 +66,12 @@ object Array {
       type Chunk[U] = _Chunk[U]
     }
 
-  def unapply[T](a: Array.T[T]):
+  def unapply(a: Array):
     Option[
       (
-        Metadata[T, a.Shape],
+        untyped.Metadata.Aux[a.T, a.Shape],
         Option[Attrs],
-        a.A[a.Chunk[T]]
+        a.A[a.Chunk[a.T]]
       )
     ] =
     Some(
@@ -242,7 +242,15 @@ object Array {
     es: Encoder[_Shape]
   ):
     Exception |
-    Aux[_Shape, _A, Chunk[_Shape, ?], _T]
+    Aux[
+      _Shape,
+      _A,
+      Chunk[
+        _Shape,
+        ?
+      ],
+      _T
+    ]
   =
     for {
       _metadata ← dir.load[Metadata[_T, _Shape]]

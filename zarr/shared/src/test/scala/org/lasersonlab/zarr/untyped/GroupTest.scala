@@ -2,6 +2,7 @@ package org.lasersonlab.zarr.untyped
 
 import hammerlab.path._
 import io.circe.Json
+import org.lasersonlab.zarr
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.{ Suite, untyped }
@@ -35,7 +36,7 @@ class GroupTest
     `var`.chunks should be(27998 :: Nil)
 
     `var`.metadata should be(
-      untyped.Metadata(
+      new zarr.Metadata(
          shape = Seq(27998),
         chunks = Seq(27998),
         dtype =

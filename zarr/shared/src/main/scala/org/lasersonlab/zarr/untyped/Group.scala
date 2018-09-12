@@ -15,6 +15,7 @@ case class Group(
   metadata: Group.Metadata = Group.Metadata()
 ) {
   def array(name: Str): Array.Ints = arrays(name)
+  // TODO: array with cast
   def group(name: Str): Group = groups(name)
 }
 

@@ -45,7 +45,7 @@ trait Array {
 
   def apply(idx: Shape): T
 
-  val metadata: untyped.Metadata.Aux[T, Shape]
+  val metadata: Metadata[T, Shape]
   def chunks: A[Chunk[T]]
 
   // TODO: this should be type-parameterizable, and validated accordingly during JSON-parsing
@@ -72,7 +72,7 @@ object Array {
   def unapply(a: Array):
     Option[
       (
-        zarr.untyped.Metadata.Aux[a.T, a.Shape],
+        Metadata[a.T, a.Shape],
         Option[Attrs],
         a.A[a.Chunk[a.T]]
       )
@@ -267,13 +267,24 @@ object Array {
     zarr.untyped.Metadata(dir)
       .flatMap {
         metadata ⇒
+          val cc =
+            new Metadata[metadata.T, Seq[Int]](
+              shape = metadata.shape,
+              chunks = metadata.chunks,
+              dtype = metadata.dtype,
+              compressor = metadata.compressor,
+              order = metadata.order,
+              fill_value = metadata.fill_value,
+              zarr_format = metadata.zarr_format,
+              filters = metadata.filters
+            )
           md[
             metadata.T,
             Seq[Int],
             FlatArray
           ](
             dir,
-            metadata,
+            cc,
             metadata.dtype
           )
           .map {
@@ -287,7 +298,7 @@ object Array {
     _A[U]
   ](
     dir: Path,
-    _metadata: zarr.untyped.Metadata.Aux[_T, _Shape],
+    _metadata: Metadata[_T, _Shape],
     datatype: DataType.Aux[_T]
   )(
     implicit
@@ -365,8 +376,6 @@ object Array {
                   val path = dir / key(idx)
                   Try {
                     import java.nio.ByteBuffer._
-                    //val datatype: DataType.Aux[_metadata.T] = _metadata.dtype
-                    //val datatype: DataTyp
                     val buffer = allocate(datatype.size * chunk.size)
                     chunk.foldLeft(()) {
                       (_, elem) ⇒

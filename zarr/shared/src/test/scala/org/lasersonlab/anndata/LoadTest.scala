@@ -39,7 +39,7 @@ class LoadTest
         .map {
           case (k, arr) ⇒
             val Seq(shape) = arr.shape
-            shape → arr.metadata.dtype → k
+            shape → (arr.metadata.dtype: DataType) → k
         },
       Seq[((Int, DataType), String)](
            19 → string( 8) → "Age_categories",

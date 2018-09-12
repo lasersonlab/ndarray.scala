@@ -9,12 +9,12 @@ import org.lasersonlab.zarr._
 import org.lasersonlab.zarr.io._
 
 case class Group(
-  arrays: Map[String, Array],
+  arrays: Map[String, Array.Ints],
   groups: Map[String, Group],
   attrs: Opt[Attrs] = None,
   metadata: Group.Metadata = Group.Metadata()
 ) {
-  def array(name: Str): Array = arrays(name)
+  def array(name: Str): Array.Ints = arrays(name)
   def group(name: Str): Group = groups(name)
 }
 
@@ -47,7 +47,7 @@ object Group {
       metadata ← dir.load[Metadata]
          attrs ← dir.load[Opt[Attrs]]
 
-      arrays = Map.newBuilder[String, Array]
+      arrays = Map.newBuilder[String, Array.Ints]
       groups = Map.newBuilder[String, Group]
 
       group ←
@@ -64,7 +64,7 @@ object Group {
           .map {
             path: Path ⇒
               /** First, try to parse as an [[Array]] */
-              Array(path)
+              Array.untyped(path)
                 .fold(
                   arrayError ⇒
                     /** If that failed, parse as a [[Group]] */

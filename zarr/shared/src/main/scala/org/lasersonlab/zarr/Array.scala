@@ -1,6 +1,6 @@
 package org.lasersonlab.zarr
 
-import cats.{ Eval, Foldable, Traverse }
+import cats.{ Eval, Foldable, Monoid, Traverse }
 import hammerlab.option._
 import hammerlab.path._
 import _root_.io.circe.{ Decoder, Encoder }
@@ -8,6 +8,7 @@ import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.{ Load, Save }
+import org.lasersonlab.zarr.untyped.FlatArray
 import shapeless.Nat
 
 import scala.util.Try
@@ -58,6 +59,8 @@ object Array {
   type T[_T] = Array { type T = _T }
   type S[S, _T] = Array { type Shape = S; type T = _T }
 
+  type Ints = Array { type Shape = Seq[Int] }
+
   type Aux[S, _A[_], _Chunk[_], _T] =
     Array {
       type T = _T
@@ -69,7 +72,7 @@ object Array {
   def unapply(a: Array):
     Option[
       (
-        untyped.Metadata.Aux[a.T, a.Shape],
+        zarr.untyped.Metadata.Aux[a.T, a.Shape],
         Option[Attrs],
         a.A[a.Chunk[a.T]]
       )
@@ -258,6 +261,25 @@ object Array {
     } yield
       arr
 
+  import cats.implicits.catsKernelStdGroupForInt
+
+  def untyped(dir: Path): Exception | Ints =
+    zarr.untyped.Metadata(dir)
+      .flatMap {
+        metadata ⇒
+          md[
+            metadata.T,
+            Seq[Int],
+            FlatArray
+          ](
+            dir,
+            metadata,
+            metadata.dtype
+          )
+          .map {
+            arr ⇒ arr: Ints
+          }
+      }
 
   def md[
     _T,
@@ -265,7 +287,7 @@ object Array {
     _A[U]
   ](
     dir: Path,
-    _metadata: untyped.Metadata.Aux[_T, _Shape],
+    _metadata: zarr.untyped.Metadata.Aux[_T, _Shape],
     datatype: DataType.Aux[_T]
   )(
     implicit
@@ -297,7 +319,7 @@ object Array {
       _chunks ← {
         // TODO: clean this up; these shouldn't all be necessary
         implicit val md = _metadata
-        import untyped.Metadata._
+        import zarr.untyped.Metadata._
         implicit val _datatype = datatype
         chunks[_T, _Shape, _A](
           dir,

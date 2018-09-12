@@ -45,6 +45,11 @@ object Metadata {
       type Shape = _S
     }
 
+  // Implicit unwrappers for some fields
+  //implicit def _compressor[T, Shape](implicit md: Metadata):      Compressor = md.compressor
+  implicit def _compressor(implicit md: Metadata):      Compressor = md.compressor
+  implicit def   _datatype(implicit md: Metadata): DataType.Aux[md.T] = md.     dtype
+
   def apply(dir: Path): Exception | S[Seq[Int]] =
     dir ? basename flatMap {
       path ⇒
@@ -52,6 +57,7 @@ object Metadata {
     }
 
   implicit val encoder: Encoder[S[Seq[Int]]] = ???
+  implicit def encoderAux[T, S]: Encoder[Aux[T, S]] = ???
 
   implicit val decoder: Decoder[S[Seq[Int]]] =
     new Decoder[S[Seq[Int]]] {
@@ -77,6 +83,7 @@ object Metadata {
     }
 
   implicit val _basename = Basename[Metadata](basename)
+  implicit def _basenameAux[T, S] = Basename[Metadata.Aux[T, S]](basename)
   implicit def _basenameShape[S] = Basename[Metadata.S[S]](basename)
   implicit def _basenameT    [T] = Basename[Metadata.T[T]](basename)
 }

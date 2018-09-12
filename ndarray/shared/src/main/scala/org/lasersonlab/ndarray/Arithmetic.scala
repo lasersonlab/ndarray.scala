@@ -23,6 +23,26 @@ object Arithmetic {
       def min (l: Int, r: Int): Int = Math.min(l, r)
     }
 
+  implicit val seqInt: Arithmetic[Seq[Int], Int] =
+    new Arithmetic[Seq[Int], Int] {
+      def   + (l: Seq[Int], r: Int): Seq[Int] = l.map(_ + r)
+      def   - (l: Seq[Int], r: Int): Seq[Int] = l.map(_ - r)
+      def   * (l: Seq[Int], r: Int): Seq[Int] = l.map(_ * r)
+      def   / (l: Seq[Int], r: Int): Seq[Int] = l.map(_ / r)
+      def   % (l: Seq[Int], r: Int): Seq[Int] = l.map(_ % r)
+      def min (l: Seq[Int], r: Int): Seq[Int] = l.map(Math.min(_, r))
+    }
+
+  implicit def seqIntId: Id[Seq[Int]] =
+    new Arithmetic[Seq[Int], Seq[Int]] {
+      def   + (l: Seq[Int], r: Seq[Int]): Seq[Int] = l.zip(r).map { case (l, r) ⇒ l + r }
+      def   - (l: Seq[Int], r: Seq[Int]): Seq[Int] = l.zip(r).map { case (l, r) ⇒ l - r }
+      def   * (l: Seq[Int], r: Seq[Int]): Seq[Int] = l.zip(r).map { case (l, r) ⇒ l * r }
+      def   / (l: Seq[Int], r: Seq[Int]): Seq[Int] = l.zip(r).map { case (l, r) ⇒ l / r }
+      def   % (l: Seq[Int], r: Seq[Int]): Seq[Int] = l.zip(r).map { case (l, r) ⇒ l % r }
+      def min (l: Seq[Int], r: Seq[Int]): Seq[Int] = l.zip(r).map { case (l, r) ⇒ math.min(l, r) }
+    }
+
   implicit def tnil[R]: Arithmetic[TNil, R] =
     new Arithmetic[TNil, R] {
       def   + (l: TNil, r: R): TNil = TNil

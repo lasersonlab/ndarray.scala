@@ -11,6 +11,12 @@ trait Sum[In] {
 object Sum {
   type Aux[T, _O] = Sum[T] { type Out = _O }
 
+  implicit def seq[T](implicit m: Monoid[T]): Aux[Seq[T], T] =
+    new Sum[Seq[T]] {
+      type Out = T
+      def apply(in: Seq[T]): T = in.foldLeft(m.empty)(m.combine)
+    }
+
   implicit def tnil[T](implicit m: Monoid[T]): Aux[TNil, T] =
     new Sum[TNil] {
       type Out = T

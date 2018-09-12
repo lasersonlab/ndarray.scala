@@ -68,13 +68,12 @@ object VectorInts {
   import cats.implicits._
   import shapeless.nat._
 
-  encodeAsSeq[Ints1, Int]
-  the[Encoder[Ints1]]
-
   implicit val `1` = make[_1, Ints1, Vector1]
   implicit val `2` = make[_2, Ints2, Vector2]
   implicit val `3` = make[_3, Ints3, Vector3]
   implicit val `4` = make[_4, Ints4, Vector4]
   implicit val `5` = make[_5, Ints5, Vector5]
   implicit val `6` = make[_6, Ints6, Vector6]
+
+  //def fromSeq(ints: Seq[Int]): Option[VectorInts]
 }

@@ -52,6 +52,16 @@ object ScanRight {
         f(inlist, init, fn)
     }
 
+  implicit def seq[A, B]: Aux[Seq[A], A, B, Seq[B]] =
+    make {
+      (inlist, init, fn) ⇒
+        val scanned = inlist.scanRight(init)(fn)
+        (
+          scanned.head,
+          scanned.tail
+        )
+    }
+
   implicit def hnil[InElem, OutElem]: Aux[TNil, InElem, OutElem, TNil] =
     make(
       (inlist, init, fn) ⇒ (init, inlist)

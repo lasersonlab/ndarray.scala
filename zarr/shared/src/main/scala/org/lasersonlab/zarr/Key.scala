@@ -13,6 +13,17 @@ trait Key[T] {
 object Key {
   def apply[T](t: T)(implicit key: Key[T]): String = key(t)
 
+  implicit def seq[T]: Key[Seq[T]] =
+    new Key[Seq[T]] {
+      def builder(builder: StringBuilder, t: Seq[T]): StringBuilder =
+        t match {
+          case Seq() ⇒ builder
+          case ts ⇒
+            builder ++= ts.head.toString
+            this.builder(builder, ts.tail)
+        }
+    }
+
   implicit def base[T]: Key[T :: TNil] =
     new Key[T :: TNil] {
       override def builder(builder: StringBuilder, t: T :: TNil): StringBuilder =

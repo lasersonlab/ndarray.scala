@@ -72,7 +72,7 @@ object Indices {
       }
   }
 
-  // This crashes the compiler if it is searched for via `cons` above
+  // TODO: this crashes the compiler if it is searched for via `cons` above
   implicit val lazyIndices1: Lazy[Indices.Aux[Vector1, Ints1]] = Lazy(indices1)
 
   implicit val     indices2:      Indices.Aux[Vector2, Ints2]  = Indices.cons[Ints1, Vector1]
@@ -89,4 +89,20 @@ object Indices {
 
   implicit val     indices6:      Indices.Aux[Vector6, Ints6]  = Indices.cons[Ints5, Vector5]
   implicit val lazyIndices6: Lazy[Indices.Aux[Vector6, Ints6]] = Lazy(indices6)
+
+//  implicit val seq: Indices.Aux[Seq, Seq[Int]] =
+//    new Indices[Seq] {
+//      type Shape = Seq[Int]
+//      @inline def apply(shape: Shape): Seq[Shape] = rec(shape.toList)
+//      private def rec(shape: List[Int]): List[List[Int]] =
+//        shape match {
+//          case Nil ⇒ List(Nil)
+//          case scala.::(h, t) ⇒
+//            for {
+//              h ← (0 until h).toList
+//              t ← rec(t)
+//            } yield
+//              scala.::(h, t)
+//        }
+//    }
 }

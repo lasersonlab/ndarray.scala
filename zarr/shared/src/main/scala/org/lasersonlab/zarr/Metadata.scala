@@ -30,10 +30,6 @@ object Metadata {
   val basename = ".zarray"
   implicit def _basename[T, Shape] = Basename[Metadata[T, Shape]](basename)
 
-  // Implicit unwrappers for some fields
-  implicit def _compressor[T, Shape](implicit md: Metadata[_, _]): Compressor = md.compressor
-  implicit def   _datatype[T, Shape](implicit md: Metadata[T, _]): DataType.Aux[T] = md.dtype
-
   def apply[
         T : FillValue.Decoder,
     Shape :           Decoder

@@ -254,10 +254,51 @@ object Array {
   =
     for {
       _metadata ← dir.load[Metadata[_T, _Shape]]
-         _attrs ← dir.load[Opt[Attrs]]
+      arr ← md(dir, _metadata, _metadata.dtype)
+    } yield
+      arr
+
+
+  def md[
+    _T,
+    _Shape,
+    _A[U]
+  ](
+    dir: Path,
+    _metadata: untyped.Metadata.Aux[_T, _Shape],
+    datatype: DataType.Aux[_T]
+  )(
+    implicit
+    e: Encoder[DataType.Aux[_T]],
+    ti: Indices.Aux[_A, _Shape],
+    traverse: Traverse[_A],
+    arrayLike: ArrayLike.Aux[_A, _Shape],
+    ai: Arithmetic[_Shape, Int],
+    scanRight: ScanRight.Aux[_Shape, Int, Int, _Shape],
+    sum: Sum.Aux[_Shape, Int],
+    et: FillValue.Encoder[_T],
+    arithmetic: Arithmetic.Id[_Shape],
+    key: Key[_Shape],
+    es: Encoder[_Shape]
+  ):
+    Exception |
+    Aux[
+      _Shape,
+      _A,
+      Chunk[
+        _Shape,
+        ?
+      ],
+      _T
+    ]
+  =
+    for {
+      _attrs ← dir.load[Opt[Attrs]]
       _chunks ← {
+        // TODO: clean this up; these shouldn't all be necessary
         implicit val md = _metadata
-        import Metadata._
+        import untyped.Metadata._
+        implicit val _datatype = datatype
         chunks[_T, _Shape, _A](
           dir,
           md.shape,
@@ -298,15 +339,16 @@ object Array {
             ti(chunkRanges)
               .map {
                 idx ⇒
-                  val chunk = arrayLike(chunks, idx)
+                  val chunk: Chunk[_T] = arrayLike(chunks, idx)
                   val path = dir / key(idx)
                   Try {
                     import java.nio.ByteBuffer._
-                    val datatype = metadata.dtype
+                    //val datatype: DataType.Aux[_metadata.T] = _metadata.dtype
+                    //val datatype: DataTyp
                     val buffer = allocate(datatype.size * chunk.size)
                     chunk.foldLeft(()) {
                       (_, elem) ⇒
-                        datatype(buffer, elem)
+                        datatype(buffer, elem: _T)
 
                         ()
                     }
@@ -327,7 +369,7 @@ object Array {
           }
 
           for {
-            _ ← metadata.save(dir)
+            _ ← _metadata.save(dir)
             _ ← attrs.save(dir)
             _ ← chunkResults
           } yield

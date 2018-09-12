@@ -165,9 +165,9 @@ object Vectors {
       @inline def foldRight[A, B](fa: Vector[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.foldRight(lb)(f)
     }
 
-  // TODO: manually unroll 6 dimesions' worth for now; couldn't get implicit derivations to work.
-  // HOPE: reversing the order of the type-params in [[Aux]] will allow partial-unification to actually work and make
-  // many of these cases smoother, allow removing the Vectors.traverseRow member, etc.
+  // HACK: manually unroll 6 dimesions' worth for now; couldn't get implicit derivations to work.
+  // TODO: reversing the order of the type-params in [[Aux]] should allow partial-unification to work, and allow
+  // automatic derivation of these cases (as well as allowing removing the Vectors.traverseRow member, etc.)
 
   type Vector1[T] = Vector[T]
   type Vector2[T] = Vectors.Aux[T, Vector1]

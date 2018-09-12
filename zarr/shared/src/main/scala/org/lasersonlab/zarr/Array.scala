@@ -1,6 +1,7 @@
 package org.lasersonlab.zarr
 
 import cats.{ Eval, Foldable, Monoid, Traverse }
+import cats.implicits._
 import hammerlab.option._
 import hammerlab.path._
 import _root_.io.circe.{ Decoder, Encoder }
@@ -36,7 +37,7 @@ trait Array {
   def elems: Iterator[T] =
     for {
       chunk ← chunksIterator
-      elem ← foldableChunk.toList(chunk).iterator
+      elem ← chunk.toList.iterator
     } yield
       elem
 
@@ -46,6 +47,7 @@ trait Array {
   def apply(idx: Shape): T
 
   val metadata: Metadata[T, Shape]
+
   def chunks: A[Chunk[T]]
 
   // TODO: this should be type-parameterizable, and validated accordingly during JSON-parsing
@@ -58,6 +60,7 @@ object Array {
 
   type T[_T] = Array { type T = _T }
   type S[S, _T] = Array { type Shape = S; type T = _T }
+  type SU[S] = Array { type Shape = S }
 
   type Ints = Array { type Shape = Seq[Int] }
 
@@ -349,6 +352,7 @@ object Array {
         override val foldableChunk = Chunk.foldable
 
         val metadata = _metadata
+        val datatype = metadata.dtype
         val   chunks =   _chunks
         val    attrs =    _attrs
 
@@ -399,6 +403,7 @@ object Array {
               .map { _ ⇒ () }
           }
 
+          // TODO: configure ability to write to a temporary location and then "commit" all results
           for {
             _ ← _metadata.save(dir)
             _ ← attrs.save(dir)

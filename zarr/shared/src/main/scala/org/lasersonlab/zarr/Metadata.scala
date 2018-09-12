@@ -21,7 +21,9 @@ case class Metadata[_T, _Shape](
    override val fill_value: FillValue[_T] = Null,
    override val zarr_format: Format = `2`,
    override val filters: Opt[Seq[Filter]] = None
-) extends untyped.Metadata {
+)
+extends untyped.Metadata
+{
   type Shape = _Shape
 }
 

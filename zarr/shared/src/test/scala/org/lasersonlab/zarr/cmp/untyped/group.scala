@@ -18,10 +18,10 @@ object group {
 //    arrays:    Seq[array.cmp.arrayCmp.Diff],
 //     attrs: Option[ json.Diff]
 //  )
-
-  //import cmp.groupCmp
+//
+//  import cmp.groupCmp
 //  import array.cmp.arrayCmp
-
+//
 //  the[Cmp[Map[String, untyped.Array]]]
 //  the[Cmp[Group]]
 

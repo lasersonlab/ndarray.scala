@@ -16,7 +16,7 @@ case class Variable(
   rank: Int,
   shape: Seq[Int],
   size: Long,
-  data: ucar.ma2.Array  // TODO: make this lazy / disk-backed
+  data: ucar.nc2.Variable
 )
 
 object Variable {
@@ -30,7 +30,7 @@ object Variable {
       v.getRank,
       v.getShape,
       v.getSize,
-      v.read()
+      v
     )
 
   implicit def lines: ToLines[Variable] =

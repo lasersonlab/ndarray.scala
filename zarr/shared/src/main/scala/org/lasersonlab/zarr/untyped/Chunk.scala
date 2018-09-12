@@ -12,6 +12,8 @@ import org.lasersonlab.zarr.Compressor
 import org.lasersonlab.zarr.dtype.DataType
 
 /**
+ * TODO: we only need the typed version of this
+ *
  * A Zarr "chunk" file, represented as a [[Path]] that bytes are lazily loaded from
  *
  * TODO: parameterize Shape by its coordinate type (presumably [[Int]] or [[Long]]); replace [[arithmetic]], [[sum]] by

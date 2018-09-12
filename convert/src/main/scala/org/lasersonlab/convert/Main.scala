@@ -14,8 +14,7 @@ import org.lasersonlab.{ netcdf, zarr }
 import scala.collection.JavaConverters._
 
 object Main
-  extends Cmd
-     with Save.syntax {
+  extends Cmd {
 
   case class Opts(
     @O("c")  chunkSize:            Bytes =              64 MB  ,

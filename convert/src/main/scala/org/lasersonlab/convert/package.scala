@@ -1,20 +1,29 @@
 package org.lasersonlab
 
+import cats.{ Eval, Foldable, Traverse }
+import cats.implicits._
 import com.tom_e_white.hdf5_java_cloud.NioReadOnlyRandomAccessFile
 import hammerlab.bytes._
+import hammerlab.either._
 import hammerlab.option._
 import hammerlab.path.Path
-import io.circe.Json
+import io.circe.{ Encoder, Json }
 import org.lasersonlab.netcdf.{ Attribute, Group, Variable }
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.DataType
-import org.lasersonlab.zarr.untyped.Metadata
-import org.lasersonlab.zarr.{ Attrs, Compressor, FillValue }
+import org.lasersonlab.zarr.io.Save
+import org.lasersonlab.zarr.{ Attrs, Compressor, FillValue, Metadata }
+import shapeless.the
+import ucar.ma2.IndexIterator
 import ucar.nc2.NetcdfFile
 
-import math.{ max, min }
+import scala.Array.fill
+import scala.math.{ max, min }
+import scala.util.Try
 
-package object convert {
+package object convert
+  extends Save.syntax
+{
   implicit def loadHDF5(path: Path): netcdf.Group =
     NetcdfFile.open(
       new NioReadOnlyRandomAccessFile(path),
@@ -88,7 +97,7 @@ package object convert {
     compressor: Compressor,
     _chunkSize: Bytes
   ):
-    zarr.untyped.Array =
+    zarr.Array.Ints =
     variable match {
       case Variable(
         name,
@@ -97,7 +106,7 @@ package object convert {
         _attrs,
         dimensions,
         rank,
-        shape,
+        _shape,
         size,
         data
       ) ⇒
@@ -112,95 +121,275 @@ package object convert {
           else
             _chunkSize.bytes.toInt
 
-        val (_shape, _datatype, fill_value): (Seq[Int], DataType, FillValue[Json]) =
+        val tpe: Type =
           dtype match {
             // fixed-length strings come in as CHARs with an extra dimensions
-            case   CHAR ⇒ (shape.dropRight(1), string(shape.last), Json.fromString(""))
-            case    INT ⇒ (shape             ,    int            , Json.fromInt(0))
-            case   LONG ⇒ (shape             ,   long            , Json.fromInt(0))
-            case  SHORT ⇒ (shape             ,  short            , Json.fromInt(0))
-            case   BYTE ⇒ (shape             ,   byte            , Json.fromInt(0))
-            case  FLOAT ⇒ (shape             ,  float            , Json.fromDoubleOrNull(0))
-            case DOUBLE ⇒ (shape             , double            , Json.fromDoubleOrNull(0))
+            case   CHAR ⇒
+              val size = _shape.last
+
+              new Type {
+                type T = String
+                val shape = _shape.dropRight(1)
+
+                val sectionShape = fill(rank)(1)
+                sectionShape(rank - 1) = size
+
+                val datatype = string(size)
+                val fill_value = FillValue("")
+                val encoder = the[FillValue.Encoder[T]]
+
+                def next(it: IndexIterator): String = {
+                  var i = 0
+                  val sb = new StringBuilder
+                  while (it.hasNext && i < size) {
+                    sb += it.getCharNext
+                    i += 1
+                  }
+                  if (i != size)
+                    throw new IllegalStateException(
+                      s"Only read $i characters (expected $size)"
+                    )
+                  sb.result()
+                }
+              }
+            case    INT ⇒ Type.make (_shape, fill(rank)(1),    int, 0        , { it: IndexIterator ⇒ it.getIntNext    } )
+            case   LONG ⇒ Type.make (_shape, fill(rank)(1),   long, 0L       , { it: IndexIterator ⇒ it.getLongNext   } )
+            case  SHORT ⇒ Type.make (_shape, fill(rank)(1),  short, 0: Short , { it: IndexIterator ⇒ it.getShortNext  } )
+            case   BYTE ⇒ Type.make (_shape, fill(rank)(1),   byte, 0: Byte  , { it: IndexIterator ⇒ it.getByteNext   } )
+            case  FLOAT ⇒ Type.make (_shape, fill(rank)(1),  float, 0.0f     , { it: IndexIterator ⇒ it.getFloatNext  } )
+            case DOUBLE ⇒ Type.make (_shape, fill(rank)(1), double, 0.0      , { it: IndexIterator ⇒ it.getDoubleNext } )
             case c ⇒
               throw new UnsupportedOperationException(
                 s"Unimplemented datatype: $dtype"
               )
           }
 
-        import Array.fill
-        import ucar.ma2.Range
+        import tpe._
 
-        val get: Seq[Int] ⇒ _datatype.T =
-          _datatype match {
-            case s @ string(size) ⇒
-              // fixed-length strings come in as CHARs with an extra dimensions
-              idxs ⇒
-                val sectionSize = fill(rank)(0)
-                sectionSize(rank - 1) = size
+        val ndims = shape.size
 
-                val ranges = new java.util.ArrayList[Range](rank)
-
-                idxs
-                  .foreach {
-                    idx ⇒
-                      ranges
-                        .add(
-                          new Range(idx, idx)
-                        )
-                  }
-
-                ranges.add(
-                  new Range(
-                    0,
-                    shape.last - 1
-                  )
-                )
-
-                val sb = new StringBuilder
-                val chars = data.getRangeIterator(ranges)
-                while (chars.hasNext) {
-                  sb += chars.getCharNext
-                }
-                sb.result().asInstanceOf[_datatype.T]
-            case _ ⇒
-              idxs ⇒
-                val index = data.getIndex
-                index.set(idxs.toArray)
-                index.currentElement()
-                data.getObject(index).asInstanceOf[_datatype.T]
-          }
-
-        val elemsPerChunk = chunkSize / _datatype.size
-        val shapeTail = _shape.tail.toList
+        val elemsPerChunk = chunkSize / datatype.size
+        val numRows = shape.head
+        val shapeTail = shape.tail.toList
         val rowSize = shapeTail.foldLeft(1L)(_ * _)
         val rowsPerChunk =
           min(
-            _shape.head,
+            numRows,
             max(
               1,
               (elemsPerChunk / rowSize).toInt
             )
           )
 
-        val chunkShape = rowsPerChunk :: shapeTail
+        val _chunkShape = rowsPerChunk :: shapeTail
+
+        val numChunks = (numRows + rowsPerChunk - 1) / rowsPerChunk
 
         val _metadata =
-          Metadata(
-            shape = _shape,
-            chunks = chunkShape,
-            dtype = _datatype,
+          new Metadata[T, Seq[Int]](
+            shape = shape,
+            chunks = _chunkShape,
+            dtype = datatype,
             compressor = compressor,
             order = C,
             fill_value = fill_value
           )
 
-        new zarr.untyped.Array {
-          override type T = _datatype.T
-          override val datatype: DataType.Aux[T] = _datatype
+        new zarr.Array {
+          override type T = tpe.T
+          type Shape = Seq[Int]
           override val metadata = _metadata
-          @inline override def apply(idxs: Int*): T = get(idxs)
+
+          type     A[U] =        Vector[U]  // we're only chunking by "row" / major-axis; 1-D array of chunks is fine
+          type Chunk[U] = convert.Chunk[U]
+
+          implicit val traverseA: Traverse[A] = catsStdInstancesForVector
+          implicit val foldableChunk: Foldable[Chunk] = Chunk.foldable
+
+          val      shape: Seq[Int] = tpe.shape
+          val chunkShape: Seq[Int] = _chunkShape
+
+          val chunks: A[Chunk[T]] =
+            (0 until numChunks)
+              .map {
+                i ⇒
+                  val start = i * rowsPerChunk
+                  val end = min(numRows, (i+1) * rowsPerChunk)
+                  val rows = end - start
+
+                  val shape = rows :: shapeTail toArray
+
+                  Chunk[T](
+                    data,
+                    start,
+                    shape,
+                    sectionShape
+                  )(
+                    next
+                  )
+              }
+              .toVector
+
+          override def save(dir: Path): Throwable | Unit = {
+            def chunkResults =
+              chunks
+                .zipWithIndex
+                .map {
+                  case (chunk, idx) ⇒
+                    val basename = {
+                      val idxs = fill(ndims)(0)
+                      idxs(0) = idx
+                      idxs.mkString(".")
+                    }
+
+                    Try {
+                      val path = dir / basename
+                      path.mkdirs
+
+                      import java.nio.ByteBuffer._
+                      val buffer = allocate(datatype.size * chunk.shape.product)
+
+                      chunk.foldLeft(()) {
+                        (_, elem) ⇒
+
+                          datatype(buffer, elem)
+                        ()
+                      }
+                    }
+                    .toEither
+                }
+                .sequence
+
+            // TODO: optionally write to a tmp dir then "commit" to intended destination
+            for {
+              _ ← (metadata: Metadata[T, Shape]).save(dir)
+              _ ←   attrs.save(dir)
+              _ ← chunkResults
+            } yield
+              ()
+          }
+
+          @inline override def apply(idx: Seq[Int]): T = {
+            require(idx.size == rank, s"Index of size ${idx.size} (${idx.mkString(",")}) for array of rank $rank")
+            val h :: t = idx.toList
+            val chunk = chunks(h / rowsPerChunk)
+            chunk((h % rowsPerChunk) :: t)
+          }
+
           override val attrs: Opt[Attrs] = _attrs
         }
     }
+
+  /**
+   * Wrapper for some properties, and a dependent type, that are being converted from HDF5
+   */
+  sealed abstract class Type {
+    type T
+    def shape: Seq[Int]
+    def sectionShape: Array[Int]
+    def datatype: DataType.Aux[T]
+    def fill_value: FillValue[T]
+    def next(it: IndexIterator): T
+    implicit def encoder: FillValue.Encoder[T]
+  }
+  object Type {
+    def make[_T](
+      _shape: Seq[Int],
+      _sectionShape: Array[Int],
+      _datatype: DataType.Aux[_T],
+      _fill_value: FillValue[_T],
+      _next: IndexIterator ⇒ _T
+    )(
+      implicit _encoder: FillValue.Encoder[_T]
+    ): Type =
+      new Type {
+        type T = _T
+        val shape = _shape
+        val sectionShape = _sectionShape
+        val datatype = _datatype
+        val fill_value = _fill_value
+        val encoder = _encoder
+        @inline def next(it: IndexIterator): T = _next(it)
+      }
+  }
+
+  case class Chunk[T](
+    variable: ucar.nc2.Variable,
+    start: Int,
+    shape: Array[Int],
+    sectionShape: Array[Int]
+  )(
+    val next: IndexIterator ⇒ T
+  ) {
+    val rank = shape.length
+    require(
+      sectionShape.length <= rank + 1,
+      s"Section shape (${sectionShape.mkString(",")}) is ${sectionShape.length - rank} longer than rank $rank (row: $start, shape ${shape.mkString(",")})"
+    )
+    def apply(idxs: Seq[Int]): T = {
+      require(
+        idxs.size == rank,
+        s"Index of size ${idxs.size} (${idxs.mkString(",")}) for array of rank $rank"
+      )
+
+      val builder = Array.newBuilder[Int]
+      for {
+        i ← 0 until rank
+         idx =  idxs(i)
+        size = shape(i)
+      } {
+        val idx =
+          if (i == 0)
+            idxs.head + start
+          else
+            idxs(i)
+        if (idx >= size)
+          throw new IllegalArgumentException(
+            s"Index $idx is larger than chunk-size $size (row $start; shape ${shape.mkString(",")}"
+          )
+
+        builder += idx
+      }
+
+      if (sectionShape.length == rank + 1)
+        builder += 0
+
+      val origin = builder.result()
+
+      next(
+        variable
+          .read(origin, sectionShape)
+          .getIndexIterator
+      )
+    }
+  }
+  object Chunk {
+    implicit val foldable: Foldable[Chunk] =
+      new Foldable[Chunk] {
+        def foldLeft [A, B](fa: Chunk[A], b: B)(f: (B, A) ⇒ B): B = {
+          import fa._
+          val origin = Array.fill(sectionShape.length)(0)
+          val shape =
+            if (sectionShape.length == rank + 1)
+              fa.shape :+ sectionShape.last
+            else
+              fa.shape
+          origin(0) = start
+          val data =
+            variable
+              .read(
+                origin,
+                shape
+              )
+              .getIndexIterator
+
+          var ret = b
+          while (data.hasNext) {
+            ret = f(ret, next(data))
+          }
+          ret
+        }
+        def foldRight[A, B](fa: Chunk[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = ???
+      }
+  }
 }

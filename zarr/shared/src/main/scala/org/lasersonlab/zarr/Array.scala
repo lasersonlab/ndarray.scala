@@ -22,24 +22,13 @@ import scala.util.Try
  */
 trait Array {
   type T
+  // TODO: make Shape a type-constructor, add `Index` type-member (e.g. Int / Long)
   type Shape
   type A[_]
   type Chunk[_]
 
   implicit def traverseA: Traverse[A]
   implicit def foldableChunk: Foldable[Chunk]
-
-  def chunksIterator: Iterator[Chunk[T]] =
-    traverseA
-      .toList(chunks)
-      .iterator
-
-  def elems: Iterator[T] =
-    for {
-      chunk ← chunksIterator
-      elem ← chunk.toList.iterator
-    } yield
-      elem
 
   /**
    * Short-hand for imbuing this [[Array]] with an element type at runtime, e.g. in the case where it was loaded without

@@ -21,27 +21,27 @@ object array {
         case IgnoreChunks. No ⇒
           Cmp.by {
             m ⇒
-              m.shape ::
-              m.chunks ::
-              m.dtype ::
-              m.compressor ::
-              m.order ::
-              //m.fill_value ::
+              m.      shape ::
+              m.     chunks ::
+              m.      dtype ::
+              m. compressor ::
+              m.      order ::
+              //m.fill_value ::      TODO: restore fill_value cmp
               m.zarr_format ::
-              m.filters ::
-              HNil
+              m.    filters ::
+                            HNil
           }
         case IgnoreChunks.Yes ⇒
           Cmp.by {
             m ⇒
-              m.shape ::
-              m.dtype ::
-              m.compressor ::
-              m.order ::
+              m.      shape ::
+              m.      dtype ::
+              m. compressor ::
+              m.      order ::
               //m.fill_value ::
               m.zarr_format ::
-              m.filters ::
-              HNil
+              m.    filters ::
+                            HNil
           }
       }
     }
@@ -91,8 +91,9 @@ object array {
                 .orElse {
                   var i = 0
                   var diff: Option[ElemsDiff] = None
-                  val  left = l.elems
-                  val right = r.elems
+                  // TODO: get cats syntax working here
+                  val  left = l.traverseA.toList(l.chunks).iterator.flatMap { chunk ⇒ l.foldableChunk.toList(chunk).iterator }
+                  val right = r.traverseA.toList(r.chunks).iterator.flatMap { chunk ⇒ r.foldableChunk.toList(chunk).iterator }
                   while (left.hasNext && right.hasNext && diff.isEmpty) {
                     val l =  left.next
                     val r = right.next

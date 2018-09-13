@@ -1,7 +1,7 @@
 package org.lasersonlab.zarr
 
-import _root_.io.circe.Decoder.Result
-import _root_.io.circe._
+import circe.Decoder.Result
+import circe._
 import shapeless.{ CNil, Generic }
 
 // TODO: add filters
@@ -28,7 +28,7 @@ object Filter {
   implicit val generic: Generic.Aux[Filter, CNil] =
     new Generic[Filter] {
       type Repr = CNil
-      override def to(t: Filter): CNil = ???
-      override def from(r: CNil): Filter = ???
+      override def   to(t: Filter):   CNil = ???
+      override def from(r:   CNil): Filter = ???
     }
 }

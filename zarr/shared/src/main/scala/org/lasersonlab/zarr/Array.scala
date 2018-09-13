@@ -1,12 +1,12 @@
 package org.lasersonlab.zarr
 
-import _root_.io.circe.{ Decoder, Encoder }
 import cats.implicits._
 import cats.{ Eval, Foldable, Traverse }
 import hammerlab.option._
 import hammerlab.path._
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
 import org.lasersonlab.zarr
+import org.lasersonlab.zarr.circe.{ Decoder, Encoder }
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.untyped.FlatArray

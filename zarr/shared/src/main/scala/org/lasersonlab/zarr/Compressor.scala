@@ -6,9 +6,9 @@ import java.nio.ByteBuffer._
 import java.util.zip.Deflater.DEFAULT_COMPRESSION
 import java.util.zip.{ Deflater, DeflaterOutputStream, InflaterInputStream }
 
-import _root_.io.circe.Decoder.Result
-import _root_.io.circe.generic.auto._
-import _root_.io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
+import circe.Decoder.Result
+import circe._
+import circe.auto._
 import caseapp.core.Error.UnrecognizedValue
 import caseapp.core.argparser.{ ArgParser, SimpleArgParser }
 import hammerlab.option._

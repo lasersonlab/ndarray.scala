@@ -1,6 +1,6 @@
 package org.lasersonlab.zarr
 
-import _root_.io.circe._
+import circe._
 import org.lasersonlab.zarr.io.Basename
 
 case class Attrs(json: Json)

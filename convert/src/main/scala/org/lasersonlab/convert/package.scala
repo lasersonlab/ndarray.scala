@@ -40,8 +40,8 @@ package object convert
     compressor: Compressor,
     chunkSize: Bytes
   ):
-    zarr.untyped.Group =
-    zarr.untyped.Group(
+    zarr.Group =
+    zarr.Group(
       group
         .vars
         .map {

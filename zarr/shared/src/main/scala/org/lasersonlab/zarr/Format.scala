@@ -1,7 +1,7 @@
 package org.lasersonlab.zarr
 
-import _root_.io.circe.Decoder.Result
-import _root_.io.circe._
+import circe.Decoder.Result
+import circe._
 
 sealed trait Format
 object Format {

@@ -3,8 +3,7 @@ package org.lasersonlab.zarr
 import java.nio.ByteBuffer
 import java.util.Base64
 
-import _root_.io.circe
-import _root_.io.circe._
+import circe._
 import org.lasersonlab.zarr.FillValue.Decoder.Result
 import org.lasersonlab.zarr.dtype.DataType
 

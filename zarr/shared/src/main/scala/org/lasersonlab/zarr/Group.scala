@@ -1,22 +1,20 @@
-package org.lasersonlab.zarr.untyped
+package org.lasersonlab.zarr
 
 import hammerlab.option._
 import hammerlab.path._
 import hammerlab.str._
-import io.circe.generic.auto._
 import org.lasersonlab.zarr.Format._
-import org.lasersonlab.zarr._
 import org.lasersonlab.zarr.io._
 
-// TODO: move out of untyped pkg
 case class Group(
   arrays: Map[String, Array.Ints],
   groups: Map[String, Group],
   attrs: Opt[Attrs] = None,
   metadata: Group.Metadata = Group.Metadata()
 ) {
-  def array(name: Str): Array.Ints = arrays(name)
-  // TODO: array with cast
+  def array   (name: Str): Array.Ints           = arrays(name)
+  def apply[T](name: Str): Array.S[Seq[Int], T] = arrays(name).as[T]
+
   def group(name: Str): Group = groups(name)
 }
 
@@ -40,6 +38,8 @@ object Group {
     s"Path $path:\nNot an array:\n$arrayError\nNot a group:\n$groupError",
     arrayError
   )
+
+  import circe.auto._
 
   def apply(
     dir: Path

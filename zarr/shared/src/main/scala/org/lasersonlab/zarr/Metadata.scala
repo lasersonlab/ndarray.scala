@@ -1,8 +1,8 @@
 package org.lasersonlab.zarr
 
-import _root_.io.circe.Decoder.Result
-import _root_.io.circe._
-import _root_.io.circe.parser._
+import circe.Decoder.Result
+import circe._
+import circe.parser._
 import hammerlab.option._
 import hammerlab.path._
 import org.lasersonlab.zarr.Compressor.Blosc
@@ -56,7 +56,7 @@ object Metadata {
     }
 
   /**
-   * To JSON-decode a [[Metadata]], we can mostly use [[_root_.io.circe.generic.auto]], however there is one wrinkle:
+   * To JSON-decode a [[Metadata]], we can mostly use [[circe.auto]], however there is one wrinkle:
    * [[Metadata.fill_value `fill_value`]]s for structs are stored in JSON as base64-encoded strings.
    *
    * Complicating matters further, decoding such a blob can require knowing lengths of multiple
@@ -108,7 +108,7 @@ object Metadata {
           }
           .flatMap {
             implicit datatype ⇒
-              import _root_.io.circe.generic.auto._
+              import circe.auto._
               exportDecoder[Metadata[T, Shape]].instance(c)
           }
       }
@@ -132,7 +132,7 @@ object Metadata {
       def apply(m: Metadata[T, Shape]): Json = {
         implicit val datatype = m.dtype
         implicit val enc = FillValue.encoder[T]
-        import _root_.io.circe.generic.auto._
+        import circe.auto._
         exportEncoder[Metadata[T, Shape]].instance(m)
       }
     }

@@ -1,5 +1,7 @@
 package org.lasersonlab
 
+import io.circe.{ Parser, ParsingFailure }
+import io.circe.generic.AutoDerivation
 import org.hammerlab.paths.HasPathOps
 import org.lasersonlab.ndarray.Arithmetic
 import org.lasersonlab.zarr.io.{ Load, Save }
@@ -29,4 +31,29 @@ package object zarr
      with hammerlab.either
      with hammerlab.math.utils
      with Load.syntax
-     with Save.syntax
+     with Save.syntax {
+
+  /**
+   * inject a bunch of circe aliases in the package here, otherwise its top-level package `io` conflicts with an
+   * eponymous [[zarr]] sub-package
+   */
+  object circe {
+    import _root_.io.{ circe ⇒ c }
+
+    object auto extends AutoDerivation
+    object parser extends Parser {
+      @inline def parse(input: String): Either[ParsingFailure, Json] = c.parser.parse(input)
+    }
+
+    val         Encoder = c.        Encoder
+    val         Decoder = c.        Decoder
+    val            Json = c.           Json
+    val DecodingFailure = c.DecodingFailure
+
+    type            Json    = c.           Json
+    type         Encoder[T] = c.        Encoder[T]
+    type         Decoder[T] = c.        Decoder[T]
+    type DecodingFailure    = c.DecodingFailure
+    type         HCursor    = c.        HCursor
+  }
+}

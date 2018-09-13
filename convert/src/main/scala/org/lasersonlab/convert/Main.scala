@@ -7,7 +7,6 @@ import lasersonlab._
 import org.lasersonlab.netcdf
 import org.lasersonlab.zarr.Compressor
 import org.lasersonlab.zarr.Compressor.Blosc
-import org.lasersonlab.zarr.untyped
 
 object Main
   extends Cmd {
@@ -35,16 +34,16 @@ object Main
         aws()
         gcp.userProject(gcpUserProject)
 
-        val Seq(from, to) = args.args.map(Path(_))
+        val Seq(in, out) = args.args.map(Path(_))
 
-        val hdf5Group: netcdf.Group = from
-        val zarrGroup: untyped.Group = hdf5Group
+        val  inGroup: netcdf.Group = in
+        val outGroup:   zarr.Group = inGroup
 
-        println(s"${hdf5Group.vars.size} vars: ${zarrGroup.arrays.keys.mkString(",")}, ${hdf5Group.groups.size} groups: ${zarrGroup.groups.keys.mkString(",")}")
-        println(s"Saving to: $to")
+        println(s"${inGroup.vars.size} vars: ${outGroup.arrays.keys.mkString(",")}, ${inGroup.groups.size} groups: ${outGroup.groups.keys.mkString(",")}")
+        println(s"Saving to: $out")
 
-        zarrGroup
-          .save(to)
+        outGroup
+          .save(out)
           .left
           .foreach { throw _ }
       }

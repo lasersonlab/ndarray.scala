@@ -1,7 +1,7 @@
 package org.lasersonlab.zarr
 
 import cats.Traverse
-import _root_.io.circe.{ Decoder, Encoder }
+import circe._
 import org.lasersonlab.ndarray.Vectors._
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
 import org.lasersonlab.ndarray.Ints._
@@ -75,5 +75,6 @@ object VectorInts {
   implicit val `5` = make[_5, Ints5, Vector5]
   implicit val `6` = make[_6, Ints6, Vector6]
 
+  // TODO: allow constructing from a Seq[Int]?
   //def fromSeq(ints: Seq[Int]): Option[VectorInts]
 }

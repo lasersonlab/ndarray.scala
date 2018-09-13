@@ -1,6 +1,6 @@
 package org.lasersonlab.zarr
 
-import _root_.io.circe.parser._
+import circe.parser._
 import hammerlab.shapeless.tlist._
 import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian

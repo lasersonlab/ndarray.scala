@@ -4,7 +4,7 @@ import hammerlab.path._
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Format.`2`
-import org.lasersonlab.zarr.Suite
+import org.lasersonlab.zarr.{ Group, Suite }
 import org.lasersonlab.zarr.dtype.DataType._
 
 class GroupTest

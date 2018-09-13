@@ -12,6 +12,36 @@ default(
   )
 )
 
+lazy val cloud =
+  project
+    .in(new File("cloud"))
+    .settings(
+      subgroup("cloud", "all")
+    )
+    .dependsOn(aws, gcp)
+    .aggregate(aws, gcp)
+
+lazy val aws =
+  project
+    .in(new File("cloud") / "aws")
+    .settings(
+      subgroup("cloud"),
+      dep(
+        "org.lasersonlab" ^ "s3fs" ^ "2.2.3"
+      )
+    )
+
+lazy val gcp =
+  project
+    .in(new File("cloud") / "gcp")
+    .settings(
+      subgroup("cloud"),
+      dep(
+        "org.lasersonlab" ^ "google-cloud-nio" ^ "0.55.2-alpha",
+        hammerlab.types
+      )
+    )
+
 lazy val convert = project.settings(
   dep(
     hammerlab.cli.base,
@@ -20,8 +50,10 @@ lazy val convert = project.settings(
   ),
   // Test-resources include "hidden" (basenames starting with ".") Zarr-metadata files that we need to include on the
   // test classpath for tests to be able to read them
-  excludeFilter in sbt.Test := NothingFilter
+  excludeFilter in sbt.Test := NothingFilter,
+  scalacOptions += "-Ypartial-unification"
 ).dependsOn(
+  cloud,
   netcdf,
   zarr andTest
 )
@@ -41,9 +73,6 @@ lazy val `ndarray-x`   = parent(`ndarray.jvm`, `ndarray.js`)
 
 lazy val netcdf = project.settings(
   dep(
-    `google-cloud-nio`,
-    s3fs,
-
     hammerlab.bytes,
     hammerlab.cli.base,
     hammerlab.io,
@@ -51,6 +80,7 @@ lazy val netcdf = project.settings(
     hammerlab.types
   )
 ).dependsOn(
+  cloud,
   utils
 )
 
@@ -68,10 +98,10 @@ lazy val singlecell = project.settings(
 
 lazy val utils = project.settings(
   dep(
-    thredds,
     hammerlab.channel % "1.5.2",
 
-    junit
+    "org.lasersonlab.thredds" ^ "cdm" ^ "5.0.0",
+    "com.novocode" ^ "junit-interface" ^ "0.11" tests
   )
 )
 
@@ -108,6 +138,7 @@ lazy val zarr = project.in(new File("zarr/shared")).settings(
 //lazy val `zarr-x`   = parent(`zarr.jvm`, `zarr.js`)
 
 lazy val `hdf5-java-cloud` = root(
+   cloud,
   `ndarray-x`,
    netcdf,
    singlecell,
@@ -115,9 +146,3 @@ lazy val `hdf5-java-cloud` = root(
    zarr
 )
 
-val `google-cloud-nio` = "org.lasersonlab" ^ "google-cloud-nio" ^ "0.55.2-alpha"
-val s3fs = "org.lasersonlab" ^ "s3fs" ^ "2.2.3"
-
-val thredds = "org.lasersonlab.thredds" ^ "cdm" ^ "5.0.0"
-
-val junit = "com.novocode" ^ "junit-interface" ^ "0.11" tests

@@ -8,6 +8,7 @@ import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr._
 import org.lasersonlab.zarr.io._
 
+// TODO: move out of untyped pkg
 case class Group(
   arrays: Map[String, Array.Ints],
   groups: Map[String, Group],

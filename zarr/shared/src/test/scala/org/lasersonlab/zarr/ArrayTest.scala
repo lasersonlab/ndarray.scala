@@ -15,6 +15,7 @@ class ArrayTest
   extends Suite {
 
   test("2-D floats") {
+    // TODO: remove local paths!
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/matrix")
 
     implicit val arr = Array.chunks[Float, _2](path).get

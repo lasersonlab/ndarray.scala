@@ -1,10 +1,10 @@
 package org.lasersonlab.zarr
 
-import cats.{ Eval, Foldable, Monoid, Traverse }
+import _root_.io.circe.{ Decoder, Encoder }
 import cats.implicits._
+import cats.{ Eval, Foldable, Traverse }
 import hammerlab.option._
 import hammerlab.path._
-import _root_.io.circe.{ Decoder, Encoder }
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.dtype.DataType
@@ -40,6 +40,21 @@ trait Array {
       elem ← chunk.toList.iterator
     } yield
       elem
+
+  /**
+   * Short-hand for imbuing this [[Array]] with an element type at runtime, e.g. in the case where it was loaded without
+   * that type having been known ahead of time
+   */
+  def as[_T]: Array.Aux[this.Shape, this.A, this.Chunk, _T] =
+    this
+      .asInstanceOf[
+        Array.Aux[
+          this.Shape,
+          this.A,
+          this.Chunk,
+          _T
+        ]
+      ]
 
   def shape: Shape
   def chunkShape: Shape
@@ -260,7 +275,7 @@ object Array {
   =
     for {
       _metadata ← dir.load[Metadata[_T, _Shape]]
-      arr ← md(dir, _metadata, _metadata.dtype)
+      arr ← Array(dir, _metadata)
     } yield
       arr
 
@@ -281,28 +296,26 @@ object Array {
               zarr_format = metadata.zarr_format,
               filters = metadata.filters
             )
-          md[
+          apply[
             metadata.T,
             Seq[Int],
             FlatArray
           ](
             dir,
-            cc,
-            metadata.dtype
+            cc
           )
           .map {
             arr ⇒ arr: Ints
           }
       }
 
-  def md[
+  def apply[
     _T,
     _Shape,
     _A[U]
   ](
     dir: Path,
-    _metadata: Metadata[_T, _Shape],
-    datatype: DataType.Aux[_T]
+    _metadata: Metadata[_T, _Shape]
   )(
     implicit
     e: Encoder[DataType.Aux[_T]],
@@ -331,14 +344,12 @@ object Array {
     for {
       _attrs ← dir.load[Opt[Attrs]]
       _chunks ← {
-        // TODO: clean this up; these shouldn't all be necessary
         implicit val md = _metadata
-        import zarr.untyped.Metadata._
-        implicit val _datatype = datatype
+        import Metadata._
         chunks[_T, _Shape, _A](
           dir,
-          md.shape,
-          md.chunks
+          _metadata.shape,
+          _metadata.chunks
         )
       }
     } yield

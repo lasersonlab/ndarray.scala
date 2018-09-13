@@ -13,11 +13,6 @@ sealed trait Attribute {
 object Attribute {
   type Aux[V] = Attribute { type Value = V }
 
-//  case class Vals[T](name: String, datatype: DataType, values: Seq[T])
-//    extends Attribute {
-//    type Value = T
-//  }
-
   sealed abstract class Attr[V](val datatype: DataType) extends Attribute {
     type Value = V
   }
@@ -44,14 +39,18 @@ object Attribute {
     attribute.getDataType match {
       case STRING ⇒ Strings(name, array[String])
       case   CHAR ⇒   Chars(name, array[  Char])
+
       case   BYTE ⇒   Bytes(name, array[  Byte])
       case  SHORT ⇒  Shorts(name, array[ Short])
       case    INT ⇒    Ints(name, array[   Int])
       case   LONG ⇒   Longs(name, array[  Long])
-      case  UBYTE ⇒   Bytes(name, array[  Byte].map { n ⇒ if (n < 0) throw new IllegalArgumentException(s"Unsigned byte out of range: $n") else n })
+
+      // "convert" unsigned numeric types by just throwing if it needed the sign bit
+      case  UBYTE ⇒   Bytes(name, array[  Byte].map { n ⇒ if (n < 0) throw new IllegalArgumentException(s"Unsigned byte out of range: $n" ) else n })
       case USHORT ⇒  Shorts(name, array[ Short].map { n ⇒ if (n < 0) throw new IllegalArgumentException(s"Unsigned short out of range: $n") else n })
-      case   UINT ⇒    Ints(name, array[   Int].map { n ⇒ if (n < 0) throw new IllegalArgumentException(s"Unsigned int out of range: $n") else n })
-      case  ULONG ⇒   Longs(name, array[  Long].map { n ⇒ if (n < 0) throw new IllegalArgumentException(s"Unsigned long out of range: $n") else n })
+      case   UINT ⇒    Ints(name, array[   Int].map { n ⇒ if (n < 0) throw new IllegalArgumentException(s"Unsigned int out of range: $n"  ) else n })
+      case  ULONG ⇒   Longs(name, array[  Long].map { n ⇒ if (n < 0) throw new IllegalArgumentException(s"Unsigned long out of range: $n" ) else n })
+
       case  FLOAT ⇒  Floats(name, array[ Float])
       case DOUBLE ⇒ Doubles(name, array[Double])
       case c ⇒

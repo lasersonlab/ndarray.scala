@@ -313,6 +313,17 @@ package object convert
       }
   }
 
+  /**
+   * Zarr "chunk" implementation that wraps a section of a NetCDF [[ucar.nc2.Variable]]
+   *
+   * @param variable underlying dataset
+   * @param start chunk "origin"
+   * @param shape chunk shape
+   * @param sectionShape the shape of one element in the chunk; this is generally an array with `rank` copies of the
+   *                     literal `1`, but in the case of converting char-arrays to fixed-length strings,
+   * @param next
+   * @tparam T
+   */
   case class Chunk[T](
     variable: ucar.nc2.Variable,
     start: Int,

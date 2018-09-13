@@ -39,10 +39,6 @@ object Metadata {
       type Shape = _S
     }
 
-  // Implicit unwrappers for some fields
-  implicit def _compressor(implicit md: Metadata):         Compressor = md.compressor
-  //implicit def   _datatype(implicit md: Metadata): DataType.Aux[md.T] = md.     dtype
-
   def apply(dir: Path): Exception | S[Seq[Int]] =
     dir ? basename flatMap {
       path ⇒

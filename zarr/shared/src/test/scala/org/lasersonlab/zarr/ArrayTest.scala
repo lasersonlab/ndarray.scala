@@ -33,12 +33,18 @@ class ArrayTest
     ==(arr.attrs, None)
 
     val chunks = arr.chunks
-    chunks.size should be(10)
+    ==(chunks.size, 10)
     // TODO: chunks.shape
 
     val rows = chunks.rows
-    rows.length should be(10)
-    rows.foreach(_.size should be(1))
+    ==(rows.length, 10)
+    rows.foreach {
+      row ⇒
+        ==(
+          row.size,
+          1
+        )
+    }
 
     val blosc = Blosc()
 
@@ -75,8 +81,9 @@ class ArrayTest
         }
         .toList
 
-    chunkNonzeroCounts should be(
-      Vector(
+    ==(
+      chunkNonzeroCounts,
+      List(
         287412,
         444234,
         17227,
@@ -90,15 +97,16 @@ class ArrayTest
       )
     )
 
-    arr.foldLeft(0) {
-      (numNonZero, elem) ⇒
-        numNonZero + (
-          if (elem > 0.0f)
-            1
-          else
-            0
-          )
-    } should be(
+    ==(
+      arr.foldLeft(0) {
+        (numNonZero, elem) ⇒
+          numNonZero + (
+            if (elem > 0.0f)
+              1
+            else
+              0
+            )
+      },
       chunkNonzeroCounts.sum
     )
   }
@@ -118,12 +126,13 @@ class ArrayTest
     )
 
     ==(attrs, None)
-    chunks.size should be(1)
-    val chunk = chunks(0)
-    val bytes = chunk.bytes
-    bytes.length should be(223984)
+    ==(chunks.size, 1)
 
-    chunk.size should be(27998)
+    val chunk = chunks(0)
+    ==(chunk.size, 27998)
+
+    val bytes = chunk.bytes
+    ==(bytes.length, 223984)
 
     val nonzeros =
       chunk.foldLeft(0) {
@@ -134,7 +143,7 @@ class ArrayTest
             sum
       }
 
-    nonzeros should be(11717)
+    ==(nonzeros, 11717)
   }
 
   test("1-D strings") {
@@ -153,17 +162,18 @@ class ArrayTest
 
     ==(attrs, None)
 
-    chunks.size should be(1)
+    ==(chunks.size, 1)
 
     val chunk = chunks(0)
-    chunk.size should be(5425)
+    ==(chunk.size, 5425)
 
     val bytes = chunk.bytes
-    bytes.length should be(27125)
+    ==(bytes.length, 27125)
 
     val elems = chunk.toList
-    elems.size should be(5425)
-    elems.take(10) should be(
+    ==(elems.size, 5425)
+    ==(
+      elems.take(10),
       List(
         "1M",
         "F",
@@ -200,14 +210,16 @@ class ArrayTest
 
     ==(attrs, None)
 
-    chunks.size should be(1)
-    val chunk = chunks(0)
-    val bytes = chunk.bytes
-    bytes.length should be(1903864)
+    ==(chunks.size, 1)
 
-    chunk.size should be(27998)
+    val chunk = chunks(0)
+    ==(chunk.size, 27998)
+
+    val bytes = chunk.bytes
+    ==(bytes.length, 1903864)
+
     val elems = chunk.toList
-    elems.size should be(27998)
+    ==(elems.size, 27998)
     ===(
       elems.take(10),
       Seq(

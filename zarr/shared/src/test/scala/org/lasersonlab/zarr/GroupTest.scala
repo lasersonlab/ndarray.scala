@@ -1,11 +1,11 @@
-package org.lasersonlab.zarr.untyped
+package org.lasersonlab.zarr
 
 import hammerlab.path._
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Format.`2`
-import org.lasersonlab.zarr.{ Group, Suite }
 import org.lasersonlab.zarr.dtype.DataType._
+import org.lasersonlab.zarr.untyped.Struct
 
 class GroupTest
   extends Suite {
@@ -25,14 +25,15 @@ class GroupTest
           identity
         )
 
-    arrays.keys should be(Set("X", "obs", "var"))
-    groups.keys should be(Set("uns"))
+    ==(arrays.keySet, Set("X", "obs", "var"))
+    ==(groups.keySet, Set("uns"))
 
     ==(attrs, None)
     ==(metadata, Group.Metadata(`2`))
 
     val `var` = group.array('var)
-    `var`.shape should be(27998 :: Nil)
+
+    ==(`var`.shape, 27998 :: Nil)
 
     `var`.metadata should be(
       zarr.Metadata[Struct, Seq[Int]](

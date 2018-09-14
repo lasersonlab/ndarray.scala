@@ -1,4 +1,6 @@
 package org.lasersonlab.zarr
 
 package object cmp
-extends all
+extends all {
+//  implicit val
+}

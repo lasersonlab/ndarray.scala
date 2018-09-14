@@ -116,7 +116,8 @@ class ArrayTest
 
     val Array(metadata, attrs, chunks) = Array.chunks[Long, _1](path).get
 
-    metadata should be(
+    ==(
+      metadata,
       Metadata(
              shape = 27998 :: TNil,
             chunks = 27998 :: TNil,
@@ -151,7 +152,8 @@ class ArrayTest
 
     val Array(metadata, attrs, chunks) = Array.chunks[String, _1](path).get
 
-    metadata should be(
+    ==(
+      metadata,
       Metadata(
          shape = 5425 :: TNil,
         chunks = 5425 :: TNil,
@@ -199,7 +201,8 @@ class ArrayTest
     implicit val stringDataType = string(18)
     val dtype = !![DataType.Aux[Var]]
 
-    metadata should be(
+    ==(
+      metadata,
       Metadata(
          shape = 27998 :: TNil,
         chunks = 27998 :: TNil,
@@ -242,7 +245,10 @@ class ArrayTest
 
     val Array(metadata, attrs, chunks) = Array[Obs, _1](path).get
 
-    metadata should be(
+    import org.lasersonlab.zarr.cmp.untyped.struct
+
+    ==(
+      metadata,
       Metadata(
          shape = 5425 :: TNil,
         chunks = 5425 :: TNil,

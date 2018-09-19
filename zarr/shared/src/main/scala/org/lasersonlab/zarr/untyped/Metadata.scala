@@ -62,6 +62,7 @@ object Metadata {
             _dtype,
             _compressor,
             _order,
+            // TODO: move fill-value parsing into datatype
             FillValue.Null,
             _zarr_format
           ): S[Seq[Int]]

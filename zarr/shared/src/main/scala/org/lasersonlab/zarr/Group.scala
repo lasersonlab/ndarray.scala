@@ -7,8 +7,8 @@ import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.io._
 
 case class Group(
-  arrays: Map[String, Array.Ints],
-  groups: Map[String, Group],
+  arrays: Map[String, Array.Ints] = Map.empty,
+  groups: Map[String, Group] = Map.empty,
   attrs: Opt[Attrs] = None,
   metadata: Group.Metadata = Group.Metadata()
 ) {

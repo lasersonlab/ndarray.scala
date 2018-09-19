@@ -237,6 +237,8 @@ package object convert
                 .map {
                   case (chunk, idx) ⇒
                     val basename = {
+                      // since we chunk by rows only, chunk indices will always be all zeros except for their first
+                      // coordinate
                       val idxs = fill(ndims)(0)
                       idxs(0) = idx
                       idxs.mkString(".")

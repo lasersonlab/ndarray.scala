@@ -1,4 +1,4 @@
-package org.lasersonlab.zarr.tlist
+package org.lasersonlab.zarr.utils.tlist
 
 import hammerlab.shapeless.tlist._
 import io.circe.Decoder.Result

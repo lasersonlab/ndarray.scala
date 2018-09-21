@@ -1,5 +1,7 @@
 package org.lasersonlab.zarr
 
+import cats.{ Semigroupal, Traverse }
+import cats.implicits._
 import circe.Decoder.Result
 import circe._
 import circe.parser._
@@ -12,9 +14,8 @@ import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Basename
 
-case class Metadata[_T, _Shape](
-   shape: _Shape,
-  chunks: _Shape,
+case class Metadata[_T, _Shape[_], _Idx](
+   shape: _Shape[Dimension[_Idx]],
   dtype: DataType.Aux[_T],
    override val compressor: Compressor = Blosc(),
    override val order: Order = C,
@@ -24,33 +25,36 @@ case class Metadata[_T, _Shape](
 )
 extends untyped.Metadata
 {
-  type Shape = _Shape
+  type Shape[U] = _Shape[U]
+  type Idx = _Idx
 }
 
 object Metadata {
 
   val basename = ".zarray"
-  implicit def _basename[T, Shape] = Basename[Metadata[T, Shape]](basename)
+  implicit def _basename[T, Shape, Idx] = Basename[Metadata[T, Shape, Idx]](basename)
 
   // Implicit unwrappers for some fields
-  implicit def _compressor   (implicit md: Metadata[_, _]):      Compressor = md.compressor
-  implicit def _datatype  [T](implicit md: Metadata[T, _]): DataType.Aux[T] = md.     dtype
+  implicit def _compressor   (implicit md: Metadata[_, _, _]):      Compressor = md.compressor
+  implicit def _datatype  [T](implicit md: Metadata[T, _, _]): DataType.Aux[T] = md.     dtype
 
   def apply[
         T : FillValue.Decoder,
-    Shape :           Decoder
+    Shape[_],
+      Idx
   ](
     dir: Path
   )(
     implicit
-    d: Decoder[DataType.Aux[T]]
+    d: Decoder[DataType.Aux[T]],
+    ds: Decoder[Shape[Idx]]
   ):
     Exception |
-    Metadata[T, Shape]
+    Metadata[T, Shape, Idx]
   =
     dir ? basename flatMap {
       path ⇒
-        decode[Metadata[T, Shape]](
+        decode[Metadata[T, Shape, Idx]](
           path.read
         )
     }
@@ -70,23 +74,27 @@ object Metadata {
    */
   implicit def decoder[
         T: FillValue.Decoder,
-    Shape:           Decoder
+    Shape[_]: Traverse : Semigroupal,
+      Idx
   ](
     implicit
-    datatypeDecoder: Decoder[DataType.Aux[T]]
+    datatypeDecoder: Decoder[DataType.Aux[T]],
+    ds: Decoder[Shape[Idx]]
   ):
     Decoder[
       Metadata[
         T,
-        Shape
+        Shape,
+        Idx
       ]
     ] =
-    new Decoder[Metadata[T, Shape]] {
+    new Decoder[Metadata[T, Shape, Idx]] {
       def apply(c: HCursor):
         Result[
           Metadata[
             T,
-            Shape
+            Shape,
+            Idx
           ]
         ]
       = {
@@ -108,32 +116,54 @@ object Metadata {
           }
           .flatMap {
             implicit datatype ⇒
-              import circe.auto._
-              exportDecoder[Metadata[T, Shape]].instance(c)
+              for {
+                        arr ← c.downField(      "shape").as[Shape[Idx]]
+                     chunks ← c.downField(     "chunks").as[Shape[Idx]]
+                 compressor ← c.downField( "compressor").as[Compressor]
+                      order ← c.downField(      "order").as[Order]
+                zarr_format ← c.downField("zarr_format").as[Format]
+              } yield
+                Metadata(
+                  Dimensions(arr, chunks),
+                  datatype,
+                  compressor,
+                  order,
+                  zarr_format
+                )
           }
       }
     }
 
   implicit def encoder[
         T: FillValue.Encoder,
-    Shape:           Encoder
+    Shape[_] : Traverse,
+      Idx
   ](
     implicit
-    datatypeEncoder: Encoder[DataType.Aux[T]]
+    datatypeEncoder: Encoder[DataType.Aux[T]],
+    ds: Encoder[Shape[Idx]]
   ):
     Encoder[
       Metadata[
         T,
-        Shape
+        Shape,
+        Idx
       ]
     ]
   =
-    new Encoder[Metadata[T, Shape]] {
-      def apply(m: Metadata[T, Shape]): Json = {
+    new Encoder[Metadata[T, Shape, Idx]] {
+      def apply(m: Metadata[T, Shape, Idx]): Json = {
         implicit val datatype = m.dtype
         implicit val enc = FillValue.encoder[T]
-        import circe.auto._
-        exportEncoder[Metadata[T, Shape]].instance(m)
+        Json.obj(
+          "shape" → encode(m.shape.map(_.arr)),
+          "chunks" → encode(m.shape.map(_.chunk)),
+          "compressor" → encode(m.compressor),
+          "dtype" → encode(m.dtype),
+          "order" → encode(m.order),
+          "fill_value" → encode(m.fill_value),
+          "zarr_format" → encode(m.zarr_format)
+        )
       }
     }
 }

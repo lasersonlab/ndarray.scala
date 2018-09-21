@@ -11,6 +11,7 @@ trait Arithmetic[L, R] {
   def   % ( l: L, r: R ): L
   def min ( l: L, r: R ): L
 }
+
 object Arithmetic {
   type Id[T] = Arithmetic[T, T]
   implicit val intint: Id[Int] =
@@ -21,6 +22,26 @@ object Arithmetic {
       def   / (l: Int, r: Int): Int = l / r
       def   % (l: Int, r: Int): Int = l % r
       def min (l: Int, r: Int): Int = Math.min(l, r)
+    }
+
+  implicit val longlong: Id[Long] =
+    new Arithmetic[Long, Long] {
+      def   + (l: Long, r: Long): Long = l + r
+      def   - (l: Long, r: Long): Long = l - r
+      def   * (l: Long, r: Long): Long = l * r
+      def   / (l: Long, r: Long): Long = l / r
+      def   % (l: Long, r: Long): Long = l % r
+      def min (l: Long, r: Long): Long = Math.min(l, r)
+    }
+
+  implicit val longint: Arithmetic[Long, Int] =
+    new Arithmetic[Long, Int] {
+      def   + (l: Long, r: Int): Long = l + r
+      def   - (l: Long, r: Int): Long = l - r
+      def   * (l: Long, r: Int): Long = l * r
+      def   / (l: Long, r: Int): Long = l / r
+      def   % (l: Long, r: Int): Long = l % r
+      def min (l: Long, r: Int): Long = Math.min(l, r)
     }
 
   implicit val seqInt: Arithmetic[Seq[Int], Int] =

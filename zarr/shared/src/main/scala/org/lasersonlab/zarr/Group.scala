@@ -13,7 +13,7 @@ case class Group(
   metadata: Group.Metadata = Group.Metadata()
 ) {
   def array   (name: Str): Array.Ints           = arrays(name)
-  def apply[T](name: Str): Array.S[Seq[Int], T] = arrays(name).as[T]
+  def apply[T](name: Str): Array.S[Seq, Int, T] = arrays(name).as[T]
 
   def group(name: Str): Group = groups(name)
 }

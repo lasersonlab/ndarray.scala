@@ -3,7 +3,7 @@ package org.lasersonlab.zarr
 import org.hammerlab.paths.HasPathOps
 import org.lasersonlab.ndarray.Arithmetic
 import org.lasersonlab.zarr.io._
-import org.lasersonlab.zarr.opt.OptDecoder
+import org.lasersonlab.zarr.utils.opt.OptDecoder
 
 package object untyped
   extends HasPathOps

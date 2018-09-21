@@ -1,12 +1,14 @@
 package org.lasersonlab
 
+import cats.{ Functor, Semigroupal }
+import cats.implicits._
 import io.circe.{ Parser, ParsingFailure }
 import io.circe.generic.AutoDerivation
 import org.hammerlab.paths.HasPathOps
 import org.lasersonlab.ndarray.Arithmetic
 import org.lasersonlab.zarr.io.{ Load, Save }
-import org.lasersonlab.zarr.opt.OptCodec
-import org.lasersonlab.zarr.tlist.TListCodec
+import org.lasersonlab.zarr.utils.opt.OptCodec
+import org.lasersonlab.zarr.utils.tlist.TListCodec
 
 /**
  * Spec / Format questions:
@@ -40,6 +42,8 @@ package object zarr
   object circe {
     import _root_.io.{ circe ⇒ c }
 
+    def encode[T](t: T)(implicit e: Encoder[T]): Json = e(t)
+
     object auto extends AutoDerivation
     object parser extends Parser {
       @inline def parse(input: String): Either[ParsingFailure, Json] = c.parser.parse(input)
@@ -55,5 +59,23 @@ package object zarr
     type         Decoder[T] = c.        Decoder[T]
     type DecodingFailure    = c.DecodingFailure
     type         HCursor    = c.        HCursor
+  }
+
+  case class Dimension[Idx](arr: Idx, chunk: Chunk.Idx)
+  object Dimensions {
+    def apply[
+      Shape[_]: Semigroupal : Functor,
+      Idx
+    ](
+      arr: Shape[Idx],
+      chunks: Shape[Chunk.Idx]
+    ):
+      Shape[Dimension[Idx]] =
+      arr
+        .product(chunks)
+        .map {
+          case (arr, chunk) ⇒
+            Dimension(arr, chunk)
+        }
   }
 }

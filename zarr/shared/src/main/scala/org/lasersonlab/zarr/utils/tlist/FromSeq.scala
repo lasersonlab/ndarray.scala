@@ -1,4 +1,4 @@
-package org.lasersonlab.zarr.tlist
+package org.lasersonlab.zarr.utils.tlist
 
 import org.hammerlab.shapeless.tlist._
 import org.lasersonlab.zarr.|

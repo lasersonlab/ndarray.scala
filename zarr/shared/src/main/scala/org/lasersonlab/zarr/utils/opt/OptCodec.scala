@@ -1,4 +1,4 @@
-package org.lasersonlab.zarr.opt
+package org.lasersonlab.zarr.utils.opt
 
 import hammerlab.option._
 import io.circe.Decoder._

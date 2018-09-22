@@ -1,16 +1,16 @@
 package org.lasersonlab.zarr
 
 import cats.implicits._
-import cats.{ Eval, Foldable, Semigroupal, Traverse }
+import cats.{ Applicative, Eval, Foldable, Monad, Semigroupal, Traverse }
 import hammerlab.option._
 import hammerlab.path._
-import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike, ScanRight, Sum }
+import org.lasersonlab.ndarray.{ ArrayLike, Scannable }
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.circe.{ Decoder, Encoder }
 import org.lasersonlab.zarr.dtype.DataType
-import org.lasersonlab.zarr.io.{ Load, Save }
+import org.lasersonlab.zarr.io.{ Basename, Load, Save }
 import org.lasersonlab.zarr.untyped.FlatArray
-import org.lasersonlab.zarr.utils.{ Idx, Scannable }
+import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.utils.Idx.Long.CastException
 import shapeless.Nat
 
@@ -52,9 +52,6 @@ trait Array {
 
   val shape: ShapeT[Dimension[Idx]]
 
-//  val shape: Shape
-//  val chunkShape: Shape
-
   def apply(idx: Shape): T
 
   val metadata: Metadata[T, ShapeT, Idx]
@@ -78,7 +75,9 @@ object Array {
   type S[S[_], I, _T] = Array { type ShapeT[U] = S[U]; type Idx = I; type T = _T }
   type SU[S[_], I] = Array { type ShapeT[U] = S[U]; type Idx = I }
 
-  type Ints = Array { type ShapeT[U] = Seq[U]; type Idx = Int }
+  type Idxs[I] = Array { type ShapeT[U] = List[U]; type Idx = I }
+  type L = Array { type ShapeT[U] = List[U] }
+  type Ints = Array { type ShapeT[U] = List[U]; type Idx = Int }
 
   type Aux[S[_], I, _A[_], _Chunk[_], _T] =
     Array {
@@ -135,8 +134,8 @@ object Array {
       ]
     ]
   = {
-    import _idx._
     import Idx.Ops
+    import _idx._
 
     for {
       chunkRanges ←
@@ -271,8 +270,13 @@ object Array {
       dt = dt,
       et = et,
       ds = ds,
+      cds = cds,
       es = es,
-      idx = idx
+      ces = ces,
+      idx = idx,
+      traverseShape = traverseShape,
+      semigroupalShape = semigroupalShape,
+      scannable = scannable
     )
   }
 
@@ -287,14 +291,19 @@ object Array {
     implicit
     d: Decoder[DataType.Aux[_T]],
     e: Encoder[DataType.Aux[_T]],
-    ti: Indices.Aux[_A, _Shape[Idx]],
+    ti: Indices.Aux[_A, _Shape[Chunk.Idx]],
     traverse: Traverse[_A],
-    arrayLike: ArrayLike.Aux[_A, _Shape[Idx]],
+    arrayLike: ArrayLike.Aux[_A, _Shape[Chunk.Idx]],
     dt: FillValue.Decoder[_T],
     et: FillValue.Encoder[_T],
     ds: Decoder[_Shape[Idx]],
+    cds: Decoder[_Shape[Chunk.Idx]],
     es: Encoder[_Shape[Idx]],
-    idx: Idx.T[Idx]
+    ces: Encoder[_Shape[Chunk.Idx]],
+    idx: Idx.T[Idx],
+    traverseShape: Traverse[_Shape],
+    semigroupalShape: Semigroupal[_Shape],
+    scannable: Scannable[_Shape]
   ):
     Exception |
     Aux[
@@ -307,21 +316,19 @@ object Array {
       ],
       _T
     ]
-  =
-    for {
+  = for {
       _metadata ← dir.load[Metadata[_T, _Shape, Idx]]
       arr ← Array(dir, _metadata)
     } yield
       arr
 
-  def untyped[Idx](dir: Path)(implicit idx: Idx.T[Idx]): Exception | Seq[Idx] =
+  def untyped[Idx](dir: Path)(implicit idx: Idx.T[Idx]): Exception | Idxs[Idx] =
     zarr.untyped.Metadata(dir)
       .flatMap {
         metadata ⇒
           val cc =
-            new Metadata[metadata.T, Seq, Idx](
-              shape = metadata.shape,
-              chunks = metadata.chunks,
+            new Metadata[metadata.T, List, Idx](
+              shape = metadata.shape.toList,
               dtype = metadata.dtype,
               compressor = metadata.compressor,
               order = metadata.order,
@@ -329,9 +336,12 @@ object Array {
               zarr_format = metadata.zarr_format,
               filters = metadata.filters
             )
+
+          import idx.encoder
+
           apply[
             metadata.T,
-            Seq,
+            List,
             Idx,
             FlatArray
           ](
@@ -339,13 +349,13 @@ object Array {
             cc
           )
           .map {
-            arr ⇒ arr: Seq[Idx]
+            arr ⇒ arr: Idxs[Idx]
           }
       }
 
   def apply[
     _T,
-    _Shape[_],
+    _Shape[_]: Semigroupal : Scannable,
     _Idx,
     _A[_]
   ](
@@ -359,8 +369,9 @@ object Array {
     _traverseShape: Traverse[_Shape],
     arrayLike: ArrayLike.Aux[_A, _Shape[Idx]],
     et: FillValue.Encoder[_T],
-    es: Encoder[_Shape[Idx]],
-    idx: Idx.T[Idx]
+    es: Encoder[_Shape[_Idx]],
+    ces: Encoder[_Shape[Idx]],
+    idx: Idx.T[_Idx]
   ):
     Exception |
     Aux[
@@ -381,8 +392,7 @@ object Array {
         import Metadata._
         chunks[_T, _Shape, _Idx, _A](
           dir,
-          _metadata.shape,
-          _metadata.chunks
+          _metadata.shape
         )
       }
     } yield
@@ -391,20 +401,13 @@ object Array {
         type Idx = _Idx
         type ShapeT[U] = _Shape[U]
         type A[U] = _A[U]
-        type Chunk[U] = zarr.Chunk[Shape, U]
+        type Chunk[U] = zarr.Chunk[ShapeT, U]
 
         val traverseA = traverse
         val foldableChunk = Chunk.foldable
         val traverseShape = _traverseShape
 
-        import idx._
-
-        val chunkRanges =
-          shape
-            .map {
-              case Dimension(arr, chunk) ⇒
-                (arr + chunk - 1) / chunk
-            }
+        import idx.{ arithmeticInt, int, encoder }
 
         val metadata = _metadata
         val datatype = metadata.dtype
@@ -412,25 +415,72 @@ object Array {
         val    attrs =    _attrs
 
         val shape = metadata.shape
-        val chunkShape = metadata.chunks
 
-        def apply(idx: Shape): T =
+        val chunkRanges =
+          shape
+            .map {
+              case Dimension(arr, chunk) ⇒
+                int {
+                  (arr + chunk - 1) / chunk
+                }
+            }
+            .sequence
+            .right
+            .get
+
+        //        shape
+        //          .map {
+        //            case Dimension(arr, chunk) ⇒
+        //              int {
+        //                (arr + chunk - 1) / chunk
+        //              }
+        //          }
+        //          .sequence[CastException | ?, Chunk.Idx]
+
+        type T2[_T] = (_T, _T)
+        implicit val appT2: Applicative[T2] = ???
+        implicit val trvT2: Traverse[T2] = ???
+        implicit val eappT2: Applicative[λ[U ⇒ CastException | T2[U]]] = ???
+
+        def apply(idx: Shape): T = {
+          val (
+            chunkIdx,
+            offset
+          ) =
+            idx
+              .product(shape)
+              .map {
+                case (idx, Dimension(_, chunk)) ⇒
+                  (
+                    (
+                      int { idx / chunk },
+                      int { idx % chunk }
+                    ):
+                    T2[CastException | Chunk.Idx]
+                  )
+                  .sequence[CastException | ?, Chunk.Idx]
+              }
+              .sequence[λ[U ⇒ CastException | T2[U]], Chunk.Idx]
+              .right
+              .get
+
           arrayLike(
             chunks,
-            idx / chunkShape
+            chunkIdx
           )(
-            idx % chunkShape
+            offset
           )
+        }
 
         def save(dir: Path): Throwable | Unit = {
-          val chunkRanges = (shape + chunkShape - 1) / chunkShape
+          //val chunkRanges = (shape + chunkShape - 1) / chunkShape
 
           def chunkResults: Throwable | Unit = {
             ti(chunkRanges)
               .map {
                 idx ⇒
                   val chunk: Chunk[_T] = arrayLike(chunks, idx)
-                  val path = dir / key(idx)
+                  val path = dir / idx.toList.mkString(".")
                   Try {
                     import java.nio.ByteBuffer._
                     val buffer = allocate(datatype.size * chunk.size)
@@ -455,6 +505,10 @@ object Array {
               .sequence
               .map { _ ⇒ () }
           }
+
+          implicitly[Encoder[_Shape[_Idx]]]
+          implicitly[Encoder[Metadata[_T, _Shape, _Idx]]]
+          implicitly[Basename[Metadata[_T, _Shape, _Idx]]]
 
           // TODO: configure ability to write to a temporary location and then "commit" all results
           for {
@@ -559,10 +613,10 @@ object Array {
     et: FillValue.Encoder[T]
   ):
     Load[
-      S[Shape, Int, T]
+      S[v.ShapeT, Int, T]
     ] =
-    new Load[S[Shape, Int, T]] {
-      override def apply(dir: Path): Exception | S[Shape, Int, T] =
+    new Load[S[v.ShapeT, Int, T]] {
+      override def apply(dir: Path): Exception | S[v.ShapeT, Int, T] =
         Array[T, N, Int](dir)
     }
 

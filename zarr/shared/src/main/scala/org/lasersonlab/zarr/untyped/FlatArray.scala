@@ -5,7 +5,7 @@ import cats.{ Applicative, Eval, Traverse }
 import org.lasersonlab.ndarray.ArrayLike
 import org.lasersonlab.zarr.Indices
 
-case class FlatArray[T](shape: Seq[Int], elems: Seq[T]) {
+case class FlatArray[T](shape: List[Int], elems: Seq[T]) {
   val size :: strides = shape.scanRight(1)(_ * _).toList
   val rank = shape.size
   def apply(idx: Seq[Int]): T = {
@@ -25,16 +25,16 @@ case class FlatArray[T](shape: Seq[Int], elems: Seq[T]) {
 }
 
 object FlatArray {
-  implicit val arrayLike: ArrayLike.Aux[FlatArray, Seq[Int]] =
+  implicit val arrayLike: ArrayLike.Aux[FlatArray, List[Int]] =
     new ArrayLike[FlatArray] {
-      type Shape = Seq[Int]
+      type Shape = List[Int]
       @inline def shape(a: FlatArray[_]): Shape = a.shape
       @inline def apply[T](a: FlatArray[T], idx: Shape): T = a(idx)
     }
 
-  implicit val seq: Indices.Aux[FlatArray, Seq[Int]] =
+  implicit val list: Indices.Aux[FlatArray, List[Int]] =
     new Indices[FlatArray] {
-      type Shape = Seq[Int]
+      type Shape = List[Int]
       @inline def apply(shape: Shape): FlatArray[Shape] =
         FlatArray(
           shape,

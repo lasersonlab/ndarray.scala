@@ -1,10 +1,10 @@
 package org.lasersonlab.zarr
 
-import cats.Traverse
-import org.lasersonlab.ndarray.ArrayLike
+import cats.{ Semigroupal, Traverse }
+import org.hammerlab.shapeless.tlist.TList
+import org.lasersonlab.ndarray.{ ArrayLike, Scannable, Shape }
 import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.ndarray.Vectors._
-//import org.lasersonlab.zarr.VectorInts.Idx
 import org.lasersonlab.zarr.circe._
 import shapeless.Nat
 
@@ -18,47 +18,61 @@ trait VectorInts[N <: Nat, Idx] {
   type Shape = ShapeT[Idx]
 
   implicit def ds: Decoder[Shape]
+  implicit def cds: Decoder[ShapeT[Chunk.Idx]]
   implicit def es: Encoder[Shape]
-  implicit def ti: Indices.Aux[A, Shape]
+  implicit def ces: Encoder[ShapeT[Chunk.Idx]]
+  implicit def ti: Indices.Aux[A, ShapeT[Chunk.Idx]]
   implicit def traverse: Traverse[A]
   implicit def traverseShape: Traverse[ShapeT]
-  implicit def arrayLike: ArrayLike.Aux[A, Shape]
+  implicit def semigroupalShape: Semigroupal[ShapeT]
+  implicit def scannable: Scannable[ShapeT]
+  implicit def arrayLike: ArrayLike.Aux[A, ShapeT[Chunk.Idx]]
 }
 object VectorInts {
   type Ax[N <: Nat, S[_], Idx] = VectorInts[N, Idx] { type Shape[U] = S[U] }
 
-  type Idx = Int
+  //type Idx = Int
 
   type Aux[N <: Nat, S[_], Idx, _A[_]] =
     VectorInts[N, Idx] {
-      type Shape[U] = S[U]
+      type ShapeT[U] = S[U]
       type A[U] = _A[U]
     }
 
   def make[N <: Nat, S[_], Idx, _A[_]](
     implicit
     _ds: Decoder[S[Idx]],
+    _cds: Decoder[S[Chunk.Idx]],
     _es: Encoder[S[Idx]],
-    _ti: Indices.Aux[_A, S[Idx]],
+    _ces: Encoder[S[Chunk.Idx]],
+    _ti: Indices.Aux[_A, S[Chunk.Idx]],
     _traverse: Traverse[_A],
     _traverseShape: Traverse[S],
-    _arrayLike: ArrayLike.Aux[_A, S[Idx]]
+    _semigroupalShape: Semigroupal[S],
+    _scannable: Scannable[S],
+    _arrayLike: ArrayLike.Aux[_A, S[Chunk.Idx]]
   ):
     Aux[N, S, Idx, _A] =
     new VectorInts[N, Idx] {
       type ShapeT[U] = S[U]
       type A[U] = _A[U]
 
-      implicit val ds = _ds
-      implicit val es = _es
-      implicit val ti = _ti
-      implicit val traverse = _traverse
-      implicit val traverseShape: Traverse[ShapeT] = _traverseShape
+      override implicit val ds = _ds
+      override implicit val cds = _cds
+      override implicit val es = _es
+      override implicit val ces = _ces
+      override implicit val ti = _ti
+      override implicit val traverse = _traverse
+      override implicit val traverseShape = _traverseShape
+      override implicit val semigroupalShape = _semigroupalShape
+      override implicit val scannable = _scannable
       implicit val arrayLike = _arrayLike
-    }: Aux[N, S, Idx, _A]
+    }
 
   import cats.implicits._
   import shapeless.nat._
+
+  import org.lasersonlab.ndarray.TList.traverses._
 
   import org.lasersonlab.ndarray.TList
   implicit val `1` = make[_1, TList._1, Int, Vector1]

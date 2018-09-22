@@ -55,25 +55,33 @@ object Metadata {
   def apply(dir: Path)(implicit idx: Idx): Exception | S[Seq, idx.T] =
     dir ? basename flatMap {
       path ⇒
-        decode[S[Seq, idx.T]](path.read)
+        decode[
+          S[
+            Seq,
+            idx.T
+          ]
+        ](
+          path.read
+        )
     }
 
-  implicit def decoder[Idx](
+  implicit def decoder(
     implicit
-    idx: Idx.T[Idx],
-    decoder: Decoder[Idx]
+    idx: Idx
   ):
     Decoder[
       S[
         Seq,
-        Idx
+        idx.T
       ]
     ] =
-    new Decoder[S[Seq, Idx]] {
+    new Decoder[S[Seq, idx.T]] {
+      import Idx.unwrapDecoder
+      type Idx = idx.T
       def apply(c: HCursor): Result[S[Seq, Idx]] = {
         for {
                 _shape ← c.downField(      "shape").as[Seq[Idx]]
-               _chunks ← c.downField(     "chunks").as[Seq[Idx]]
+               _chunks ← c.downField(     "chunks").as[Seq[Chunk.Idx]]
                 _dtype ← c.downField(      "dtype").as[DataType]
            _compressor ← c.downField( "compressor").as[Compressor]
                 _order ← c.downField(      "order").as[Order]
@@ -103,7 +111,7 @@ object Metadata {
     }
 
   // TODO: are all these basenames necessary?
-  implicit val _basename = Basename[Metadata](basename)
-  implicit def _basenameShape[S, Idx] = Basename[Metadata.S[S, Idx]](basename)
-  implicit def _basenameT    [T, Idx] = Basename[Metadata.T[T, Idx]](basename)
+//  implicit val _basename                 = Basename(basename)
+//  implicit def _basenameShape[S[_], Idx] = Basename(basename)
+//  implicit def _basenameT    [T   , Idx] = Basename(basename)
 }

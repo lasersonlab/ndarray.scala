@@ -7,9 +7,9 @@ import cats.{ Eval, Foldable, Semigroupal }
 import cats.implicits._
 import hammerlab.option._
 import hammerlab.path._
+import org.lasersonlab.ndarray.Scannable
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.Chunk.Idx
-import org.lasersonlab.zarr.utils.Scannable
 
 /**
  * A Zarr "chunk" file, represented as a [[Path]] that bytes are lazily loaded from
@@ -69,11 +69,11 @@ case class Chunk[
   def apply(idx: Shape): T =
     dtype.read(
       buff,
-      product
-        .product[Int, Int](idx, strides)
+      idx
+        .product(strides)
         .foldLeft(0) {
-          case (idx, stride) ⇒
-            idx * stride
+          case (sum, (idx, stride)) ⇒
+            sum + idx * stride
         }
     )
 

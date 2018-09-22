@@ -1,6 +1,6 @@
 package org.lasersonlab.zarr
 
-import cats.{ Semigroupal, Traverse }
+import cats.{ Functor, Semigroupal, Traverse }
 import cats.implicits._
 import circe.Decoder.Result
 import circe._
@@ -32,22 +32,23 @@ extends untyped.Metadata
 object Metadata {
 
   val basename = ".zarray"
-  implicit def _basename[T, Shape, Idx] = Basename[Metadata[T, Shape, Idx]](basename)
+  implicit def _basename[T, Shape[_], Idx]: Basename[Metadata[T, Shape, Idx]] = Basename(basename)
 
   // Implicit unwrappers for some fields
-  implicit def _compressor   (implicit md: Metadata[_, _, _]):      Compressor = md.compressor
-  implicit def _datatype  [T](implicit md: Metadata[T, _, _]): DataType.Aux[T] = md.     dtype
+  implicit def _compressor[   S[_]](implicit md: Metadata[_, S, _]):      Compressor = md.compressor
+  implicit def _datatype  [T, S[_]](implicit md: Metadata[T, S, _]): DataType.Aux[T] = md.     dtype
 
   def apply[
         T : FillValue.Decoder,
-    Shape[_],
+    Shape[_]: Functor : Semigroupal,
       Idx
   ](
     dir: Path
   )(
     implicit
     d: Decoder[DataType.Aux[T]],
-    ds: Decoder[Shape[Idx]]
+    ds: Decoder[Shape[Idx]],
+    cds: Decoder[Shape[Chunk.Idx]]
   ):
     Exception |
     Metadata[T, Shape, Idx]
@@ -74,12 +75,14 @@ object Metadata {
    */
   implicit def decoder[
         T: FillValue.Decoder,
-    Shape[_]: Traverse : Semigroupal,
+    Shape[_]: Functor : Semigroupal,
       Idx
   ](
     implicit
     datatypeDecoder: Decoder[DataType.Aux[T]],
-    ds: Decoder[Shape[Idx]]
+    // TODO: HKT Shape decoder
+    ds: Decoder[Shape[Idx]],
+    cds: Decoder[Shape[Chunk.Idx]]
   ):
     Decoder[
       Metadata[
@@ -118,9 +121,10 @@ object Metadata {
             implicit datatype ⇒
               for {
                         arr ← c.downField(      "shape").as[Shape[Idx]]
-                     chunks ← c.downField(     "chunks").as[Shape[Idx]]
+                     chunks ← c.downField(     "chunks").as[Shape[Chunk.Idx]]
                  compressor ← c.downField( "compressor").as[Compressor]
                       order ← c.downField(      "order").as[Order]
+                fill_value  ← c.downField( "fill_value").as[FillValue[T]]
                 zarr_format ← c.downField("zarr_format").as[Format]
               } yield
                 Metadata(
@@ -128,6 +132,7 @@ object Metadata {
                   datatype,
                   compressor,
                   order,
+                  fill_value,
                   zarr_format
                 )
           }
@@ -141,7 +146,8 @@ object Metadata {
   ](
     implicit
     datatypeEncoder: Encoder[DataType.Aux[T]],
-    ds: Encoder[Shape[Idx]]
+    ds: Encoder[Shape[Idx]],
+    cds: Encoder[Shape[Chunk.Idx]]
   ):
     Encoder[
       Metadata[

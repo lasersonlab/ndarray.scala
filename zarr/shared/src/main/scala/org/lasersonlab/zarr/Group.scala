@@ -5,17 +5,21 @@ import hammerlab.path._
 import hammerlab.str._
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.io._
+import org.lasersonlab.zarr.utils.Idx
 
-case class Group(
-  arrays: Map[String, Array.Ints] = Map.empty,
-  groups: Map[String, Group] = Map.empty,
+case class Group[Idx](
+  arrays: Map[String, Array.Idxs[Idx]] = Map.empty,
+  groups: Map[String, Group[Idx]] = Map.empty,
   attrs: Opt[Attrs] = None,
   metadata: Group.Metadata = Group.Metadata()
+)(
+  implicit
+  idx: Idx.T[Idx]
 ) {
-  def array   (name: Str): Array.Ints           = arrays(name)
-  def apply[T](name: Str): Array.S[Seq, Int, T] = arrays(name).as[T]
+  def array   (name: Str): Array.L               = arrays(name)
+  def apply[T](name: Str): Array.S[List, Idx, T] = arrays(name).as[T]
 
-  def group(name: Str): Group = groups(name)
+  def group(name: Str): Group[Idx] = groups(name)
 }
 
 object Group {
@@ -41,16 +45,19 @@ object Group {
 
   import circe.auto._
 
-  def apply(
+  def apply[Idx](
     dir: Path
+  )(
+    implicit
+    idx: Idx.T[Idx]
   ):
-    Exception | Group =
+    Exception | Group[Idx] =
     for {
       metadata ← dir.load[Metadata]
          attrs ← dir.load[Opt[Attrs]]
 
-      arrays = Map.newBuilder[String, Array.Ints]
-      groups = Map.newBuilder[String, Group]
+      arrays = Map.newBuilder[String, Array.Idxs[Idx]]
+      groups = Map.newBuilder[String, Group[Idx]]
 
       group ←
         dir
@@ -109,15 +116,15 @@ object Group {
     } yield
       group
 
-  implicit val group: Load[Group] =
-    new Load[Group] {
-      override def apply(dir: Path): Exception | Group =
+  implicit def group[Idx](implicit idx: Idx.T[Idx]): Load[Group[Idx]] =
+    new Load[Group[Idx]] {
+      override def apply(dir: Path): Exception | Group[Idx] =
         Group(dir)
     }
 
-  implicit val save: Save[Group] =
-    new Save[Group] {
-      def apply(t: Group, dir: Path): Throwable | Unit = {
+  implicit def save[Idx]: Save[Group[Idx]] =
+    new Save[Group[Idx]] {
+      def apply(t: Group[Idx], dir: Path): Throwable | Unit = {
         import cats.implicits._
 
         val groups =

@@ -67,17 +67,31 @@ trait Array {
   val attrs: Opt[Attrs]
 
   def save(dir: Path): Throwable | Unit
+
+  def foldLeft[B](b: B)(f: (B, T) ⇒ B): B =
+    chunks
+      .foldLeft(b) {
+        (b, chunk) ⇒
+          chunk
+            .foldLeft(b) { f }
+      }
+
+  def foldRight[B](lb: Eval[B])(f: (T, Eval[B]) ⇒ Eval[B]): Eval[B] =
+    chunks
+      .foldRight(lb) {
+        _.foldRight(_) { f }
+      }
 }
 
 object Array {
 
   type T[_T] = Array { type T = _T }
-  type S[S[_], I, _T] = Array { type ShapeT[U] = S[U]; type Idx = I; type T = _T }
-  type SU[S[_], I] = Array { type ShapeT[U] = S[U]; type Idx = I }
+  type S [S[_], I, _T] = Array { type ShapeT[U] = S[U]; type Idx = I; type T = _T }
+  type SU[S[_], I    ] = Array { type ShapeT[U] = S[U]; type Idx = I              }
 
-  type Idxs[I] = Array { type ShapeT[U] = List[U]; type Idx = I }
-  type L = Array { type ShapeT[U] = List[U] }
-  type Ints = Array { type ShapeT[U] = List[U]; type Idx = Int }
+  type Idxs[I] = Array { type ShapeT[U] = List[U]; type Idx =   I }
+  type Ints    = Array { type ShapeT[U] = List[U]; type Idx = Int }
+  type    L    = Array { type ShapeT[U] = List[U]                 }
 
   type Aux[S[_], I, _A[_], _Chunk[_], _T] =
     Array {
@@ -506,87 +520,31 @@ object Array {
         }
       }
 
-  implicit def foldable[Shape[_], Idx]: Foldable[Array.S[Shape, Idx, ?]] =
-    new Foldable[S[Shape, Idx, ?]] {
-      type F[A] = S[Shape, Idx, A]
-
-      def foldLeft[A, B](fa: F[A], b: B)(f: (B, A) ⇒ B): B =
-        fa
-          .traverseA
-          .foldLeft(
-            fa.chunks,
-            b
-          ) {
-            (b, chunk) ⇒
-              fa
-                .foldableChunk
-                .foldLeft(
-                  chunk,
-                  b
-                )(
-                  f
-                )
-          }
-
-      def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] =
-        fa
-          .traverseA
-          .foldRight(
-            fa.chunks,
-            lb
-          ) {
-            (chunk, lb) ⇒
-              fa
-                .foldableChunk
-                .foldRight(
-                  chunk,
-                  lb
-                )(
-                  f
-                )
-          }
+  /**
+   * Implement [[Foldable]] on an [[Array]] identified only by its element type; part of working around / mitigating
+   * https://github.com/scala/bug/issues/11169.
+   *
+   * [[Array.foldLeft foldLeft]] and [[Array.foldRight foldRight]] are defined directly on [[Array]], but this can still
+   * be useful in contexts based around Cats typeclasses
+   */
+  implicit val foldableT: Foldable[Array.T] =
+    new Foldable[Array.T] {
+      override def foldLeft[A, B](fa: T[A], b: B)(f: (B, A) ⇒ B): B = ???
+      override def foldRight[A, B](fa: T[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = ???
     }
 
-  // TODO: is this used/necessary?
+  /**
+   * Implement [[Foldable]] on an [[Array]] by making it implicit; part of working around / mitigating
+   * https://github.com/scala/bug/issues/11169
+   *
+   * [[Array.foldLeft foldLeft]] and [[Array.foldRight foldRight]] are defined directly on [[Array]], but this can still
+   * be useful in contexts based around Cats typeclasses
+   */
   implicit def foldableDerived[T](implicit a: Array.T[T]): Foldable[Aux[a.ShapeT, a.Idx, a.A, a.Chunk, ?]] =
     new Foldable[Aux[a.ShapeT, a.Idx, a.A, a.Chunk, ?]] {
       type F[A] = Aux[a.ShapeT, a.Idx, a.A, a.Chunk, A]
-
-      def foldLeft[A, B](fa: F[A], b: B)(f: (B, A) ⇒ B): B =
-        fa
-          .traverseA
-          .foldLeft(
-            fa.chunks,
-            b
-          ) {
-            (b, chunk) ⇒
-              fa
-                .foldableChunk
-                .foldLeft(
-                  chunk,
-                  b
-                )(
-                  f
-                )
-          }
-
-      def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] =
-        fa
-          .traverseA
-          .foldRight(
-            fa.chunks,
-            lb
-          ) {
-            (chunk, lb) ⇒
-              fa
-                .foldableChunk
-                .foldRight(
-                  chunk,
-                  lb
-                )(
-                  f
-                )
-          }
+      @inline def foldLeft [A, B](fa: F[A],  b:      B )(f: (B,      A ) ⇒      B ):      B  = fa.foldLeft ( b)(f)
+      @inline def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.foldRight(lb)(f)
     }
 
   // TODO: type-parameterize Idx

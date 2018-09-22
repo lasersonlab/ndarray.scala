@@ -4,7 +4,6 @@ import cats.implicits._
 import hammerlab.path._
 import hammerlab.shapeless.tlist.{ Map ⇒ _, _ }
 import org.lasersonlab.anndata.loom.{ Obs, Var }
-import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.ndarray.TList.{ `1`, `2` }
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian

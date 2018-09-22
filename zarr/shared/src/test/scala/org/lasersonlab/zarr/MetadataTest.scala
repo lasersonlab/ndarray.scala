@@ -2,7 +2,6 @@ package org.lasersonlab.zarr
 
 import circe.parser._
 import hammerlab.shapeless.tlist._
-import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.ndarray.TList.{ `1`, `2` }
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.dtype.DataType._

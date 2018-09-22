@@ -1,10 +1,8 @@
 package org.lasersonlab.zarr
 
 import cats.{ Semigroupal, Traverse }
-import org.hammerlab.shapeless.tlist.TList
-import org.lasersonlab.ndarray.{ ArrayLike, Scannable, Shape }
-import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.ndarray.Vectors._
+import org.lasersonlab.ndarray.{ ArrayLike, Scannable }
 import org.lasersonlab.zarr.circe._
 import shapeless.Nat
 
@@ -70,11 +68,9 @@ object VectorInts {
     }
 
   import cats.implicits._
-  import shapeless.nat._
-
-  import org.lasersonlab.ndarray.TList.traverses._
-
   import org.lasersonlab.ndarray.TList
+  import org.lasersonlab.ndarray.TList.traverses._
+  import shapeless.nat._
   implicit val `1` = make[_1, TList._1, Int, Vector1]
   implicit val `2` = make[_2, TList._2, Int, Vector2]
   implicit val `3` = make[_3, TList._3, Int, Vector3]

@@ -74,7 +74,7 @@ object Metadata {
    * - running a normal generic auto-derivation to get a [[Metadata]]-[[Decoder]]
    */
   implicit def decoder[
-        T: FillValue.Decoder,
+        T   : FillValue.Decoder,
     Shape[_]: Functor : Semigroupal,
       Idx
   ](

@@ -1,6 +1,6 @@
 package org.lasersonlab.zarr
 
-trait utils {
+trait data {
   val `matrix/.zarray` =
     """{
       |    "chunks": [
@@ -50,4 +50,4 @@ trait utils {
       .stripMargin
 }
 
-object utils extends utils
+object data$ extends data

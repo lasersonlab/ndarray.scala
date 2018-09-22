@@ -3,18 +3,21 @@ package org.lasersonlab.zarr
 import circe.parser._
 import hammerlab.shapeless.tlist._
 import org.lasersonlab.ndarray.Ints._
+import org.lasersonlab.ndarray.TList.{ `1`, `2` }
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.dtype.DataType._
-import org.lasersonlab.zarr.utils._
+import org.lasersonlab.zarr.data$._
 
 class MetadataTest
   extends Suite {
 
   test("1-D chars") {
+    import org.lasersonlab.ndarray.TList.traverses.traverse_1
     decode[
       Metadata[
         String,
-        Ints1
+        `1`,
+        Int
       ]
     ](
       `col_attrs/DonorID/.zarray`
@@ -22,10 +25,10 @@ class MetadataTest
       Right(
         Metadata[
           String,
-          Ints1
+          `1`,
+          Int
         ](
-           shape = 5425 :: TNil,
-          chunks = 5425 :: TNil,
+           shape = Dimension(5425) :: TNil,
            dtype = string(1),
           fill_value = ""
         )
@@ -34,10 +37,12 @@ class MetadataTest
   }
 
   test("2-D floats") {
+    import org.lasersonlab.ndarray.TList.traverses.traverse_2
     decode[
       Metadata[
         Float,
-        Ints2
+        `2`,
+        Int
       ]
     ](
       `matrix/.zarray`
@@ -45,10 +50,10 @@ class MetadataTest
       Right(
         Metadata[
           Float,
-          Ints2
+          `2`,
+          Int
         ](
-           shape = 27998 :: 5425 :: TNil,
-          chunks =  3092 :: 5425 :: TNil,
+           shape = Dimension(27998) :: Dimension(5425) :: TNil,
            dtype = float,
           fill_value = 0.0f
         )

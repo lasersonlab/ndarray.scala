@@ -428,16 +428,7 @@ object Array {
             .right
             .get
 
-        //        shape
-        //          .map {
-        //            case Dimension(arr, chunk) ⇒
-        //              int {
-        //                (arr + chunk - 1) / chunk
-        //              }
-        //          }
-        //          .sequence[CastException | ?, Chunk.Idx]
-
-        type T2[_T] = (_T, _T)
+        type T2[E] = (E, E)
         implicit val appT2: Applicative[T2] = ???
         implicit val trvT2: Traverse[T2] = ???
         implicit val eappT2: Applicative[λ[U ⇒ CastException | T2[U]]] = ???
@@ -473,7 +464,6 @@ object Array {
         }
 
         def save(dir: Path): Throwable | Unit = {
-          //val chunkRanges = (shape + chunkShape - 1) / chunkShape
 
           def chunkResults: Throwable | Unit = {
             ti(chunkRanges)
@@ -505,10 +495,6 @@ object Array {
               .sequence
               .map { _ ⇒ () }
           }
-
-          implicitly[Encoder[_Shape[_Idx]]]
-          implicitly[Encoder[Metadata[_T, _Shape, _Idx]]]
-          implicitly[Basename[Metadata[_T, _Shape, _Idx]]]
 
           // TODO: configure ability to write to a temporary location and then "commit" all results
           for {
@@ -604,7 +590,7 @@ object Array {
     }
 
   // TODO: type-parameterize Idx
-  implicit def load[T, N <: Nat, Shape[_]](
+  implicit def loadArr[T, N <: Nat, Shape[_]](
     implicit
     v: VectorInts.Ax[N, Shape, Int],
     d: Decoder[DataType.Aux[T]],
@@ -613,11 +599,12 @@ object Array {
     et: FillValue.Encoder[T]
   ):
     Load[
-      S[v.ShapeT, Int, T]
+      S[Shape, Int, T]
     ] =
-    new Load[S[v.ShapeT, Int, T]] {
-      override def apply(dir: Path): Exception | S[v.ShapeT, Int, T] =
-        Array[T, N, Int](dir)
+    new Load[S[Shape, Int, T]] {
+      override def apply(dir: Path): Exception | S[Shape, Int, T] =
+        ???
+        //Array[T, N, Int](dir)
     }
 
   implicit def save[

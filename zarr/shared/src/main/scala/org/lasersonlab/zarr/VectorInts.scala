@@ -29,7 +29,7 @@ trait VectorInts[N <: Nat, Idx] {
   implicit def arrayLike: ArrayLike.Aux[A, ShapeT[Chunk.Idx]]
 }
 object VectorInts {
-  type Ax[N <: Nat, S[_], Idx] = VectorInts[N, Idx] { type Shape[U] = S[U] }
+  type Ax[N <: Nat, S[_], Idx] = VectorInts[N, Idx] { type ShapeT[U] = S[U] }
 
   //type Idx = Int
 

@@ -62,6 +62,9 @@ package object zarr
   }
 
   case class Dimension[Idx](arr: Idx, chunk: Chunk.Idx)
+  object Dimension {
+    def apply(arr: Chunk.Idx): Dimension[Chunk.Idx] = Dimension(arr, arr)
+  }
   object Dimensions {
     def apply[
       Shape[_]: Semigroupal : Functor,

@@ -16,8 +16,8 @@ case class Group[Idx](
   implicit
   idx: Idx.T[Idx]
 ) {
-  def array   (name: Str): Array.L               = arrays(name)
-  def apply[T](name: Str): Array.S[List, Idx, T] = arrays(name).as[T]
+  def array   (name: Str): Array.Idxs[      Idx   ] = arrays(name)
+  def apply[T](name: Str): Array.S   [List, Idx, T] = arrays(name).as[T]
 
   def group(name: Str): Group[Idx] = groups(name)
 }

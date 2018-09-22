@@ -5,6 +5,7 @@ import hammerlab.path._
 import hammerlab.shapeless.tlist.{ Map ⇒ _, _ }
 import org.lasersonlab.anndata.loom.{ Obs, Var }
 import org.lasersonlab.ndarray.Ints._
+import org.lasersonlab.ndarray.TList.{ `1`, `2` }
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.dtype.DataType
@@ -18,14 +19,13 @@ class ArrayTest
     // TODO: remove local paths!
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/matrix")
 
-    implicit val arr = Array.chunks[Float, _2](path).get
+    implicit val arr = Array.chunks[Float, _2, Int](path).get
 
     ==(
       arr.metadata,
-      Metadata(
-         shape = 27998 :: 5425 :: TNil,
-        chunks =  3092 :: 5425 :: TNil,
-         dtype = float,
+      Metadata[Float, `2`, Int](
+             shape = Dimension(27998, 3092) :: Dimension(5425) :: TNil,
+             dtype = float,
         fill_value = 0.0f
       )
     )
@@ -48,22 +48,24 @@ class ArrayTest
 
     val blosc = Blosc()
 
+    import org.lasersonlab.ndarray.TList.`2`
+    import org.lasersonlab.ndarray.TList.traverses.traverse_2
     val expected =
       Seq(
-        Chunk[Ints2, Float](path / "0.0", 3092 :: 5425 :: TNil, 0 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[Ints2, Float](path / "1.0", 3092 :: 5425 :: TNil, 1 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[Ints2, Float](path / "2.0", 3092 :: 5425 :: TNil, 2 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[Ints2, Float](path / "3.0", 3092 :: 5425 :: TNil, 3 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[Ints2, Float](path / "4.0", 3092 :: 5425 :: TNil, 4 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[Ints2, Float](path / "5.0", 3092 :: 5425 :: TNil, 5 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[Ints2, Float](path / "6.0", 3092 :: 5425 :: TNil, 6 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[Ints2, Float](path / "7.0", 3092 :: 5425 :: TNil, 7 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[Ints2, Float](path / "8.0", 3092 :: 5425 :: TNil, 8 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[Ints2, Float](path / "9.0",  170 :: 5425 :: TNil, 9 :: 0 :: TNil, size =   922250, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4)
+        Chunk[`2`, Float](path / "0.0", 3092 :: 5425 :: TNil, 0 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "1.0", 3092 :: 5425 :: TNil, 1 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "2.0", 3092 :: 5425 :: TNil, 2 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "3.0", 3092 :: 5425 :: TNil, 3 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "4.0", 3092 :: 5425 :: TNil, 4 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "5.0", 3092 :: 5425 :: TNil, 5 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "6.0", 3092 :: 5425 :: TNil, 6 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "7.0", 3092 :: 5425 :: TNil, 7 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "8.0", 3092 :: 5425 :: TNil, 8 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "9.0",  170 :: 5425 :: TNil, 9 :: 0 :: TNil, size =   922250, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4)
       )
 
     ==(
-      chunks.toList: Seq[Chunk[Ints2, Float]],
+      chunks.toList: Seq[Chunk[`2`, Float]],
       expected
     )
 
@@ -114,13 +116,12 @@ class ArrayTest
   test("1-D longs") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/row_attrs/_Valid")
 
-    val Array(metadata, attrs, chunks) = Array.chunks[Long, _1](path).get
+    val Array(metadata, attrs, chunks) = Array.chunks[Long, _1, Int](path).get
 
     ==(
       metadata,
-      Metadata(
-             shape = 27998 :: TNil,
-            chunks = 27998 :: TNil,
+      Metadata[Long, `1`, Int](
+             shape = Dimension(27998) :: TNil,
              dtype = long,
         fill_value = 0L
       )
@@ -150,13 +151,12 @@ class ArrayTest
   test("1-D strings") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/col_attrs/Sex")
 
-    val Array(metadata, attrs, chunks) = Array.chunks[String, _1](path).get
+    val a @ Array(metadata, attrs, chunks) = Array.chunks[String, _1, Int](path).get
 
     ==(
       metadata,
-      Metadata(
-         shape = 5425 :: TNil,
-        chunks = 5425 :: TNil,
+      Metadata[String, `1`, Int](
+         shape = Dimension(5425) :: TNil,
         dtype = string(5),
         fill_value = ""
       )
@@ -171,6 +171,8 @@ class ArrayTest
 
     val bytes = chunk.bytes
     ==(bytes.length, 27125)
+
+    import a.foldableChunk
 
     val elems = chunk.toList
     ==(elems.size, 5425)
@@ -196,16 +198,15 @@ class ArrayTest
 
     import shapeless._
 
-    val Array(metadata, attrs, chunks) = Array.chunks[Var, _1](path).get
+    val a @ Array(metadata, attrs, chunks) = Array.chunks[Var, _1, Int](path).get
 
     implicit val stringDataType = string(18)
     val dtype = !![DataType.Aux[Var]]
 
     ==(
       metadata,
-      Metadata(
-         shape = 27998 :: TNil,
-        chunks = 27998 :: TNil,
+      Metadata[Var, `1`, Int](
+         shape = Dimension(27998) :: TNil,
         dtype = dtype,
         fill_value = Var.empty
       )
@@ -220,6 +221,8 @@ class ArrayTest
 
     val bytes = chunk.bytes
     ==(bytes.length, 1903864)
+
+    import a.foldableChunk
 
     val elems = chunk.toList
     ==(elems.size, 27998)
@@ -243,15 +246,14 @@ class ArrayTest
   test("1-D untyped structs") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr/obs")
 
-    val Array(metadata, attrs, chunks) = Array[Obs, _1](path).get
+    val Array(metadata, attrs, chunks) = Array[Obs, _1, Int](path).get
 
     import org.lasersonlab.zarr.cmp.untyped.struct
 
     ==(
       metadata,
-      Metadata(
-         shape = 5425 :: TNil,
-        chunks = 5425 :: TNil,
+      Metadata[untyped.Struct, `1`, Int](
+         shape = Dimension(5425) :: TNil,
         dtype =
           DataType.struct(
             List[(String, DataType)](

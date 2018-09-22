@@ -1,6 +1,9 @@
 package org.lasersonlab.zarr
 
 import hammerlab.path._
+import org.hammerlab.cmp.CanEq.dsl
+import org.hammerlab.cmp.Show
+import org.hammerlab.test.Cmp
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.dtype.DataType._
@@ -33,7 +36,7 @@ class GroupTest
     val `var`  = group[Struct]('var)
     val `var2` = group.array('var)
 
-    ==(`var`.shape, 27998 :: Nil)
+    ==(`var`.shape, Dimension(27998) :: Nil)
 
     val datatype =
       struct(
@@ -52,9 +55,8 @@ class GroupTest
     import org.lasersonlab.zarr.cmp.cmpStruct
 
     val expected =
-      zarr.Metadata[Struct, Seq[Int]](
-        shape = Seq(27998),
-        chunks = Seq(27998),
+      zarr.Metadata[Struct, List, Int](
+        shape = List(Dimension(27998)),
         dtype = datatype,
         fill_value =
           // TODO: fill untyped values are null atm; fix is to move fill-value handling into datatype
@@ -81,9 +83,21 @@ class GroupTest
     {
       // use a custom comparator for the untyped version
       import zarr.cmp.metadataCmp
-      ==(
-        `var2`.metadata: untyped.Metadata.S[Seq[Int]],
-        expected
+
+      val cmp = metadataCmp[List]
+
+      !![Cmp[untyped.Metadata.S[List, Int]]]
+
+      ==[
+        untyped.Metadata.S[List, Int],
+        untyped.Metadata.S[List, Int],
+        cmp.Diff
+      ](
+        `var2`.metadata: untyped.Metadata.S[List, Int],
+        expected: untyped.Metadata.S[List, Int]
+      )(
+        cmp,
+        Show.showAny[cmp.Diff]
       )
     }
   }

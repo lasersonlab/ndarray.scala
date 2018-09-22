@@ -111,7 +111,7 @@ object Metadata {
     }
 
   // TODO: are all these basenames necessary?
-//  implicit val _basename                 = Basename(basename)
-//  implicit def _basenameShape[S[_], Idx] = Basename(basename)
-//  implicit def _basenameT    [T   , Idx] = Basename(basename)
+  implicit val _basename                 = Basename(basename)
+  implicit def _basenameShape[S[_], Idx] = Basename(basename)
+  implicit def _basenameT    [T   , Idx] = Basename(basename)
 }

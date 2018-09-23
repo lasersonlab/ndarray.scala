@@ -1,10 +1,12 @@
 package org.lasersonlab.zarr.utils.slist
 
+import cats.Foldable
+import cats.implicits._
 import io.circe.Decoder.Result
 import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json, Printer }
 import lasersonlab.shapeless.slist._
+import org.lasersonlab.shapeless.SList.FromList
 import org.lasersonlab.shapeless.SList.FromList.{ TooFew, TooMany }
-import org.lasersonlab.shapeless.SList.{ FromList, ToList }
 
 trait HKTDecoder[F[_]] {
   def apply[T](implicit d: Decoder[T]): Decoder[F[T]]
@@ -14,7 +16,7 @@ object HKTDecoder {
     new HKTDecoder[List] {
       def apply[T](implicit d: Decoder[T]): Decoder[List[T]] =
         new Decoder[List[T]] {
-          override def apply(c: HCursor): Result[List[T]] =
+          def apply(c: HCursor): Result[List[T]] =
             c.as[List[T]]
         }
     }
@@ -65,21 +67,22 @@ trait Codecs {
         }
     }
 
-  implicit def make[F[_]](implicit to: ToList[F], from: FromList[F]): HKTCodec[F] =
+  implicit def make[F[_]: Foldable](implicit from: FromList[F]): HKTCodec[F] =
     new HKTEncoder[F] with HKTDecoder[F] {
-      override def apply[T](implicit d: Encoder[T]): Encoder[F[T]] =
+      def apply[T](implicit d: Encoder[T]): Encoder[F[T]] =
         new Encoder[F[T]] {
           def apply(a: F[T]): Json =
             Json.arr(
-              to(a)
+              a
+                .toList
                 .map(d(_))
-                  : _*
+              : _*
             )
         }
 
       def apply[T](implicit d: Decoder[T]): Decoder[F[T]] =
         new Decoder[F[T]] {
-          override def apply(c: HCursor): Result[F[T]] =
+          def apply(c: HCursor): Result[F[T]] =
             c
               .as[List[T]]
               .flatMap(

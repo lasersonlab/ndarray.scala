@@ -63,10 +63,6 @@ object SList {
     def size(implicit base: Base[Tail]): Int = base.size
   }
 
-  trait ToList[F[_]] {
-    def apply[T](f: F[T]): List[T]
-  }
-
   trait FromList[F[_]] {
     val size: Int
     def apply[T](l: List[T]): Err | F[T]
@@ -81,7 +77,6 @@ object SList {
     extends    Traverse[F]
        with Semigroupal[F]
        with   Scannable[F]
-       with      ToList[F]
        with    FromList[F]
 
   trait Utils[F[_]]
@@ -185,9 +180,6 @@ object SList {
             subtotal :: tail
           )
         }
-
-        // ToList
-        override def apply[T](f: F[T]): List[T] = f.head :: tail(f.tail)
 
         val size = tail.size + 1
         // FromList

@@ -1,7 +1,6 @@
 package org.lasersonlab.ndarray
 
 import lasersonlab.shapeless.slist._
-//import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.ndarray.Vectors._
 
 trait ArrayLike[A[_]] {

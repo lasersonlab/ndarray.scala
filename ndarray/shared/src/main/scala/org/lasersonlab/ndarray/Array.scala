@@ -1,6 +1,6 @@
 package org.lasersonlab.ndarray
 
-import cats.{ Functor, Traverse }
+import cats.Functor
 import hammerlab.shapeless.tlist._
 
 trait Array[T] {

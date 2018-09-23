@@ -1,4 +1,4 @@
-package org.lasersonlab.ndarray
+package org.lasersonlab.shapeless
 
 trait Scannable[F[_]] {
   def scanLeft [A, B](fa: F[A], b: B, f: (B, A) ⇒ B): (F[B], B)

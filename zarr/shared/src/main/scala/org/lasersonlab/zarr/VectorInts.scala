@@ -2,8 +2,8 @@ package org.lasersonlab.zarr
 
 import cats.{ Semigroupal, Traverse }
 import org.lasersonlab.ndarray.Vectors._
-import org.lasersonlab.ndarray.{ ArrayLike, Scannable }
-import org.lasersonlab.shapeless.Zip
+import org.lasersonlab.ndarray.ArrayLike
+import org.lasersonlab.shapeless.{ Scannable, Zip }
 import org.lasersonlab.zarr.circe._
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.utils.slist.{ HKTDecoder, HKTEncoder }

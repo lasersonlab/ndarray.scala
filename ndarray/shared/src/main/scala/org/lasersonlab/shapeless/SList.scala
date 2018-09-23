@@ -3,7 +3,6 @@ package org.lasersonlab.shapeless
 import cats.{ Applicative, Eval, Reducible, Semigroupal, Traverse }
 import cats.implicits._
 import hammerlab.either._
-import org.lasersonlab.ndarray.Scannable
 import org.lasersonlab.shapeless.SList.FromList.{ Err, TooFew, TooMany }
 
 trait SList {

@@ -4,8 +4,8 @@ import cats.implicits._
 import cats.{ Applicative, Eval, Foldable, Traverse }
 import hammerlab.option._
 import hammerlab.path._
-import org.lasersonlab.ndarray.{ ArrayLike, Scannable }
-import org.lasersonlab.shapeless.Zip
+import org.lasersonlab.ndarray.ArrayLike
+import org.lasersonlab.shapeless.{ Scannable, Zip }
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.circe.{ Decoder, Encoder }
 import org.lasersonlab.zarr.dtype.DataType
@@ -464,6 +464,7 @@ object Array {
           )
         }
 
+        // TODO: move this implementation into base trait, or separate Save instance
         def save(dir: Path): Throwable | Unit = {
 
           def chunkResults: Throwable | Unit = {
@@ -497,10 +498,6 @@ object Array {
               .map { _ ⇒ () }
           }
 
-          implicitly[HKTEncoder[_Shape]]
-          implicitly[Encoder[_Idx]]
-          implicitly[Encoder[Metadata[_T, _Shape, _Idx]]]
-
           // TODO: configure ability to write to a temporary location and then "commit" all results
           for {
             _ ← _metadata.save(dir)
@@ -520,8 +517,8 @@ object Array {
    */
   implicit val foldableT: Foldable[Array.T] =
     new Foldable[Array.T] {
-      override def foldLeft[A, B](fa: T[A], b: B)(f: (B, A) ⇒ B): B = ???
-      override def foldRight[A, B](fa: T[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = ???
+      @inline def foldLeft [A, B](fa: T[A],  b:      B )(f: (B,      A ) ⇒      B ):      B  = fa.foldLeft ( b)(f)
+      @inline def foldRight[A, B](fa: T[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.foldRight(lb)(f)
     }
 
   /**
@@ -538,22 +535,21 @@ object Array {
       @inline def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.foldRight(lb)(f)
     }
 
-  // TODO: type-parameterize Idx
-  implicit def loadArr[T, N <: Nat, Shape[_]](
+  implicit def loadArr[T, N <: Nat, Idx, Shape[_]](
     implicit
-    v: VectorInts.Ax[N, Shape, Int],
+    v: VectorInts.Ax[N, Shape, Idx],
     d: Decoder[DataType.Aux[T]],
     e: Encoder[DataType.Aux[T]],
     dt: FillValue.Decoder[T],
     et: FillValue.Encoder[T]
   ):
     Load[
-      S[Shape, Int, T]
+      S[Shape, Idx, T]
     ] =
-    new Load[S[Shape, Int, T]] {
-      override def apply(dir: Path): Exception | S[Shape, Int, T] =
-        ???
-        //Array[T, N, Int](dir)
+    new Load[S[Shape, Idx, T]] {
+      import v.idx
+      override def apply(dir: Path): Exception | S[Shape, Idx, T] =
+        Array[T, N, Idx](dir)
     }
 
   implicit def save[

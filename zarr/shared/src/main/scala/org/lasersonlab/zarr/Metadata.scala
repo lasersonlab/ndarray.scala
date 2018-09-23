@@ -4,6 +4,7 @@ import cats.implicits._
 import cats.{ Functor, Traverse }
 import hammerlab.option._
 import hammerlab.path._
+import org.lasersonlab.circe.{ DecoderK, EncoderK }
 import org.lasersonlab.shapeless.Zip
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.FillValue.Null
@@ -14,7 +15,6 @@ import org.lasersonlab.zarr.circe._
 import org.lasersonlab.zarr.circe.parser._
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Basename
-import org.lasersonlab.zarr.utils.slist.{ HKTDecoder, HKTEncoder }
 
 case class Metadata[_T, _Shape[_], _Idx](
    shape: _Shape[Dimension[_Idx]],
@@ -42,7 +42,7 @@ object Metadata {
 
   def apply[
         T   : FillValue.Decoder,
-    Shape[_]: Functor : Zip : HKTDecoder,
+    Shape[_]: Functor : Zip : DecoderK,
       Idx   : Decoder
   ](
     dir: Path
@@ -80,7 +80,7 @@ object Metadata {
   ](
     implicit
     datatypeDecoder: Decoder[DataType.Aux[T]],
-    ds: HKTDecoder[Shape],
+    ds: DecoderK[Shape],
     ids: Decoder[Idx]
   ):
     Decoder[
@@ -140,7 +140,7 @@ object Metadata {
 
   implicit def encoder[
         T: FillValue.Encoder,
-    Shape[_] : Traverse : HKTEncoder,
+    Shape[_] : Traverse : EncoderK,
       Idx : Encoder
   ](
     implicit

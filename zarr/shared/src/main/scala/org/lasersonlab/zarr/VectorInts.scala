@@ -1,12 +1,12 @@
 package org.lasersonlab.zarr
 
-import cats.{ Semigroupal, Traverse }
-import org.lasersonlab.ndarray.Vectors._
+import cats.Traverse
+import org.lasersonlab.circe.{ DecoderK, EncoderK }
 import org.lasersonlab.ndarray.ArrayLike
+import org.lasersonlab.ndarray.Vectors._
 import org.lasersonlab.shapeless.{ Scannable, Zip }
 import org.lasersonlab.zarr.circe._
 import org.lasersonlab.zarr.utils.Idx
-import org.lasersonlab.zarr.utils.slist.{ HKTDecoder, HKTEncoder }
 import shapeless.Nat
 
 /**
@@ -19,9 +19,9 @@ trait VectorInts[N <: Nat, Idx] {
   type Shape = ShapeT[Idx]
 
   implicit val idx: utils.Idx.T[Idx]
-  implicit def sdec: HKTDecoder[ShapeT]
+  implicit def sdec: DecoderK[ShapeT]
   implicit def idec: Decoder[Idx]
-  implicit def senc: HKTEncoder[ShapeT]
+  implicit def senc: EncoderK[ShapeT]
   implicit def ienc: Encoder[Idx]
   implicit def ti: Indices.Aux[A, ShapeT]
   implicit def traverse: Traverse[A]
@@ -42,9 +42,9 @@ object VectorInts {
 
   def make[N <: Nat, S[_], Idx, _A[_]](
     implicit
-    _sdec: HKTDecoder[S],
+    _sdec: DecoderK[S],
     _idec: Decoder[Idx],
-    _senc: HKTEncoder[S],
+    _senc: EncoderK[S],
     _ienc: Encoder[Idx],
     _idx: Idx.T[Idx],
     _ti: Indices.Aux[_A, S],
@@ -75,6 +75,7 @@ object VectorInts {
   import cats.implicits._
   import lasersonlab.shapeless.slist._
   import shapeless.nat._
+
   implicit val `1` = make[_1, `1`, Int, Vector1]
   implicit val `2` = make[_2, `2`, Int, Vector2]
   implicit val `3` = make[_3, `3`, Int, Vector3]

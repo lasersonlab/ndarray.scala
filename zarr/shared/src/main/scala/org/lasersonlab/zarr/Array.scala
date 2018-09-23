@@ -4,6 +4,7 @@ import cats.implicits._
 import cats.{ Applicative, Eval, Foldable, Traverse }
 import hammerlab.option._
 import hammerlab.path._
+import org.lasersonlab.circe.{ DecoderK, EncoderK }
 import org.lasersonlab.ndarray.ArrayLike
 import org.lasersonlab.shapeless.{ Scannable, Zip }
 import org.lasersonlab.zarr
@@ -13,7 +14,6 @@ import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.untyped.FlatArray
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.utils.Idx.Long.CastException
-import org.lasersonlab.zarr.utils.slist.{ HKTDecoder, HKTEncoder }
 import shapeless.Nat
 
 import scala.util.Try
@@ -300,9 +300,9 @@ object Array {
     arrayLike: ArrayLike.Aux[_A, _Shape],
     dt: FillValue.Decoder[_T],
     et: FillValue.Encoder[_T],
-    sdec: HKTDecoder[_Shape],
+    sdec: DecoderK[_Shape],
     idec: Decoder[Idx],
-    senc: HKTEncoder[_Shape],
+    senc: EncoderK[_Shape],
     idx: Idx.T[Idx],
     traverseShape: Traverse[_Shape],
     zipShape: Zip[_Shape],
@@ -370,7 +370,7 @@ object Array {
     _traverseShape: Traverse[_Shape],
     arrayLike: ArrayLike.Aux[_A, _Shape],
     et: FillValue.Encoder[_T],
-    senc: HKTEncoder[_Shape],
+    senc: EncoderK[_Shape],
     idx: Idx.T[_Idx]
   ):
     Exception |

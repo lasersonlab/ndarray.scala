@@ -7,40 +7,12 @@ import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json, Printer }
 import lasersonlab.shapeless.slist._
 import org.lasersonlab.shapeless.SList.FromList
 import org.lasersonlab.shapeless.SList.FromList.{ TooFew, TooMany }
-
-trait HKTDecoder[F[_]] {
-  def apply[T](implicit d: Decoder[T]): Decoder[F[T]]
-}
-object HKTDecoder {
-  implicit val list: HKTDecoder[List] =
-    new HKTDecoder[List] {
-      def apply[T](implicit d: Decoder[T]): Decoder[List[T]] =
-        new Decoder[List[T]] {
-          def apply(c: HCursor): Result[List[T]] =
-            c.as[List[T]]
-        }
-    }
-}
-
-trait HKTEncoder[F[_]] {
-  def apply[T](implicit d: Encoder[T]): Encoder[F[T]]
-}
-object HKTEncoder {
-  implicit val list: HKTEncoder[List] =
-    new HKTEncoder[List] {
-      def apply[T](implicit d: Encoder[T]): Encoder[List[T]] =
-        new Encoder[List[T]] {
-          def apply(a: List[T]): Json = Json.arr(a.map(d(_)): _*)
-        }
-    }
-}
+import org.lasersonlab.circe.{ CodecK, DecoderK, EncoderK }
 
 trait Codecs {
-  type HKTCodec[F[_]] = HKTEncoder[F] with HKTDecoder[F]
-  type Codec[T] = Encoder[T] with Decoder[T]
 
-  implicit val codec_0: HKTCodec[`0`] =
-    new HKTEncoder[`0`] with HKTDecoder[`0`] {
+  implicit val codec_0: CodecK[`0`] =
+    new EncoderK[`0`] with DecoderK[`0`] {
 
       def apply[T](implicit d: Encoder[T]): Encoder[`0`[T]] =
         new Encoder[`0`[T]] {
@@ -67,8 +39,8 @@ trait Codecs {
         }
     }
 
-  implicit def make[F[_]: Foldable](implicit from: FromList[F]): HKTCodec[F] =
-    new HKTEncoder[F] with HKTDecoder[F] {
+  implicit def makeCodecK[F[_]: Foldable](implicit from: FromList[F]): CodecK[F] =
+    new EncoderK[F] with DecoderK[F] {
       def apply[T](implicit d: Encoder[T]): Encoder[F[T]] =
         new Encoder[F[T]] {
           def apply(a: F[T]): Json =
@@ -103,7 +75,7 @@ trait Codecs {
         }
     }
 
-  implicit def makeEncoder[F[_], T](implicit hkt: HKTEncoder[F], d: Encoder[T]): Encoder[F[T]] = hkt(d)
-  implicit def makeDecoder[F[_], T](implicit hkt: HKTDecoder[F], d: Decoder[T]): Decoder[F[T]] = hkt(d)
+  implicit def makeEncoder[F[_], T](implicit hkt: EncoderK[F], d: Encoder[T]): Encoder[F[T]] = hkt(d)
+  implicit def makeDecoder[F[_], T](implicit hkt: DecoderK[F], d: Decoder[T]): Decoder[F[T]] = hkt(d)
 }
 object Codecs extends Codecs

@@ -32,16 +32,12 @@ class ArrayTest
 
     val chunks = arr.chunks
     ==(chunks.size, 10)
-    // TODO: chunks.shape
 
     val rows = chunks.rows
     ==(rows.length, 10)
-    rows.foreach {
+    rows foreach {
       row ⇒
-        ==(
-          row.size,
-          1
-        )
+        ==(row.size, 1)
     }
 
     val blosc = Blosc()

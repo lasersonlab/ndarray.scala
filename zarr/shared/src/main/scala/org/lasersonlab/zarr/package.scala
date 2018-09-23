@@ -1,15 +1,14 @@
 package org.lasersonlab
 
-import cats.{ Functor, Semigroupal }
+import cats.Functor
 import cats.implicits._
-import io.circe.{ Parser, ParsingFailure }
 import io.circe.generic.AutoDerivation
+import io.circe.{ Parser, ParsingFailure }
 import org.hammerlab.paths.HasPathOps
 import org.lasersonlab.ndarray.Arithmetic
 import org.lasersonlab.shapeless.Zip
 import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.utils.opt.OptCodec
-import org.lasersonlab.zarr.utils.tlist.TListCodec
 
 /**
  * Spec / Format questions:
@@ -29,7 +28,6 @@ import org.lasersonlab.zarr.utils.tlist.TListCodec
 package object zarr
   extends Arithmetic.HasOps
      with OptCodec
-     with TListCodec
      with utils.slist.Codecs
      with HasPathOps
      with hammerlab.either

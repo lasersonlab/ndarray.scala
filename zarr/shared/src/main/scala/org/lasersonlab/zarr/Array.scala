@@ -259,8 +259,7 @@ object Array {
      d: Decoder[DataType.Aux[T]],
      e: Encoder[DataType.Aux[T]],
     dt: FillValue.Decoder[T],
-    et: FillValue.Encoder[T],
-    idx: Idx.T[Idx]
+    et: FillValue.Encoder[T]
   ):
     Exception |
     Aux[v.ShapeT, Idx, v.A, Chunk[v.ShapeT, ?], T]

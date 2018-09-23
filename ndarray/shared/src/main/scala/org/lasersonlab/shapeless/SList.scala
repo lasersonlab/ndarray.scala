@@ -1,34 +1,21 @@
 package org.lasersonlab.shapeless
 
-import cats.{ Applicative, Eval, Reducible, Semigroupal, Traverse }
-import org.lasersonlab.ndarray.Scannable
+import cats.{ Applicative, Eval }
+import cats.implicits._
+import org.lasersonlab.shapeless.TList.{ Base, Utils }
 
-trait TList[T] {
-  def head: T
-  type Tail
-  def tail: Tail
-  def ::[_Tail >: this.type <: TList[T]](h: T): TList.::[T, _Tail] = {
-    val self: _Tail = this
-    new TList[T] {
-      type Tail = _Tail
-      val head = h
-      val tail = self
-    }
+object SList {
+
+  trait SList {
+    type Head
+    def head: Head
+    type Tail[_]
+    def tail: Tail[Head]
   }
-}
-object TList {
-
-  type Aux[_Tail, T] = TList[T] { type Tail = _Tail }
-  type  ::[T, _Tail] = TList[T] { type Tail = _Tail }
+  type Aux[T, _Tail[_]] = SList { type Head = T; type Tail[U] = _Tail[U] }
 
   object :: {
-    def apply[T, _Tail](h: T, t: _Tail): T :: _Tail =
-      new TList[T] {
-        val head: T = h
-        type Tail = _Tail
-        val tail: Tail = t
-      }
-    def unapply[T](l: TList[T]): Option[(T, l.Tail)] =
+    def unapply[L <: SList](l: L): Option[(l.Head, l.Tail[l.Head])] =
       Some(
         (
           l.head,
@@ -38,34 +25,44 @@ object TList {
   }
 
   case object `0` {
-    def ::[T](h: T): `1`[T] = TList.::(h, `0`)
+    def ::[T](h: T) = `1`(h)
   }
   val ⊥ = `0`
   type ⊥ = `0`.type
   type `0`[T] = `0`.type
+  case class `1`[T](head: T)               extends SList { type Head = T; type Tail[U] = `0`[T]; def tail: `0`[T] = `0` }
+  case class `2`[T](head: T, tail: `1`[T]) extends SList { type Head = T; type Tail[U] = `1`[U] }
+  case class `3`[T](head: T, tail: `2`[T]) extends SList { type Head = T; type Tail[U] = `2`[U] }
+  case class `4`[T](head: T, tail: `3`[T]) extends SList { type Head = T; type Tail[U] = `3`[U] }
+  case class `5`[T](head: T, tail: `4`[T]) extends SList { type Head = T; type Tail[U] = `4`[U] }
+  case class `6`[T](head: T, tail: `5`[T]) extends SList { type Head = T; type Tail[U] = `5`[U] }
 
-  type `1`[T] = T :: `0`[T]
-  type `2`[T] = T :: `1`[T]
-  type `3`[T] = T :: `2`[T]
-  type `4`[T] = T :: `3`[T]
-  type `5`[T] = T :: `4`[T]
-  type `6`[T] = T :: `5`[T]
+  trait Cons[In[_]] {
+    type Out[U] <: Aux[U, In]
+    def apply[T](h: T, t: In[T]): Out[T]
+  }
+  object Cons {
+    abstract class Aux[In[_], O[U] <: SList.Aux[U, In]]
+      extends Cons[In] {
+      type Out[U] = O[U]
+    }
+    implicit val cons_0 = new Aux[`0`, `1`] { def apply[T](h: T, t: `0`[T]) = `1`(h   ) }
+    implicit val cons_1 = new Aux[`1`, `2`] { def apply[T](h: T, t: `1`[T]) = `2`(h, t) }
+    implicit val cons_2 = new Aux[`2`, `3`] { def apply[T](h: T, t: `2`[T]) = `3`(h, t) }
+    implicit val cons_3 = new Aux[`3`, `4`] { def apply[T](h: T, t: `3`[T]) = `4`(h, t) }
+    implicit val cons_4 = new Aux[`4`, `5`] { def apply[T](h: T, t: `4`[T]) = `5`(h, t) }
+    implicit val cons_5 = new Aux[`5`, `6`] { def apply[T](h: T, t: `5`[T]) = `6`(h, t) }
+  }
 
-  trait Base[F[_]]
-    extends    Traverse[F]
-       with Semigroupal[F]
-       with   Scannable[F]
-
-  trait Utils[F[_]]
-    extends      Base[F]
-       with Reducible[F]
-
+  implicit class Ops[T, Tail[_]](val tail: Tail[T]) extends AnyVal {
+    def ::(head: T)(implicit cons: Cons[Tail]): cons.Out[T] = cons(head, tail)
+  }
 
   trait instances {
     import cats.implicits._
 
-    private def cons[Tail[_]](implicit tail: Base[Tail]): Utils[λ[T ⇒ Aux[Tail[T], T]]] = {
-      type F[T] = Aux[Tail[T], T]
+    private def cons[Tail[_]](implicit tail: Base[Tail], ev: Cons[Tail]): Utils[ev.Out] = {
+      type F[T] = ev.Out[T]
       val tl = tail
       new Utils[F] {
         override def traverse[G[_]: Applicative, A, B](fa: F[A])(f: A ⇒ G[B]): G[F[B]] =
@@ -75,10 +72,9 @@ object TList {
                 .map2(
                   tl.traverse(t)(f)
                 ) {
-                  ::(_, _)
+                  _ :: _
                 }
           }
-
 
         override def reduceLeftTo [A, B](fa: F[A])(f: A ⇒ B)(g: (B, A) ⇒ B): B =
           fa
@@ -136,17 +132,15 @@ object TList {
               ha :: ta,
               hb :: tb
             ) ⇒
-              ::(
-                (ha, hb),
-                ta.product(tb)
-              )
+              (ha, hb) ::
+              ta.product(tb)
           }
 
         override def scanLeft[A, B](fa: F[A], b: B, f: (B, A) ⇒ B): (F[B], B) = {
           val next = f(b, fa.head)
           val (scanned, total) = tl.scanLeft(fa.tail, next, f)
           (
-            ::(b, scanned),
+            b :: scanned,
             total
           )
         }
@@ -158,7 +152,7 @@ object TList {
               fa.head,
               subtotal
             ),
-            ::(subtotal, tail)
+            subtotal :: tail
           )
         }
       }
@@ -177,6 +171,7 @@ object TList {
 
         def product[A, B](fa: F[A], fb: F[B]): F[(A, B)] = `0`
       }
+
     implicit val utils1 = cons[`0`]
     implicit val utils2 = cons[`1`]
     implicit val utils3 = cons[`2`]
@@ -186,11 +181,3 @@ object TList {
   }
   object instances extends instances
 }
-
-//trait Next[TL[_]] {
-//  type Next[_]
-//}
-//object Next {
-//  type Aux[TL[_], N[_]] = Next[TL] { type Next[U] = N[U] }
-//  implicit val `0`: Aux[TList.`0`, TList.`1`] = ???
-//}

@@ -5,7 +5,7 @@ import cats.{ Applicative, Eval, Traverse }
 import org.lasersonlab.ndarray.ArrayLike
 import org.lasersonlab.zarr.Indices
 
-case class FlatArray[T](shape: List[Int], elems: Seq[T]) {
+case class FlatArray[T](shape: List[Int], elems: Vector[T]) {
   val size :: strides = shape.scanRight(1)(_ * _).toList
   val rank = shape.size
   def apply(idx: Seq[Int]): T = {
@@ -38,16 +38,14 @@ object FlatArray {
       @inline def apply(shape: Shape): FlatArray[Shape] =
         FlatArray(
           shape,
-          rec(
-            shape.toList
-          )
+          rec(shape)
         )
-      private def rec(shape: List[Int]): List[List[Int]] =
+      private def rec(shape: List[Int]): Vector[List[Int]] =
         shape match {
-          case Nil ⇒ Nil
+          case Nil ⇒ Vector()
           case scala.::(h, t) ⇒
             for {
-              h ← (0 until h).toList
+              h ← (0 until h).toVector
               t ← rec(t)
             } yield
               scala.::(h, t)

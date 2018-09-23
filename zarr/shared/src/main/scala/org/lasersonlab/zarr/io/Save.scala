@@ -3,16 +3,9 @@ package org.lasersonlab.zarr.io
 import hammerlab.either._
 import hammerlab.option._
 import hammerlab.path._
-import hammerlab.str._
 import io.circe.{ Encoder, Printer }
 
 import scala.util.Try
-
-case class Basename[T](override val toString: String)
-object Basename {
-  implicit def toString[T](basename: Basename[T]): String = basename.toString
-  implicit def toStr   [T](basename: Basename[T]): Str    = basename.toString
-}
 
 trait Save[T] {
   def apply(t: T, dir: Path): Throwable | Unit
@@ -38,7 +31,6 @@ object Save {
             )
         }
         .toEither
-
     }
 
   implicit def opt[T](implicit save: Save[T]): Save[Opt[T]] =

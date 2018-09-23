@@ -1,7 +1,7 @@
 package org.lasersonlab.shapeless
 
 import cats.implicits._
-import cats.{ Applicative, Eval, Semigroupal, Traverse }
+import cats.{ Applicative, Eval, Reducible, Semigroupal, Traverse }
 import org.lasersonlab.ndarray.Scannable
 import org.lasersonlab.shapeless.Shape.Utils
 import shapeless.{ Nat, Succ }

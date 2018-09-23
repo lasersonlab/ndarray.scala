@@ -1,7 +1,7 @@
 package org.lasersonlab.anndata
 
 import org.lasersonlab.anndata.AnnData.Idx
-import org.lasersonlab.ndarray.TList._
+import org.lasersonlab.ndarray.Shape._
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.Group
 

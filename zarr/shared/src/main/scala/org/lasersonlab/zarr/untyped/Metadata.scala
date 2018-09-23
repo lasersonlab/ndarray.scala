@@ -14,7 +14,6 @@ import org.lasersonlab.zarr.Metadata._
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr._
 import org.lasersonlab.zarr.dtype.DataType
-import org.lasersonlab.zarr.io.Basename
 import org.lasersonlab.zarr.utils.Idx
 
 trait Metadata {
@@ -109,9 +108,4 @@ object Metadata {
             )
       }
     }
-
-  // TODO: are all these basenames necessary?
-  implicit val _basename                 = Basename(basename)
-  implicit def _basenameShape[S[_], Idx] = Basename(basename)
-  implicit def _basenameT    [T   , Idx] = Basename(basename)
 }

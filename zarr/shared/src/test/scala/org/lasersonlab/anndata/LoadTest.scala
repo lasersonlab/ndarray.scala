@@ -1,18 +1,13 @@
 package org.lasersonlab.anndata
 
-import cats.Foldable
 import cats.implicits._
 import hammerlab.path._
+import hammerlab.shapeless._1
 import hammerlab.shapeless.tlist._
-import org.lasersonlab.anndata.AnnData.Idx
 import org.lasersonlab.anndata.loom.{ Obs, Var }
-import org.lasersonlab.ndarray.TList.{ `1`, `2` }
-import org.lasersonlab.zarr
-import org.lasersonlab.zarr.{ Array, Dimension, Suite, VectorInts }
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.dtype.DataType.string
-import org.lasersonlab.zarr.io.Load
-import hammerlab.shapeless._1
+import org.lasersonlab.zarr.{ Dimension, Suite }
 
 class LoadTest
   extends Suite {

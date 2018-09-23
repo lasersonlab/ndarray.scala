@@ -4,7 +4,7 @@ import cats.implicits._
 import hammerlab.path._
 import hammerlab.shapeless.tlist.{ Map ⇒ _, _ }
 import org.lasersonlab.anndata.loom.{ Obs, Var }
-import org.lasersonlab.ndarray.TList.{ `1`, `2` }
+import org.lasersonlab.ndarray.Shape.{ `1`, `2` }
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.dtype.DataType
@@ -47,8 +47,8 @@ class ArrayTest
 
     val blosc = Blosc()
 
-    import org.lasersonlab.ndarray.TList.`2`
-    import org.lasersonlab.ndarray.TList.traverses.traverse_2
+    import org.lasersonlab.ndarray.Shape.`2`
+    import org.lasersonlab.ndarray.Shape.instances.traverse_2
     val expected =
       Seq(
         Chunk[`2`, Float](path / "0.0", 3092 :: 5425 :: TNil, 0 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
@@ -115,10 +115,12 @@ class ArrayTest
   test("1-D longs") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/row_attrs/_Valid")
 
+    // TODO: push idx-type into an implicit param
     val Array(metadata, attrs, chunks) = Array.chunks[Long, _1, Int](path).get
 
     ==(
       metadata,
+      // TODO: allow not specifying type-params explicitly here
       Metadata[Long, `1`, Int](
              shape = Dimension(27998) :: TNil,
              dtype = long,

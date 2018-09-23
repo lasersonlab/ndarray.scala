@@ -68,15 +68,15 @@ object VectorInts {
     }
 
   import cats.implicits._
-  import org.lasersonlab.ndarray.TList
-  import org.lasersonlab.ndarray.TList.traverses._
+  import org.lasersonlab.ndarray.Shape
+  import org.lasersonlab.ndarray.Shape.instances._
   import shapeless.nat._
-  implicit val `1` = make[_1, TList._1, Int, Vector1]
-  implicit val `2` = make[_2, TList._2, Int, Vector2]
-  implicit val `3` = make[_3, TList._3, Int, Vector3]
-  implicit val `4` = make[_4, TList._4, Int, Vector4]
-  implicit val `5` = make[_5, TList._5, Int, Vector5]
-  implicit val `6` = make[_6, TList._6, Int, Vector6]
+  implicit val `1` = make[_1, Shape._1, Int, Vector1]
+  implicit val `2` = make[_2, Shape._2, Int, Vector2]
+  implicit val `3` = make[_3, Shape._3, Int, Vector3]
+  implicit val `4` = make[_4, Shape._4, Int, Vector4]
+  implicit val `5` = make[_5, Shape._5, Int, Vector5]
+  implicit val `6` = make[_6, Shape._6, Int, Vector6]
 
   // TODO: allow constructing from a Seq[Int]?
   //def fromSeq(ints: Seq[Int]): Option[VectorInts]

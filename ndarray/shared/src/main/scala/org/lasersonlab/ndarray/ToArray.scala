@@ -87,21 +87,6 @@ object ToArray
         }
   )
 
-  implicit def bytes[
-    T,
-    Idx <: TList.Aux[Int],
-    B <: Bytes.Aux[Idx, T]
-  ]:
-    Aux[
-      B,
-      T,
-      Idx
-    ] =
-    apply(
-      _.shape,
-      _(_)
-    )
-
   implicit def ndarray[
     Elem,
     _Idx

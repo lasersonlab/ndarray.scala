@@ -29,6 +29,7 @@ package object zarr
   extends Arithmetic.HasOps
      with OptCodec
      with TListCodec
+     with utils.slist.Codecs
      with HasPathOps
      with hammerlab.either
      with hammerlab.math.utils

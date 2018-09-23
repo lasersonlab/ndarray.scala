@@ -60,7 +60,6 @@ object TList {
     extends      Base[F]
        with Reducible[F]
 
-
   trait instances {
     import cats.implicits._
 

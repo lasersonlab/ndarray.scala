@@ -12,6 +12,7 @@ import org.lasersonlab.zarr.io.{ Basename, Load, Save }
 import org.lasersonlab.zarr.untyped.FlatArray
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.utils.Idx.Long.CastException
+import org.lasersonlab.zarr.utils.slist.{ HKTDecoder, HKTEncoder }
 import shapeless.Nat
 
 import scala.util.Try
@@ -275,10 +276,10 @@ object Array {
       arrayLike = arrayLike,
       dt = dt,
       et = et,
-      ds = ds,
-      cds = cds,
-      es = es,
-      ces = ces,
+      sdec = sdec,
+      idec = idec,
+      senc = senc,
+      ienc = ienc,
       idx = idx,
       traverseShape = traverseShape,
       semigroupalShape = semigroupalShape,
@@ -302,10 +303,10 @@ object Array {
     arrayLike: ArrayLike.Aux[_A, _Shape[Chunk.Idx]],
     dt: FillValue.Decoder[_T],
     et: FillValue.Encoder[_T],
-    ds: Decoder[_Shape[Idx]],
-    cds: Decoder[_Shape[Chunk.Idx]],
-    es: Encoder[_Shape[Idx]],
-    ces: Encoder[_Shape[Chunk.Idx]],
+    sdec: HKTDecoder[_Shape],
+    idec: Decoder[Idx],
+    senc: HKTEncoder[_Shape],
+    ienc: Encoder[Idx],
     idx: Idx.T[Idx],
     traverseShape: Traverse[_Shape],
     semigroupalShape: Semigroupal[_Shape],
@@ -375,8 +376,8 @@ object Array {
     _traverseShape: Traverse[_Shape],
     arrayLike: ArrayLike.Aux[_A, _Shape[Idx]],
     et: FillValue.Encoder[_T],
-    es: Encoder[_Shape[_Idx]],
-    ces: Encoder[_Shape[Idx]],
+    senc: HKTEncoder[_Shape],
+    es: Encoder[_Idx],
     idx: Idx.T[_Idx]
   ):
     Exception |

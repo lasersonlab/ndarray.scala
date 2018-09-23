@@ -1,18 +1,19 @@
 package org.lasersonlab.zarr
 
-import cats.{ Functor, Semigroupal, Traverse }
 import cats.implicits._
-import circe.Decoder.Result
-import circe._
-import circe.parser._
+import cats.{ Functor, Semigroupal, Traverse }
 import hammerlab.option._
 import hammerlab.path._
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.Order.C
+import org.lasersonlab.zarr.circe.Decoder.Result
+import org.lasersonlab.zarr.circe._
+import org.lasersonlab.zarr.circe.parser._
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Basename
+import org.lasersonlab.zarr.utils.slist.HKTEncoder
 
 case class Metadata[_T, _Shape[_], _Idx](
    shape: _Shape[Dimension[_Idx]],
@@ -141,13 +142,11 @@ object Metadata {
 
   implicit def encoder[
         T: FillValue.Encoder,
-    Shape[_] : Traverse,
-      Idx
+    Shape[_] : Traverse : HKTEncoder,
+      Idx : Encoder
   ](
     implicit
-    datatypeEncoder: Encoder[DataType.Aux[T]],
-    ds: Encoder[Shape[Idx]],
-    cds: Encoder[Shape[Chunk.Idx]]
+    datatypeEncoder: Encoder[DataType.Aux[T]]
   ):
     Encoder[
       Metadata[
@@ -161,6 +160,7 @@ object Metadata {
       def apply(m: Metadata[T, Shape, Idx]): Json = {
         implicit val datatype = m.dtype
         implicit val enc = FillValue.encoder[T]
+        //implicit val shapeIdxEnc = join[Shape, Idx]
         Json.obj(
           "shape" → encode(m.shape.map(_.arr)),
           "chunks" → encode(m.shape.map(_.chunk)),

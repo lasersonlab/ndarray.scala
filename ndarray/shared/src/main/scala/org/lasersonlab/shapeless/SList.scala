@@ -1,17 +1,20 @@
 package org.lasersonlab.shapeless
 
-import cats.{ Applicative, Eval }
+import cats.{ Applicative, Eval, Reducible, Semigroupal, Traverse }
 import cats.implicits._
-import org.lasersonlab.shapeless.TList.{ Base, Utils }
+import hammerlab.either._
+import org.lasersonlab.ndarray.Scannable
+import org.lasersonlab.shapeless.SList.FromList.{ Err, TooFew, TooMany }
+
+trait SList {
+  type Head
+  def head: Head
+  type Tail[_]
+  def tail: Tail[Head]
+}
 
 object SList {
 
-  trait SList {
-    type Head
-    def head: Head
-    type Tail[_]
-    def tail: Tail[Head]
-  }
   type Aux[T, _Tail[_]] = SList { type Head = T; type Tail[U] = _Tail[U] }
 
   object :: {
@@ -26,11 +29,12 @@ object SList {
 
   case object `0` {
     def ::[T](h: T) = `1`(h)
+    val size = 0
   }
-  val ⊥ = `0`
-  type ⊥ = `0`.type
+  val   ⊥      = `0`
+  type  ⊥      = `0`.type
   type `0`[T] = `0`.type
-  case class `1`[T](head: T)               extends SList { type Head = T; type Tail[U] = `0`[T]; def tail: `0`[T] = `0` }
+  case class `1`[T](head: T              ) extends SList { type Head = T; type Tail[U] = `0`[U]; def tail: `0`[T] = `0` }
   case class `2`[T](head: T, tail: `1`[T]) extends SList { type Head = T; type Tail[U] = `1`[U] }
   case class `3`[T](head: T, tail: `2`[T]) extends SList { type Head = T; type Tail[U] = `2`[U] }
   case class `4`[T](head: T, tail: `3`[T]) extends SList { type Head = T; type Tail[U] = `3`[U] }
@@ -56,12 +60,38 @@ object SList {
 
   implicit class Ops[T, Tail[_]](val tail: Tail[T]) extends AnyVal {
     def ::(head: T)(implicit cons: Cons[Tail]): cons.Out[T] = cons(head, tail)
+    def size(implicit base: Base[Tail]): Int = base.size
   }
+
+  trait ToList[F[_]] {
+    def apply[T](f: F[T]): List[T]
+  }
+
+  trait FromList[F[_]] {
+    val size: Int
+    def apply[T](l: List[T]): Err | F[T]
+  }
+  object FromList {
+    sealed trait Err
+    case class TooFew [T](  gap:  Int   ) extends Err
+    case class TooMany[T](extra: List[T]) extends Err
+  }
+
+  trait Base[F[_]]
+    extends    Traverse[F]
+       with Semigroupal[F]
+       with   Scannable[F]
+       with      ToList[F]
+       with    FromList[F]
+
+  trait Utils[F[_]]
+    extends      Base[F]
+       with Reducible[F]
 
   trait instances {
     import cats.implicits._
 
-    private def cons[Tail[_]](implicit tail: Base[Tail], ev: Cons[Tail]): Utils[ev.Out] = {
+    def cons[Tail[_]](implicit tail: Base[Tail], ev: Cons[Tail]): Utils[ev.Out] = {
       type F[T] = ev.Out[T]
       val tl = tail
       new Utils[F] {
@@ -155,12 +185,30 @@ object SList {
             subtotal :: tail
           )
         }
+
+        // ToList
+        override def apply[T](f: F[T]): List[T] = f.head :: tail(f.tail)
+
+        val size = tail.size + 1
+        // FromList
+        override def apply[T](l: List[T]): Err | F[T] =
+          l match {
+            case Nil ⇒ L(TooFew(size))
+            case scala.::(h, t) ⇒
+              tail(t)
+                .map {
+                  t ⇒
+                    h :: t
+                }
+          }
       }
     }
 
     implicit val utils0 =
       new Base[`0`] {
         type F[T] = `0`[T]
+        val size = 0
+
         def traverse[G[_], A, B](fa: F[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[F[B]] = ev.pure(`0`)
 
         def foldLeft [A, B](fa: F[A],  b:      B )(f: (B,      A ) ⇒      B ):      B  =  b
@@ -170,6 +218,13 @@ object SList {
         def scanRight[A, B](fa: F[A], b: B, f: (A, B) ⇒ B): (  B, F[B]) = (b, `0`)
 
         def product[A, B](fa: F[A], fb: F[B]): F[(A, B)] = `0`
+
+        def apply[T](f: `0`[T]): List[T] = Nil
+        def apply[T](l: List[T]): Err | F[T] =
+          l match {
+            case   Nil ⇒ R(`0`)
+            case extra ⇒ L(TooMany(extra))
+          }
       }
 
     implicit val utils1 = cons[`0`]

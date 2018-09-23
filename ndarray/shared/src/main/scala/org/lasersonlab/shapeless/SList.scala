@@ -74,10 +74,10 @@ object SList {
   }
 
   trait Base[F[_]]
-    extends    Traverse[F]
-       with Semigroupal[F]
-       with   Scannable[F]
-       with    FromList[F]
+    extends  Traverse[F]
+       with       Zip[F]
+       with Scannable[F]
+       with  FromList[F]
 
   trait Utils[F[_]]
     extends      Base[F]
@@ -151,14 +151,14 @@ object SList {
               .foldRight(lb)(f)
           )
 
-        override def product[A, B](fa: F[A], fb: F[B]): F[(A, B)] =
+        override def apply[A, B](fa: F[A], fb: F[B]): F[(A, B)] =
           (fa, fb) match {
             case (
               ha :: ta,
               hb :: tb
             ) ⇒
               (ha, hb) ::
-              ta.product(tb)
+              tail(ta, tb)
           }
 
         override def scanLeft[A, B](fa: F[A], b: B, f: (B, A) ⇒ B): (F[B], B) = {
@@ -209,7 +209,7 @@ object SList {
         def scanLeft [A, B](fa: F[A], b: B, f: (B, A) ⇒ B): (F[B],  B ) = (`0`, b)
         def scanRight[A, B](fa: F[A], b: B, f: (A, B) ⇒ B): (  B, F[B]) = (b, `0`)
 
-        def product[A, B](fa: F[A], fb: F[B]): F[(A, B)] = `0`
+        def apply[A, B](fa: F[A], fb: F[B]): F[(A, B)] = `0`
 
         def apply[T](f: `0`[T]): List[T] = Nil
         def apply[T](l: List[T]): Err | F[T] =

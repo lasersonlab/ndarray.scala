@@ -1,14 +1,15 @@
 package org.lasersonlab.zarr
 
 import cats.implicits._
-import cats.{ Applicative, Eval, Foldable, Monad, Semigroupal, Traverse }
+import cats.{ Applicative, Eval, Foldable, Traverse }
 import hammerlab.option._
 import hammerlab.path._
 import org.lasersonlab.ndarray.{ ArrayLike, Scannable }
+import org.lasersonlab.shapeless.Zip
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.circe.{ Decoder, Encoder }
 import org.lasersonlab.zarr.dtype.DataType
-import org.lasersonlab.zarr.io.{ Basename, Load, Save }
+import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.untyped.FlatArray
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.utils.Idx.Long.CastException
@@ -114,8 +115,6 @@ object Array {
       )
     )
 
-  import Chunk.Idx
-
   /**
    * Load an ND-array of chunks from a [[Path directory]]
    *
@@ -123,7 +122,7 @@ object Array {
    */
   private def chunks[
         _T,
-    Shape[_]: Traverse : Semigroupal : Scannable,
+    Shape[_]: Traverse : Zip : Scannable,
       Idx,
         A[_]: Traverse
   ](
@@ -144,7 +143,6 @@ object Array {
       ]
     ]
   = {
-    import Idx.Ops
     import _idx._
 
     for {
@@ -165,17 +163,18 @@ object Array {
           indices(chunkRanges)
             .map {
               idx: Shape[Chunk.Idx] ⇒
+                import Zip.Ops
                 for {
                   chunkShape ←
                     // chunks in the last "row" of any dimension may be smaller
                     shape
-                      .product(idx)
+                      .zip(idx)
                       .map {
                         case (Dimension(arr, chunk), idx) ⇒
                           val start = idx * chunk
                           val end = arr min ((idx + 1) * chunk)
 
-                          (end - start).int
+                          int { end - start }
                       }
                       .sequence[
                         CastException | ?,
@@ -281,7 +280,7 @@ object Array {
       senc = senc,
       idx = idx,
       traverseShape = traverseShape,
-      semigroupalShape = semigroupalShape,
+      zipShape = zipShape,
       scannable = scannable
     )
   }
@@ -307,7 +306,7 @@ object Array {
     senc: HKTEncoder[_Shape],
     idx: Idx.T[Idx],
     traverseShape: Traverse[_Shape],
-    semigroupalShape: Semigroupal[_Shape],
+    zipShape: Zip[_Shape],
     scannable: Scannable[_Shape]
   ):
     Exception |
@@ -342,8 +341,6 @@ object Array {
               filters = metadata.filters
             )
 
-          import idx.encoder
-
           apply[
             metadata.T,
             List,
@@ -360,7 +357,7 @@ object Array {
 
   def apply[
     _T,
-    _Shape[_]: Semigroupal : Scannable,
+    _Shape[_]: Scannable : Zip,
     _Idx,
     _A[_]
   ](
@@ -411,7 +408,7 @@ object Array {
         val foldableChunk = Chunk.foldable
         val traverseShape = _traverseShape
 
-        import idx.{ arithmeticInt, int, encoder }
+        import idx.{ arithmeticInt, encoder, int }
 
         val metadata = _metadata
         val datatype = metadata.dtype
@@ -438,12 +435,13 @@ object Array {
         implicit val eappT2: Applicative[λ[U ⇒ CastException | T2[U]]] = ???
 
         def apply(idx: Shape): T = {
+          import Zip.Ops
           val (
             chunkIdx,
             offset
           ) =
             idx
-              .product(shape)
+              .zip(shape)
               .map {
                 case (idx, Dimension(_, chunk)) ⇒
                   (

@@ -50,4 +50,4 @@ trait data {
       .stripMargin
 }
 
-object data$ extends data
+object data extends data

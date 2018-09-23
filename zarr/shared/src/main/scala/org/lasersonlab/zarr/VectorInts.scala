@@ -3,6 +3,7 @@ package org.lasersonlab.zarr
 import cats.{ Semigroupal, Traverse }
 import org.lasersonlab.ndarray.Vectors._
 import org.lasersonlab.ndarray.{ ArrayLike, Scannable }
+import org.lasersonlab.shapeless.Zip
 import org.lasersonlab.zarr.circe._
 import org.lasersonlab.zarr.utils.slist.{ HKTDecoder, HKTEncoder }
 import shapeless.Nat
@@ -23,7 +24,7 @@ trait VectorInts[N <: Nat, Idx] {
   implicit def ti: Indices.Aux[A, ShapeT]
   implicit def traverse: Traverse[A]
   implicit def traverseShape: Traverse[ShapeT]
-  implicit def semigroupalShape: Semigroupal[ShapeT]
+  implicit def zipShape: Zip[ShapeT]
   implicit def scannable: Scannable[ShapeT]
   implicit def arrayLike: ArrayLike.Aux[A, ShapeT]
 }
@@ -46,7 +47,7 @@ object VectorInts {
     _ti: Indices.Aux[_A, S],
     _traverse: Traverse[_A],
     _traverseShape: Traverse[S],
-    _semigroupalShape: Semigroupal[S],
+    _zipShape: Zip[S],
     _scannable: Scannable[S],
     _arrayLike: ArrayLike.Aux[_A, S]
   ):
@@ -62,7 +63,7 @@ object VectorInts {
       override implicit val ti = _ti
       override implicit val traverse = _traverse
       override implicit val traverseShape = _traverseShape
-      override implicit val semigroupalShape = _semigroupalShape
+      override implicit val zipShape = _zipShape
       override implicit val scannable = _scannable
       implicit val arrayLike = _arrayLike
     }

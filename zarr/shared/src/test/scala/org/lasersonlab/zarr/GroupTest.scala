@@ -1,11 +1,11 @@
 package org.lasersonlab.zarr
 
 import hammerlab.path._
-import org.hammerlab.cmp.CanEq.dsl
-import org.hammerlab.cmp.Show
+import org.hammerlab.cmp.CanEq
 import org.hammerlab.test.Cmp
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.Format.`2`
+import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.untyped.Struct
 
@@ -55,7 +55,7 @@ class GroupTest
     import org.lasersonlab.zarr.cmp.cmpStruct
 
     val expected =
-      zarr.Metadata[Struct, List, Int](
+      zarr.Metadata(
         shape = List(Dimension(27998)),
         dtype = datatype,
         fill_value =
@@ -80,26 +80,28 @@ class GroupTest
        expected
     )
 
-    {
-      // use a custom comparator for the untyped version
-      import zarr.cmp.metadataCmp
+    val actual = `var2`.metadata
 
-      val cmp = metadataCmp[List]
+    // auto-Cmp-derivation doesn't work  for `var2` because its element-type is unknown at compile-time
+    // here we verify its the fields individually
+    ==( actual       shape, expected       shape )
+    ==( actual  compressor, expected  compressor )
+    ==( actual       order, expected       order )
+    ==( actual zarr_format, expected zarr_format )
+    ==( actual     filters, expected     filters )
 
-      !![Cmp[untyped.Metadata.S[List, Int]]]
+    // drop opaque dependent-type from the left side
+    ==( actual dtype: DataType, expected dtype )
 
-      ==[
-        untyped.Metadata.S[List, Int],
-        untyped.Metadata.S[List, Int],
-        cmp.Diff
-      ](
-        `var2`.metadata: untyped.Metadata.S[List, Int],
-        expected: untyped.Metadata.S[List, Int]
-      )(
-        cmp,
-        Show.showAny[cmp.Diff]
-      )
-    }
+    // TODO: fold fill-values into datatype
+    ==( actual. fill_value.asInstanceOf[Struct], expected fill_value )
+
+    // casting to a fully-typed representation allows normal checking to succeed; this is redundant with the checks
+    // above, but both are included for demonstration purposes
+    ==(
+      actual.asInstanceOf[Metadata[Struct, List, Int]],
+      expected
+    )
   }
 
   test("save") {

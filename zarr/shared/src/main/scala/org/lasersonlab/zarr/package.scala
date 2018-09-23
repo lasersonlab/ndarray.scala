@@ -6,6 +6,7 @@ import io.circe.{ Parser, ParsingFailure }
 import io.circe.generic.AutoDerivation
 import org.hammerlab.paths.HasPathOps
 import org.lasersonlab.ndarray.Arithmetic
+import org.lasersonlab.shapeless.Zip
 import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.utils.opt.OptCodec
 import org.lasersonlab.zarr.utils.tlist.TListCodec
@@ -67,8 +68,9 @@ package object zarr
     def apply(arr: Chunk.Idx): Dimension[Chunk.Idx] = Dimension(arr, arr)
   }
   object Dimensions {
+    import Zip.Ops
     def apply[
-      Shape[_]: Semigroupal : Functor,
+      Shape[_]: Zip : Functor,
       Idx
     ](
       arr: Shape[Idx],
@@ -76,7 +78,7 @@ package object zarr
     ):
       Shape[Dimension[Idx]] =
       arr
-        .product(chunks)
+        .zip(chunks)
         .map {
           case (arr, chunk) ⇒
             Dimension(arr, chunk)

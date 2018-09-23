@@ -1,11 +1,10 @@
 package org.lasersonlab.zarr
 
-import circe.Encoder
 import circe.parser._
 import lasersonlab.shapeless.slist._
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.dtype.DataType._
-import org.lasersonlab.zarr.data$._
+import org.lasersonlab.zarr.data._
 
 class MetadataTest
   extends Suite {
@@ -21,11 +20,7 @@ class MetadataTest
       `col_attrs/DonorID/.zarray`
     ) should be(
       Right(
-        Metadata[
-          String,
-          `1`,
-          Int
-        ](
+        Metadata(
            shape = Dimension(5425) :: ⊥,
            dtype = string(1),
           fill_value = ""
@@ -45,11 +40,7 @@ class MetadataTest
       `matrix/.zarray`
     ) should be(
       Right(
-        Metadata[
-          Float,
-          `2`,
-          Int
-        ](
+        Metadata(
            shape = Dimension(27998) :: Dimension(5425) :: ⊥,
            dtype = float,
           fill_value = 0.0f

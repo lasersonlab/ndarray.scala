@@ -8,6 +8,7 @@ import cats.implicits._
 import hammerlab.option._
 import hammerlab.path._
 import org.lasersonlab.ndarray.Scannable
+import org.lasersonlab.shapeless.Zip
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.Chunk.Idx
 
@@ -25,7 +26,7 @@ import org.lasersonlab.zarr.Chunk.Idx
  * @tparam T element type
  */
 case class Chunk[
-  ShapeT[_],
+  ShapeT[_] : Foldable : Zip,
   T
 ](
   path: Path,
@@ -37,9 +38,7 @@ case class Chunk[
   sizeHint: Opt[Int]
 )(
   implicit
-  val dtype: DataType.Aux[T],
-  val product: Semigroupal[ShapeT],
-  val shapeFoldable: Foldable[ShapeT]
+  val dtype: DataType.Aux[T]
 ) {
 
   type Shape = ShapeT[Idx]
@@ -66,11 +65,12 @@ case class Chunk[
 
   @inline def apply(idx: Int): T = dtype.read(buff, idx)
 
+  import Zip.Ops
   def apply(idx: Shape): T =
     dtype.read(
       buff,
       idx
-        .product(strides)
+        .zip(strides)
         .foldLeft(0) {
           case (sum, (idx, stride)) ⇒
             sum + idx * stride
@@ -110,7 +110,7 @@ object Chunk {
    * Does some error-checking, and computes the per-dimension strides and total size of the chunk
    */
   def apply[
-    ShapeT[_]: Foldable : Scannable,
+    ShapeT[_]: Foldable : Scannable : Zip,
     T
   ](
           path: Path,
@@ -120,8 +120,7 @@ object Chunk {
       sizeHint: Opt[Int] = None
   )(
     implicit
-    dt: DataType.Aux[T],
-    product: Semigroupal[ShapeT]
+    dt: DataType.Aux[T]
   ):
     Exception |
     Chunk[ShapeT, T]

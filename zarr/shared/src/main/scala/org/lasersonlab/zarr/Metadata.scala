@@ -1,9 +1,10 @@
 package org.lasersonlab.zarr
 
 import cats.implicits._
-import cats.{ Functor, Semigroupal, Traverse }
+import cats.{ Functor, Traverse }
 import hammerlab.option._
 import hammerlab.path._
+import org.lasersonlab.shapeless.Zip
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Format._
@@ -13,7 +14,7 @@ import org.lasersonlab.zarr.circe._
 import org.lasersonlab.zarr.circe.parser._
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Basename
-import org.lasersonlab.zarr.utils.slist.HKTEncoder
+import org.lasersonlab.zarr.utils.slist.{ HKTDecoder, HKTEncoder }
 
 case class Metadata[_T, _Shape[_], _Idx](
    shape: _Shape[Dimension[_Idx]],
@@ -40,16 +41,14 @@ object Metadata {
   implicit def _datatype  [T, S[_]](implicit md: Metadata[T, S, _]): DataType.Aux[T] = md.     dtype
 
   def apply[
-        T : FillValue.Decoder,
-    Shape[_]: Functor : Semigroupal,
-      Idx
+        T   : FillValue.Decoder,
+    Shape[_]: Functor : Zip : HKTDecoder,
+      Idx   : Decoder
   ](
     dir: Path
   )(
     implicit
-    d: Decoder[DataType.Aux[T]],
-    ds: Decoder[Shape[Idx]],
-    cds: Decoder[Shape[Chunk.Idx]]
+    d: Decoder[DataType.Aux[T]]
   ):
     Exception |
     Metadata[T, Shape, Idx]
@@ -76,14 +75,13 @@ object Metadata {
    */
   implicit def decoder[
         T   : FillValue.Decoder,
-    Shape[_]: Functor : Semigroupal,
+    Shape[_]: Functor : Zip,
       Idx
   ](
     implicit
     datatypeDecoder: Decoder[DataType.Aux[T]],
-    // TODO: HKT Shape decoder
-    ds: Decoder[Shape[Idx]],
-    cds: Decoder[Shape[Chunk.Idx]]
+    ds: HKTDecoder[Shape],
+    ids: Decoder[Idx]
   ):
     Decoder[
       Metadata[

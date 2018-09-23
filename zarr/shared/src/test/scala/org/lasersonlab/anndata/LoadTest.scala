@@ -3,7 +3,7 @@ package org.lasersonlab.anndata
 import cats.implicits._
 import hammerlab.path._
 import hammerlab.shapeless._1
-import hammerlab.shapeless.tlist._
+import lasersonlab.shapeless.slist._
 import org.lasersonlab.anndata.loom.{ Obs, Var }
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.dtype.DataType.string
@@ -18,12 +18,12 @@ class LoadTest
 
     implicit val AnnData(x, obs, v, uns) = ad
 
-    ==(x.shape, Dimension(5425, 299) :: Dimension(27998) :: TNil)
+    ==(x.shape, Dimension(5425, 299) :: Dimension(27998) :: ⊥)
 
     ==(x.foldLeft(0.0f)(_ + _), 8596396.0f)
 
-    ==(obs.shape, Dimension( 5425) :: TNil)
-    ==(  v.shape, Dimension(27998) :: TNil)
+    ==(obs.shape, Dimension( 5425) :: ⊥)
+    ==(  v.shape, Dimension(27998) :: ⊥)
 
     ==(uns.arrays.size, 79)
     ==(uns.groups.size, 0)

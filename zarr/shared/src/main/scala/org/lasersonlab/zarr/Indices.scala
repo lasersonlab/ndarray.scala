@@ -3,8 +3,6 @@ package org.lasersonlab.zarr
 import cats.implicits._
 import cats.{ Id, Traverse }
 import lasersonlab.shapeless.slist._
-//import hammerlab.shapeless.tlist._
-//import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.ndarray.Vectors
 import org.lasersonlab.ndarray.Vectors._
 import shapeless.Lazy
@@ -13,18 +11,17 @@ import shapeless.Lazy
  * Iterate over an N-dimensional range of integers (provided as a `Shape`), stored as an [[A]]
  */
 trait Indices[A[_]] {
-  // TODO: make Shape a HKT, add Idx type
-  type Shape
-  def apply(shape: Shape): A[Shape]
+  type Shape[_]
+  def apply(shape: Shape[Int]): A[Shape[Int]]
 }
 object Indices {
 
-  type Aux[A[_], _Shape] = Indices[A] { type Shape = _Shape }
+  type Aux[A[_], _Shape[_]] = Indices[A] { type Shape[U] = _Shape[U] }
 
-  implicit val tnil: Aux[Id, ⊥] =
+  implicit val indices_0: Aux[Id, `0`] =
     new Indices[Id] {
-      type Shape = ⊥
-      def apply(tnil: ⊥): Id[⊥] = tnil
+      type Shape[T] = `0`[T]
+      override def apply(⊥ : `0`[Int]): ⊥ = ⊥
     }
 
   // NOTE: the compiler doesn't use this to derive instances for `Vectors` types
@@ -36,14 +33,14 @@ object Indices {
   ):
   Aux[
     Vectors.Aux[?, Row],
-    Int :: TL
+    cons.Out
   ] =
     new Indices[Vectors.Aux[?, Row]] {
-      type Shape = Int :: TL
-      def apply(shape: Shape): Vectors.Aux[Shape, Row] =
+      type Shape[U] = cons.Out[U]
+      def apply(shape: Shape[Int]): Vectors.Aux[Shape[Int], Row] =
         shape match {
           case h :: t ⇒
-            Vectors.make[Shape, Row](
+            Vectors.make[Shape[Int], Row](
               (0 until h)
                 .map {
                   i ⇒
@@ -64,33 +61,33 @@ object Indices {
   // The auto-derivations needed below fail, seemingly due to unification issues / general inability to work with HKTs,
   // so here are some manual instances:
 
-  implicit val     indices1:      Indices.Aux[Vector1, `1`[Int]]  =
+  implicit val     indices1:      Indices.Aux[Vector1, `1`]  =
   new Indices[Vector1] {
-    type Shape = `1`[Int]
-    def apply(shape: Shape): Vector1[Shape] =
+    type Shape[T] = `1`[T]
+    def apply(shape: Shape[Int]): Vector1[Shape[Int]] =
       shape match {
         case n :: ⊥ ⇒
-          (0 until n).map[Shape, Vector[Shape]]{ _ :: ⊥ }
+          (0 until n).map[Shape[Int], Vector[Shape[Int]]]{ _ :: ⊥ }
       }
   }
 
   // TODO: this crashes the compiler if it is searched for via `cons` above
-  implicit val lazyIndices1: Lazy[Indices.Aux[Vector1, `1`[Int]]] = Lazy(indices1)
+  implicit val lazyIndices1: Lazy[Indices.Aux[Vector1, `1`]] = Lazy(indices1)
 
-  implicit val     indices2:      Indices.Aux[Vector2, `2`[Int]]  = Indices.cons[`1`[Int], Vector1]
-  implicit val lazyIndices2: Lazy[Indices.Aux[Vector2, `2`[Int]]] = Lazy(indices2)
+  implicit val     indices2:      Indices.Aux[Vector2, `2`]  = Indices.cons[`1`, Vector1]
+  implicit val lazyIndices2: Lazy[Indices.Aux[Vector2, `2`]] = Lazy(indices2)
 
-  implicit val     indices3:      Indices.Aux[Vector3, `3`[Int]]  = Indices.cons[`2`[Int], Vector2]
-  implicit val lazyIndices3: Lazy[Indices.Aux[Vector3, `3`[Int]]] = Lazy(indices3)
+  implicit val     indices3:      Indices.Aux[Vector3, `3`]  = Indices.cons[`2`, Vector2]
+  implicit val lazyIndices3: Lazy[Indices.Aux[Vector3, `3`]] = Lazy(indices3)
 
-  implicit val     indices4:      Indices.Aux[Vector4, `4`[Int]]  = Indices.cons[`3`[Int], Vector3]
-  implicit val lazyIndices4: Lazy[Indices.Aux[Vector4, `4`[Int]]] = Lazy(indices4)
+  implicit val     indices4:      Indices.Aux[Vector4, `4`]  = Indices.cons[`3`, Vector3]
+  implicit val lazyIndices4: Lazy[Indices.Aux[Vector4, `4`]] = Lazy(indices4)
 
-  implicit val     indices5:      Indices.Aux[Vector5, `5`[Int]]  = Indices.cons[`4`[Int], Vector4]
-  implicit val lazyIndices5: Lazy[Indices.Aux[Vector5, `5`[Int]]] = Lazy(indices5)
+  implicit val     indices5:      Indices.Aux[Vector5, `5`]  = Indices.cons[`4`, Vector4]
+  implicit val lazyIndices5: Lazy[Indices.Aux[Vector5, `5`]] = Lazy(indices5)
 
-  implicit val     indices6:      Indices.Aux[Vector6, `6`[Int]]  = Indices.cons[`5`[Int], Vector5]
-  implicit val lazyIndices6: Lazy[Indices.Aux[Vector6, `6`[Int]]] = Lazy(indices6)
+  implicit val     indices6:      Indices.Aux[Vector6, `6`]  = Indices.cons[`5`, Vector5]
+  implicit val lazyIndices6: Lazy[Indices.Aux[Vector6, `6`]] = Lazy(indices6)
 
 //  implicit val seq: Indices.Aux[Seq, Seq[Int]] =
 //    new Indices[Seq] {

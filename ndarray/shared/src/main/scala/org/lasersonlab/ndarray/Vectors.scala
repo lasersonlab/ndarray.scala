@@ -13,6 +13,7 @@ trait Vectors[T] {
 }
 
 object Vectors {
+  // TODO: swap order, may allow partial-unification
   type Aux[T, _R[_]] = Vectors[T] { type Row[U] = _R[U] }
 
   /**

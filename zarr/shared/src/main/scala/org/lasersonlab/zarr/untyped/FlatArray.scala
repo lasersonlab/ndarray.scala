@@ -25,17 +25,17 @@ case class FlatArray[T](shape: List[Int], elems: Vector[T]) {
 }
 
 object FlatArray {
-  implicit val arrayLike: ArrayLike.Aux[FlatArray, List[Int]] =
+  implicit val arrayLike: ArrayLike.Aux[FlatArray, List] =
     new ArrayLike[FlatArray] {
-      type Shape = List[Int]
-      @inline def shape(a: FlatArray[_]): Shape = a.shape
-      @inline def apply[T](a: FlatArray[T], idx: Shape): T = a(idx)
+      type Shape[T] = List[T]
+      @inline def shape(a: FlatArray[_]): Shape[Int] = a.shape
+      @inline def apply[T](a: FlatArray[T], idx: Shape[Int]): T = a(idx)
     }
 
-  implicit val list: Indices.Aux[FlatArray, List[Int]] =
+  implicit val list: Indices.Aux[FlatArray, List] =
     new Indices[FlatArray] {
-      type Shape = List[Int]
-      @inline def apply(shape: Shape): FlatArray[Shape] =
+      type Shape[T] = List[T]
+      @inline override def apply(shape: Shape[Int]): FlatArray[Shape[Int]] =
         FlatArray(
           shape,
           rec(shape)

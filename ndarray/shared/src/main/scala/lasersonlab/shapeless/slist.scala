@@ -27,5 +27,7 @@ trait slist
 
   type Cons[In[_]] = s.Cons[In]
   val Cons = s.Cons
+
+  val :: = s.::
 }
 object slist extends slist

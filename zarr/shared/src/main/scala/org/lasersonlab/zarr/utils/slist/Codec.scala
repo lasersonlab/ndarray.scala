@@ -9,9 +9,28 @@ import org.lasersonlab.shapeless.SList.{ FromList, ToList }
 trait HKTDecoder[F[_]] {
   def apply[T](implicit d: Decoder[T]): Decoder[F[T]]
 }
+object HKTDecoder {
+  implicit val list: HKTDecoder[List] =
+    new HKTDecoder[List] {
+      def apply[T](implicit d: Decoder[T]): Decoder[List[T]] =
+        new Decoder[List[T]] {
+          override def apply(c: HCursor): Result[List[T]] =
+            c.as[List[T]]
+        }
+    }
+}
 
 trait HKTEncoder[F[_]] {
   def apply[T](implicit d: Encoder[T]): Encoder[F[T]]
+}
+object HKTEncoder {
+  implicit val list: HKTEncoder[List] =
+    new HKTEncoder[List] {
+      def apply[T](implicit d: Encoder[T]): Encoder[List[T]] =
+        new Encoder[List[T]] {
+          def apply(a: List[T]): Json = Json.arr(a.map(d(_)): _*)
+        }
+    }
 }
 
 trait Codecs {
@@ -21,12 +40,12 @@ trait Codecs {
   implicit val codec_0: HKTCodec[`0`] =
     new HKTEncoder[`0`] with HKTDecoder[`0`] {
 
-      override def apply[T](implicit d: Encoder[T]): Encoder[`0`[T]] =
+      def apply[T](implicit d: Encoder[T]): Encoder[`0`[T]] =
         new Encoder[`0`[T]] {
           override def apply(a: `0`[T]): Json = Json.arr()
         }
 
-      override def apply[T](implicit d: Decoder[T]): Decoder[`0`[T]] =
+      def apply[T](implicit d: Decoder[T]): Decoder[`0`[T]] =
         new Decoder[`0`[T]] {
           override def apply(c: HCursor): Result[`0`[T]] =
             c
@@ -50,15 +69,15 @@ trait Codecs {
     new HKTEncoder[F] with HKTDecoder[F] {
       override def apply[T](implicit d: Encoder[T]): Encoder[F[T]] =
         new Encoder[F[T]] {
-          override def apply(a: F[T]): Json =
+          def apply(a: F[T]): Json =
             Json.arr(
               to(a)
-              .map(d(_))
-                : _*
+                .map(d(_))
+                  : _*
             )
         }
 
-      override def apply[T](implicit d: Decoder[T]): Decoder[F[T]] =
+      def apply[T](implicit d: Decoder[T]): Decoder[F[T]] =
         new Decoder[F[T]] {
           override def apply(c: HCursor): Result[F[T]] =
             c
@@ -83,12 +102,5 @@ trait Codecs {
 
   implicit def makeEncoder[F[_], T](implicit hkt: HKTEncoder[F], d: Encoder[T]): Encoder[F[T]] = hkt(d)
   implicit def makeDecoder[F[_], T](implicit hkt: HKTDecoder[F], d: Decoder[T]): Decoder[F[T]] = hkt(d)
-
-//  implicit val codec_1 = make[`0`]
-//  implicit val codec_2 = make[`1`]
-//  implicit val codec_3 = make[`2`]
-//  implicit val codec_4 = make[`3`]
-//  implicit val codec_5 = make[`4`]
-//  implicit val codec_6 = make[`5`]
 }
 object Codecs extends Codecs

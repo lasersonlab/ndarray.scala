@@ -2,9 +2,8 @@ package org.lasersonlab.zarr
 
 import cats.implicits._
 import hammerlab.path._
-import hammerlab.shapeless.tlist.{ Map ⇒ _, _ }
+import lasersonlab.shapeless.slist._
 import org.lasersonlab.anndata.loom.{ Obs, Var }
-import org.lasersonlab.shapeless.Shape.{ `1`, `2` }
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.dtype.DataType
@@ -23,7 +22,7 @@ class ArrayTest
     ==(
       arr.metadata,
       Metadata[Float, `2`, Int](
-             shape = Dimension(27998, 3092) :: Dimension(5425) :: TNil,
+             shape = Dimension(27998, 3092) :: Dimension(5425) :: ⊥,
              dtype = float,
         fill_value = 0.0f
       )
@@ -47,20 +46,40 @@ class ArrayTest
 
     val blosc = Blosc()
 
-    import org.lasersonlab.shapeless.Shape.`2`
-    import org.lasersonlab.shapeless.Shape.instances.traverse_2
+//    def chunk(idx: Int, shape: `2`[Int], size: Int): Chunk[`2`, Float] =
+//      Chunk(
+//        path / s"$idx.0",
+//        shape,
+//        idx :: 0 :: ⊥,
+//        size = size,
+//        strides = 5425 :: 1 :: ⊥,
+//        compressor = blosc,
+//        sizeHint = 16774100 * 4
+//      )
+//
+//    chunk(0, 3092 :: 5425 :: ⊥, 16774100)
+//    chunk(1, 3092 :: 5425 :: ⊥, 16774100)
+//    chunk(2, 3092 :: 5425 :: ⊥, 16774100)
+//    chunk(3, 3092 :: 5425 :: ⊥, 16774100)
+//    chunk(4, 3092 :: 5425 :: ⊥, 16774100)
+//    chunk(5, 3092 :: 5425 :: ⊥, 16774100)
+//    chunk(6, 3092 :: 5425 :: ⊥, 16774100)
+//    chunk(7, 3092 :: 5425 :: ⊥, 16774100)
+//    chunk(8, 3092 :: 5425 :: ⊥, 16774100)
+//    chunk(9,  170 :: 5425 :: ⊥,   922250)
+
     val expected =
       Seq(
-        Chunk[`2`, Float](path / "0.0", 3092 :: 5425 :: TNil, 0 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[`2`, Float](path / "1.0", 3092 :: 5425 :: TNil, 1 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[`2`, Float](path / "2.0", 3092 :: 5425 :: TNil, 2 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[`2`, Float](path / "3.0", 3092 :: 5425 :: TNil, 3 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[`2`, Float](path / "4.0", 3092 :: 5425 :: TNil, 4 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[`2`, Float](path / "5.0", 3092 :: 5425 :: TNil, 5 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[`2`, Float](path / "6.0", 3092 :: 5425 :: TNil, 6 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[`2`, Float](path / "7.0", 3092 :: 5425 :: TNil, 7 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[`2`, Float](path / "8.0", 3092 :: 5425 :: TNil, 8 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),
-        Chunk[`2`, Float](path / "9.0",  170 :: 5425 :: TNil, 9 :: 0 :: TNil, size =   922250, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4)
+        Chunk[`2`, Float](path / "0.0", 3092 :: 5425 :: ⊥, 0 :: 0 :: ⊥, size = 16774100, strides = 5425 :: 1 :: ⊥, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "1.0", 3092 :: 5425 :: ⊥, 1 :: 0 :: ⊥, size = 16774100, strides = 5425 :: 1 :: ⊥, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "2.0", 3092 :: 5425 :: ⊥, 2 :: 0 :: ⊥, size = 16774100, strides = 5425 :: 1 :: ⊥, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "3.0", 3092 :: 5425 :: ⊥, 3 :: 0 :: ⊥, size = 16774100, strides = 5425 :: 1 :: ⊥, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "4.0", 3092 :: 5425 :: ⊥, 4 :: 0 :: ⊥, size = 16774100, strides = 5425 :: 1 :: ⊥, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "5.0", 3092 :: 5425 :: ⊥, 5 :: 0 :: ⊥, size = 16774100, strides = 5425 :: 1 :: ⊥, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "6.0", 3092 :: 5425 :: ⊥, 6 :: 0 :: ⊥, size = 16774100, strides = 5425 :: 1 :: ⊥, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "7.0", 3092 :: 5425 :: ⊥, 7 :: 0 :: ⊥, size = 16774100, strides = 5425 :: 1 :: ⊥, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "8.0", 3092 :: 5425 :: ⊥, 8 :: 0 :: ⊥, size = 16774100, strides = 5425 :: 1 :: ⊥, compressor = blosc, sizeHint = 16774100 * 4),
+        Chunk[`2`, Float](path / "9.0",  170 :: 5425 :: ⊥, 9 :: 0 :: ⊥, size =   922250, strides = 5425 :: 1 :: ⊥, compressor = blosc, sizeHint = 16774100 * 4)
       )
 
     ==(
@@ -122,7 +141,7 @@ class ArrayTest
       metadata,
       // TODO: allow not specifying type-params explicitly here
       Metadata[Long, `1`, Int](
-             shape = Dimension(27998) :: TNil,
+             shape = Dimension(27998) :: ⊥,
              dtype = long,
         fill_value = 0L
       )
@@ -157,7 +176,7 @@ class ArrayTest
     ==(
       metadata,
       Metadata[String, `1`, Int](
-         shape = Dimension(5425) :: TNil,
+         shape = Dimension(5425) :: ⊥,
         dtype = string(5),
         fill_value = ""
       )
@@ -207,7 +226,7 @@ class ArrayTest
     ==(
       metadata,
       Metadata[Var, `1`, Int](
-         shape = Dimension(27998) :: TNil,
+         shape = Dimension(27998) :: ⊥,
         dtype = dtype,
         fill_value = Var.empty
       )
@@ -254,7 +273,7 @@ class ArrayTest
     ==(
       metadata,
       Metadata[untyped.Struct, `1`, Int](
-         shape = Dimension(5425) :: TNil,
+         shape = Dimension(5425) :: ⊥,
         dtype =
           DataType.struct(
             List[(String, DataType)](

@@ -1,40 +1,40 @@
 package org.lasersonlab.ndarray
 
-import hammerlab.shapeless.tlist._
-import org.lasersonlab.ndarray.Ints._
+import lasersonlab.shapeless.slist._
+//import org.lasersonlab.ndarray.Ints._
 import org.lasersonlab.ndarray.Vectors._
 
 trait ArrayLike[A[_]] {
-  type Shape
-  def shape(a: A[_]): Shape
-  def apply[T](a: A[T], idx: Shape): T
+  type Shape[_]
+  def shape(a: A[_]): Shape[Int]
+  def apply[T](a: A[T], idx: Shape[Int]): T
 }
 
 object ArrayLike {
-  type Aux[A[_], S] = ArrayLike[A] { type Shape = S }
+  type Aux[A[_], S[_]] = ArrayLike[A] { type Shape[T] = S[T] }
 
-  implicit val vector1toArray: Aux[Vector1, Ints1] =
+  implicit val vector1toArray: Aux[Vector1, `1`] =
     new ArrayLike[Vector1] {
-      type Shape = Ints1
-      def shape(a: Vector1[_]): Shape = a.length :: TNil
-      def apply[T](a: Vector1[T], idx: Shape): T = a(idx.head)
+      type Shape[T] = `1`[T]
+      def shape(a: Vector1[_]): Shape[Int] = a.length :: ⊥
+      def apply[T](a: Vector1[T], idx: Shape[Int]): T = a(idx.head)
     }
 
   def makeArrayLike[
     A[_],
-    _Shape <: TList
+    _Shape[_]
   ](
     implicit
     prev: Aux[A, _Shape],
-    pp: Prepend[Int, _Shape]
+    cons: Cons[_Shape]
   ):
     Aux[
       Vectors.Aux[?, A],
-      Int :: _Shape
+      cons.Out
     ] =
     new ArrayLike[Vectors.Aux[?, A]] {
-      type Shape = Int :: _Shape
-      def shape(a: Vectors.Aux[_, A]): Shape =
+      type Shape[T] = cons.Out[T]
+      def shape(a: Vectors.Aux[_, A]): Shape[Int] =
         a.size ::
         prev.shape(
           // TODO: check sizes on Vectors construction, store Shape on Vectors
@@ -42,7 +42,7 @@ object ArrayLike {
         )
       def apply[T](
         a: Vectors.Aux[T, A],
-        idx: Shape
+        idx: Shape[Int]
       ):
         T =
         prev(
@@ -51,9 +51,9 @@ object ArrayLike {
         )
     }
 
-  implicit val vector2toArray: Aux[Vector2, Ints2] = makeArrayLike[Vector1, Ints1]
-  implicit val vector3toArray: Aux[Vector3, Ints3] = makeArrayLike[Vector2, Ints2]
-  implicit val vector4toArray: Aux[Vector4, Ints4] = makeArrayLike[Vector3, Ints3]
-  implicit val vector5toArray: Aux[Vector5, Ints5] = makeArrayLike[Vector4, Ints4]
-  implicit val vector6toArray: Aux[Vector6, Ints6] = makeArrayLike[Vector5, Ints5]
+  implicit val vector2toArray: Aux[Vector2, `2`] = makeArrayLike[Vector1, `1`]
+  implicit val vector3toArray: Aux[Vector3, `3`] = makeArrayLike[Vector2, `2`]
+  implicit val vector4toArray: Aux[Vector4, `4`] = makeArrayLike[Vector3, `3`]
+  implicit val vector5toArray: Aux[Vector5, `5`] = makeArrayLike[Vector4, `4`]
+  implicit val vector6toArray: Aux[Vector6, `6`] = makeArrayLike[Vector5, `5`]
 }

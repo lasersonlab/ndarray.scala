@@ -160,7 +160,6 @@ object Metadata {
       def apply(m: Metadata[T, Shape, Idx]): Json = {
         implicit val datatype = m.dtype
         implicit val enc = FillValue.encoder[T]
-        //implicit val shapeIdxEnc = join[Shape, Idx]
         Json.obj(
           "shape" → encode(m.shape.map(_.arr)),
           "chunks" → encode(m.shape.map(_.chunk)),

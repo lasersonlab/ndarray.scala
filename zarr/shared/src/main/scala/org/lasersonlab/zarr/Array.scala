@@ -131,7 +131,7 @@ object Array {
          shape: Shape[Dimension[Idx]]
   )(
    implicit
-   indices: Indices.Aux[A, Shape[Chunk.Idx]],
+   indices: Indices.Aux[A, Shape],
    _idx: Idx.T[Idx],
    compressor: Compressor,
    datatype: DataType.Aux[_T],
@@ -279,7 +279,6 @@ object Array {
       sdec = sdec,
       idec = idec,
       senc = senc,
-      ienc = ienc,
       idx = idx,
       traverseShape = traverseShape,
       semigroupalShape = semigroupalShape,
@@ -298,15 +297,14 @@ object Array {
     implicit
     d: Decoder[DataType.Aux[_T]],
     e: Encoder[DataType.Aux[_T]],
-    ti: Indices.Aux[_A, _Shape[Chunk.Idx]],
+    ti: Indices.Aux[_A, _Shape],
     traverse: Traverse[_A],
-    arrayLike: ArrayLike.Aux[_A, _Shape[Chunk.Idx]],
+    arrayLike: ArrayLike.Aux[_A, _Shape],
     dt: FillValue.Decoder[_T],
     et: FillValue.Encoder[_T],
     sdec: HKTDecoder[_Shape],
     idec: Decoder[Idx],
     senc: HKTEncoder[_Shape],
-    ienc: Encoder[Idx],
     idx: Idx.T[Idx],
     traverseShape: Traverse[_Shape],
     semigroupalShape: Semigroupal[_Shape],
@@ -371,13 +369,12 @@ object Array {
   )(
     implicit
     e: Encoder[DataType.Aux[_T]],
-    ti: Indices.Aux[_A, _Shape[Idx]],
+    ti: Indices.Aux[_A, _Shape],
     traverse: Traverse[_A],
     _traverseShape: Traverse[_Shape],
-    arrayLike: ArrayLike.Aux[_A, _Shape[Idx]],
+    arrayLike: ArrayLike.Aux[_A, _Shape],
     et: FillValue.Encoder[_T],
     senc: HKTEncoder[_Shape],
-    es: Encoder[_Idx],
     idx: Idx.T[_Idx]
   ):
     Exception |
@@ -502,6 +499,10 @@ object Array {
               .sequence
               .map { _ ⇒ () }
           }
+
+          implicitly[HKTEncoder[_Shape]]
+          implicitly[Encoder[_Idx]]
+          implicitly[Encoder[Metadata[_T, _Shape, _Idx]]]
 
           // TODO: configure ability to write to a temporary location and then "commit" all results
           for {

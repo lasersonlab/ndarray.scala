@@ -20,20 +20,16 @@ trait VectorInts[N <: Nat, Idx] {
   implicit def idec: Decoder[Idx]
   implicit def senc: HKTEncoder[ShapeT]
   implicit def ienc: Encoder[Idx]
-  implicit def ti: Indices.Aux[A, ShapeT[Chunk.Idx]]
+  implicit def ti: Indices.Aux[A, ShapeT]
   implicit def traverse: Traverse[A]
   implicit def traverseShape: Traverse[ShapeT]
   implicit def semigroupalShape: Semigroupal[ShapeT]
   implicit def scannable: Scannable[ShapeT]
-  implicit def arrayLike: ArrayLike.Aux[A, ShapeT[Chunk.Idx]]
+  implicit def arrayLike: ArrayLike.Aux[A, ShapeT]
 }
 object VectorInts {
 
-  import org.lasersonlab.shapeless.Shape
-
   type Ax[N <: Nat, S[_], Idx] = VectorInts[N, Idx] { type ShapeT[U] = S[U] }
-
-  //type Idx = Int
 
   type Aux[N <: Nat, S[_], Idx, _A[_]] =
     VectorInts[N, Idx] {
@@ -47,12 +43,12 @@ object VectorInts {
     _idec: Decoder[Idx],
     _senc: HKTEncoder[S],
     _ienc: Encoder[Idx],
-    _ti: Indices.Aux[_A, S[Chunk.Idx]],
+    _ti: Indices.Aux[_A, S],
     _traverse: Traverse[_A],
     _traverseShape: Traverse[S],
     _semigroupalShape: Semigroupal[S],
     _scannable: Scannable[S],
-    _arrayLike: ArrayLike.Aux[_A, S[Chunk.Idx]]
+    _arrayLike: ArrayLike.Aux[_A, S]
   ):
     Aux[N, S, Idx, _A] =
     new VectorInts[N, Idx] {

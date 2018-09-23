@@ -58,11 +58,6 @@ trait Array {
 
   val chunks: A[Chunk[T]]
 
-  def key(shape: Shape): String =
-    shape
-      .toList
-      .mkString(".")
-
   // TODO: this should be type-parameterizable, and validated accordingly during JSON-parsing
   val attrs: Opt[Attrs]
 
@@ -123,7 +118,7 @@ object Array {
   /**
    * Load an ND-array of chunks from a [[Path directory]]
    *
-   * Each chunk lives in a file with basename given by the provided [[Key]] ('.'-joined indices)
+   * Each chunk lives in a file with basename given by '.'-joined indices
    */
   private def chunks[
         _T,
@@ -186,10 +181,7 @@ object Array {
                         Chunk.Idx
                       ]
 
-                  basename =
-                    idx
-                      .toList
-                      .mkString(".")
+                  basename = Key(idx)
 
                   chunk ←
                     Chunk(
@@ -484,7 +476,7 @@ object Array {
               .map {
                 idx ⇒
                   val chunk: Chunk[_T] = arrayLike(chunks, idx)
-                  val path = dir / idx.toList.mkString(".")
+                  val path = dir / Key(idx)
                   Try {
                     import java.nio.ByteBuffer._
                     val buffer = allocate(datatype.size * chunk.size)

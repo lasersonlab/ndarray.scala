@@ -12,6 +12,7 @@ import shapeless.Lazy
  * Iterate over an N-dimensional range of integers (provided as a `Shape`), stored as an [[A]]
  */
 trait Indices[A[_]] {
+  // TODO: make Shape a HKT, add Idx type
   type Shape
   def apply(shape: Shape): A[Shape]
 }

@@ -4,7 +4,7 @@ import cats.implicits._
 import hammerlab.path._
 import hammerlab.shapeless.tlist.{ Map ⇒ _, _ }
 import org.lasersonlab.anndata.loom.{ Obs, Var }
-import org.lasersonlab.ndarray.Shape.{ `1`, `2` }
+import org.lasersonlab.shapeless.Shape.{ `1`, `2` }
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.dtype.DataType
@@ -47,8 +47,8 @@ class ArrayTest
 
     val blosc = Blosc()
 
-    import org.lasersonlab.ndarray.Shape.`2`
-    import org.lasersonlab.ndarray.Shape.instances.traverse_2
+    import org.lasersonlab.shapeless.Shape.`2`
+    import org.lasersonlab.shapeless.Shape.instances.traverse_2
     val expected =
       Seq(
         Chunk[`2`, Float](path / "0.0", 3092 :: 5425 :: TNil, 0 :: 0 :: TNil, size = 16774100, strides = 5425 :: 1 :: TNil, compressor = blosc, sizeHint = 16774100 * 4),

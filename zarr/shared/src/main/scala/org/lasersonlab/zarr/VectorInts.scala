@@ -27,6 +27,9 @@ trait VectorInts[N <: Nat, Idx] {
   implicit def arrayLike: ArrayLike.Aux[A, ShapeT[Chunk.Idx]]
 }
 object VectorInts {
+
+  import org.lasersonlab.shapeless.Shape
+
   type Ax[N <: Nat, S[_], Idx] = VectorInts[N, Idx] { type ShapeT[U] = S[U] }
 
   //type Idx = Int
@@ -68,8 +71,7 @@ object VectorInts {
     }
 
   import cats.implicits._
-  import org.lasersonlab.ndarray.Shape
-  import org.lasersonlab.ndarray.Shape.instances._
+  import Shape.instances._
   import shapeless.nat._
   implicit val `1` = make[_1, Shape._1, Int, Vector1]
   implicit val `2` = make[_2, Shape._2, Int, Vector2]

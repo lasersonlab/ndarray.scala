@@ -1,8 +1,9 @@
-package org.lasersonlab.ndarray
+package org.lasersonlab.shapeless
 
-import cats.{ Applicative, Eval, Semigroupal, Traverse }
 import cats.implicits._
-import org.lasersonlab.ndarray.Shape.Utils
+import cats.{ Applicative, Eval, Semigroupal, Traverse }
+import org.lasersonlab.ndarray.Scannable
+import org.lasersonlab.shapeless.Shape.Utils
 import shapeless.{ Nat, Succ }
 
 trait Shape[N <: Nat] {

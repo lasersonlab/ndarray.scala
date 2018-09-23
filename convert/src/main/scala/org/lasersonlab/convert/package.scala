@@ -12,7 +12,8 @@ import org.lasersonlab.netcdf.{ Attribute, Group, Variable }
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Save
-import org.lasersonlab.zarr.{ Attrs, Compressor, FillValue, Metadata }
+import org.lasersonlab.zarr.utils.Idx
+import org.lasersonlab.zarr.{ Attrs, Compressor, Dimension, FillValue, Key, Metadata }
 import shapeless.the
 import ucar.ma2.IndexIterator
 import ucar.nc2.NetcdfFile
@@ -38,26 +39,29 @@ package object convert
   )(
     implicit
     compressor: Compressor,
-    chunkSize: Bytes
+    chunkSize: Bytes,
+    idx: Idx
   ):
-    zarr.Group =
-    zarr.Group(
-      group
-        .vars
-        .map {
-          v ⇒
-            v.name →
-              convertVariable(v)
-        }
-        .toMap,
-      group
-        .groups
-        .map {
-          g ⇒
-            g.name →
-              convertGroup(g)
-        }
-        .toMap,
+    zarr.Group[idx.T] =
+    new zarr.Group(
+      arrays =
+        group
+          .vars
+          .map {
+            v ⇒
+              v.name →
+                convertVariable(v)
+          }
+          .toMap,
+      groups =
+        group
+          .groups
+          .map {
+            g ⇒
+              g.name →
+                convertGroup(g)
+          }
+          .toMap,
       group.attributes
     )
 
@@ -186,9 +190,8 @@ package object convert
         val numChunks = (numRows + rowsPerChunk - 1) / rowsPerChunk
 
         val _metadata =
-          new Metadata[T, Seq[Int]](
+          new Metadata[T, Seq, Int](
             shape = shape,
-            chunks = _chunkShape,
             dtype = datatype,
             compressor = compressor,
             order = C,
@@ -197,7 +200,7 @@ package object convert
 
         new zarr.Array {
           override type T = tpe.T
-          type Shape = Seq[Int]
+          type ShapeT[U] = Seq[U]
           override val metadata = _metadata
 
           type     A[U] =        Vector[U]  // we're only chunking by "row" / major-axis; 1-D array of chunks is fine
@@ -206,8 +209,7 @@ package object convert
           implicit val traverseA: Traverse[A] = catsStdInstancesForVector
           implicit val foldableChunk: Foldable[Chunk] = Chunk.foldable
 
-          val      shape: Seq[Int] = tpe.shape
-          val chunkShape: Seq[Int] = _chunkShape
+          val shape: Seq[Dimension[Int]] = tpe.shape
 
           val chunks: A[Chunk[T]] =
             (0 until numChunks)
@@ -241,7 +243,7 @@ package object convert
                       // coordinate
                       val idxs = fill(ndims)(0)
                       idxs(0) = idx
-                      idxs.mkString(".")
+                      Key(idxs)
                     }
 
                     Try {
@@ -287,7 +289,7 @@ package object convert
    */
   sealed abstract class Type {
     type T
-    def shape: Seq[Int]
+    def shape: Seq[Dimension[Int]]
     def sectionShape: Array[Int]
     def datatype: DataType.Aux[T]
     def fill_value: FillValue[T]

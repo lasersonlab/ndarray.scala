@@ -57,29 +57,6 @@ object metadata {
           HNil
       }
     }
-
-    //    implicit def metadataCanEq[
-//      L,
-//      R,
-//      Shape[_],
-//      Idx
-//    ](
-//      implicit
-//      dim: Cmp[Dimension[Idx]]
-//    ):
-//      CanEq[
-//        Metadata[
-//          L,
-//          Shape,
-//          Idx
-//        ],
-//        Metadata[
-//          R,
-//          Shape,
-//          Idx
-//        ]
-//      ] =
-//      ???
   }
   object cmp extends cmp
 }

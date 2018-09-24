@@ -73,10 +73,11 @@ object SList {
   }
 
   trait Base[F[_]]
-    extends  Traverse[F]
-       with       Zip[F]
-       with Scannable[F]
-       with  FromList[F]
+    extends    Traverse[F]
+       with         Zip[F]
+       with   Scannable[F]
+       with    FromList[F]
+       with Applicative[F]
 
   trait Utils[F[_]]
     extends      Base[F]
@@ -192,6 +193,17 @@ object SList {
                     h :: t
                 }
           }
+
+        override def pure[A](x: A): F[A] = x :: tail.pure(x)
+
+        override def ap[A, B](ff: F[A ⇒ B])(fa: F[A]): F[B] =
+          (ff, fa) match {
+            case (
+              hf :: tf,
+              ha :: ta
+            ) ⇒
+              hf(ha) :: tail.ap(tf)(ta)
+          }
       }
     }
 
@@ -216,6 +228,10 @@ object SList {
             case   Nil ⇒ R(`0`)
             case extra ⇒ L(TooMany(extra))
           }
+
+        override def pure[A](x: A): `0`[A] = ⊥
+
+        override def ap[A, B](ff: `0`[A ⇒ B])(fa: `0`[A]): `0`[B] = ⊥
       }
 
     implicit val utils1 = cons[`0`]

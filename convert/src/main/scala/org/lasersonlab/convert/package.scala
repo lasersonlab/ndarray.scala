@@ -124,8 +124,8 @@ package object convert
           else
             _chunkSize.bytes.toInt
 
-        val dimensions =
-          _shape
+        def dimensions(shape: Seq[Int], dtype: DataType) =
+          shape
             .map {
               shape ⇒
                 Dimension(
@@ -134,7 +134,7 @@ package object convert
                     1,
                     min(
                       shape,
-                      chunkSize / dtype.getSize
+                      chunkSize / dtype.size
                     )
                   )
                 )
@@ -149,14 +149,15 @@ package object convert
 
               new Type {
                 type T = String
-                val shape = dimensions.dropRight(1)
-
-                val sectionShape = fill(rank)(1)
-                sectionShape(rank - 1) = size
 
                 val datatype = string(size)
                 val fill_value = FillValue("")
                 val encoder = the[FillValue.Encoder[T]]
+
+                val shape = dimensions(_shape.dropRight(1), datatype)
+
+                val sectionShape = fill(rank)(1)
+                sectionShape(rank - 1) = size
 
                 def next(it: IndexIterator): String = {
                   var i = 0
@@ -172,12 +173,12 @@ package object convert
                   sb.result()
                 }
               }
-            case    INT ⇒ Type.make (dimensions, fill(rank)(1),    int, 0        , { it: IndexIterator ⇒ it.getIntNext    } )
-            case   LONG ⇒ Type.make (dimensions, fill(rank)(1),   long, 0L       , { it: IndexIterator ⇒ it.getLongNext   } )
-            case  SHORT ⇒ Type.make (dimensions, fill(rank)(1),  short, 0: Short , { it: IndexIterator ⇒ it.getShortNext  } )
-            case   BYTE ⇒ Type.make (dimensions, fill(rank)(1),   byte, 0: Byte  , { it: IndexIterator ⇒ it.getByteNext   } )
-            case  FLOAT ⇒ Type.make (dimensions, fill(rank)(1),  float, 0.0f     , { it: IndexIterator ⇒ it.getFloatNext  } )
-            case DOUBLE ⇒ Type.make (dimensions, fill(rank)(1), double, 0.0      , { it: IndexIterator ⇒ it.getDoubleNext } )
+            case    INT ⇒ Type.make ( dimensions(_shape,    int), fill(rank)(1),    int, 0        , { it: IndexIterator ⇒ it.getIntNext    } )
+            case   LONG ⇒ Type.make ( dimensions(_shape,   long), fill(rank)(1),   long, 0L       , { it: IndexIterator ⇒ it.getLongNext   } )
+            case  SHORT ⇒ Type.make ( dimensions(_shape,  short), fill(rank)(1),  short, 0: Short , { it: IndexIterator ⇒ it.getShortNext  } )
+            case   BYTE ⇒ Type.make ( dimensions(_shape,   byte), fill(rank)(1),   byte, 0: Byte  , { it: IndexIterator ⇒ it.getByteNext   } )
+            case  FLOAT ⇒ Type.make ( dimensions(_shape,  float), fill(rank)(1),  float, 0.0f     , { it: IndexIterator ⇒ it.getFloatNext  } )
+            case DOUBLE ⇒ Type.make ( dimensions(_shape, double), fill(rank)(1), double, 0.0      , { it: IndexIterator ⇒ it.getDoubleNext } )
             case c ⇒
               throw new UnsupportedOperationException(
                 s"Unimplemented datatype: $dtype"
@@ -257,6 +258,7 @@ package object convert
               }
               .toVector
 
+          // TODO: move this out
           implicit val foldArray: Foldable[Array] =
             new Foldable[Array] {
               type F[A] = Array[A]

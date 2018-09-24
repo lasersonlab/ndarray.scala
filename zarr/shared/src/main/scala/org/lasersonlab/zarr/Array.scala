@@ -1,5 +1,6 @@
 package org.lasersonlab.zarr
 
+import cats.data.Nested
 import cats.implicits._
 import cats.{ Applicative, Eval, Foldable, Traverse }
 import hammerlab.option._
@@ -429,33 +430,32 @@ object Array {
             .right
             .get
 
-        type T2[E] = (E, E)
-        implicit val appT2: Applicative[T2] = ???
-        implicit val trvT2: Traverse[T2] = ???
-        implicit val eappT2: Applicative[λ[U ⇒ CastException | T2[U]]] = ???
+        import lasersonlab.shapeless.slist._
 
         def apply(idx: Shape): T = {
           import Zip.Ops
-          val (
-            chunkIdx,
-            offset
-          ) =
-            idx
-              .zip(shape)
-              .map {
-                case (idx, Dimension(_, chunk)) ⇒
-                  (
-                    (
-                      int { idx / chunk },
-                      int { idx % chunk }
-                    ):
-                    T2[CastException | Chunk.Idx]
-                  )
-                  .sequence[CastException | ?, Chunk.Idx]
-              }
-              .sequence[λ[U ⇒ CastException | T2[U]], Chunk.Idx]
-              .right
-              .get
+
+          // aliases for annotating the `.sequence` shenanigans below
+          type E[U] = CastException | U
+          type F[U] = ShapeT[U]
+          type G[U] = `2`[U]
+          type T = Chunk.Idx
+
+          val chunkIdx :: offset :: ⊥ =  // ShapeT[Int] :: ShapeT[Int]
+            Nested(
+              idx
+                .zip(shape)
+                .map {
+                  case (idx, Dimension(_, chunk)) ⇒
+                    int { idx / chunk } ::
+                    int { idx % chunk } ::
+                    ⊥
+                }                    : F[G[E[T]]]
+            )
+            .sequence               // E[F[G[T]]]
+            .map(_.value.sequence)  // E[G[F[T]]]
+            .right
+            .get                     :   G[F[T]]
 
           arrayLike(
             chunks,

@@ -91,7 +91,7 @@ class GroupTest
     ==( actual dtype: DataType, expected dtype )
 
     // TODO: fold fill-values into datatype
-    ==( actual. fill_value.asInstanceOf[Struct], expected fill_value )
+    ==( actual. fill_value.asInstanceOf[FillValue[Struct]], expected fill_value )
 
     // casting to a fully-typed representation allows normal checking to succeed; this is redundant with the checks
     // above, but both are included for demonstration purposes

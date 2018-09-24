@@ -1,11 +1,11 @@
 package org.lasersonlab.zarr.cmp.untyped
 
 import cats.implicits._
-import org.lasersonlab.zarr.{ Array, Attrs, Dimension, Metadata }
 import hammerlab.either._
 import hammerlab.option._
 import org.hammerlab.test.Cmp
 import org.lasersonlab.zarr.cmp.untyped.array.ElemsDiff.{ Index, Sizes }
+import org.lasersonlab.zarr.{ Array, Attrs, Dimension }
 import shapeless.the
 
 object array {

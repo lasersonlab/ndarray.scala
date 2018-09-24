@@ -212,7 +212,7 @@ object Array {
    * Convenience-constructor: given a data-type and a [[Nat (type-level) number of dimensions]], load an [[Array]] from
    * a [[Path directory]]
    *
-   * Uses a [[VectorInts]] as evidence for mapping from the [[Nat]] to a concrete shape
+   * Uses a [[VectorEvidence]] as evidence for mapping from the [[Nat]] to a concrete shape
    */
   def apply[
     T,
@@ -222,7 +222,7 @@ object Array {
     dir: Path
   )(
     implicit
-     v: VectorInts[N, Idx],
+     v: VectorEvidence[N, Idx],
      d: Decoder[DataType.Aux[T]],
      e: Encoder[DataType.Aux[T]],
     dt: FillValue.Decoder[T],
@@ -243,7 +243,7 @@ object Array {
    * Convenience-constructor: given a data-type and a [[Nat (type-level) number of dimensions]], load an [[Array]] from
    * a [[Path directory]]
    *
-   * Uses a [[VectorInts]] as evidence for mapping from the [[Nat]] to a concrete shape
+   * Uses a [[VectorEvidence]] as evidence for mapping from the [[Nat]] to a concrete shape
    *
    * Differs from [[apply]] above in that it returns full-resolved [[Array.A]] and [[Array.Chunk]] type-members, for
    * situations where that is important (in general, it shouldn't be; tests may wish to verify / operate on chunks, but
@@ -257,7 +257,7 @@ object Array {
     dir: Path
   )(
     implicit
-     v: VectorInts[N, Idx],
+     v: VectorEvidence[N, Idx],
      d: Decoder[DataType.Aux[T]],
      e: Encoder[DataType.Aux[T]],
     dt: FillValue.Decoder[T],
@@ -538,9 +538,9 @@ object Array {
 
   implicit def loadArr[T, N <: Nat, Idx, Shape[_]](
     implicit
-    v: VectorInts.Ax[N, Shape, Idx],
-    d: Decoder[DataType.Aux[T]],
-    e: Encoder[DataType.Aux[T]],
+     v: VectorEvidence.Ax[N, Shape, Idx],
+     d: Decoder[DataType.Aux[T]],
+     e: Encoder[DataType.Aux[T]],
     dt: FillValue.Decoder[T],
     et: FillValue.Encoder[T]
   ):

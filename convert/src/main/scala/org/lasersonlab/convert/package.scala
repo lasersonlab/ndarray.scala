@@ -14,7 +14,7 @@ import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Save
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.{ Attrs, Compressor, Dimension, FillValue, Key, Metadata }
-import shapeless.the
+import _root_.shapeless.the
 import ucar.ma2.IndexIterator
 import ucar.nc2.NetcdfFile
 
@@ -39,11 +39,10 @@ package object convert
   )(
     implicit
     compressor: Compressor,
-    chunkSize: Bytes,
-    idx: Idx
+    chunkSize: Bytes
   ):
-    zarr.Group[idx.T] =
-    new zarr.Group(
+    zarr.Group[Int] =
+    new zarr.Group[Int](
       arrays =
         group
           .vars
@@ -125,6 +124,23 @@ package object convert
           else
             _chunkSize.bytes.toInt
 
+        val dimensions =
+          _shape
+            .map {
+              shape ⇒
+                Dimension(
+                  shape,
+                  max(
+                    1,
+                    min(
+                      shape,
+                      chunkSize / dtype.getSize
+                    )
+                  )
+                )
+            }
+            .toList
+
         val tpe: Type =
           dtype match {
             // fixed-length strings come in as CHARs with an extra dimensions
@@ -133,7 +149,7 @@ package object convert
 
               new Type {
                 type T = String
-                val shape = _shape.dropRight(1)
+                val shape = dimensions.dropRight(1)
 
                 val sectionShape = fill(rank)(1)
                 sectionShape(rank - 1) = size
@@ -156,12 +172,12 @@ package object convert
                   sb.result()
                 }
               }
-            case    INT ⇒ Type.make (_shape, fill(rank)(1),    int, 0        , { it: IndexIterator ⇒ it.getIntNext    } )
-            case   LONG ⇒ Type.make (_shape, fill(rank)(1),   long, 0L       , { it: IndexIterator ⇒ it.getLongNext   } )
-            case  SHORT ⇒ Type.make (_shape, fill(rank)(1),  short, 0: Short , { it: IndexIterator ⇒ it.getShortNext  } )
-            case   BYTE ⇒ Type.make (_shape, fill(rank)(1),   byte, 0: Byte  , { it: IndexIterator ⇒ it.getByteNext   } )
-            case  FLOAT ⇒ Type.make (_shape, fill(rank)(1),  float, 0.0f     , { it: IndexIterator ⇒ it.getFloatNext  } )
-            case DOUBLE ⇒ Type.make (_shape, fill(rank)(1), double, 0.0      , { it: IndexIterator ⇒ it.getDoubleNext } )
+            case    INT ⇒ Type.make (dimensions, fill(rank)(1),    int, 0        , { it: IndexIterator ⇒ it.getIntNext    } )
+            case   LONG ⇒ Type.make (dimensions, fill(rank)(1),   long, 0L       , { it: IndexIterator ⇒ it.getLongNext   } )
+            case  SHORT ⇒ Type.make (dimensions, fill(rank)(1),  short, 0: Short , { it: IndexIterator ⇒ it.getShortNext  } )
+            case   BYTE ⇒ Type.make (dimensions, fill(rank)(1),   byte, 0: Byte  , { it: IndexIterator ⇒ it.getByteNext   } )
+            case  FLOAT ⇒ Type.make (dimensions, fill(rank)(1),  float, 0.0f     , { it: IndexIterator ⇒ it.getFloatNext  } )
+            case DOUBLE ⇒ Type.make (dimensions, fill(rank)(1), double, 0.0      , { it: IndexIterator ⇒ it.getDoubleNext } )
             case c ⇒
               throw new UnsupportedOperationException(
                 s"Unimplemented datatype: $dtype"
@@ -172,25 +188,30 @@ package object convert
 
         val ndims = shape.size
 
-        val elemsPerChunk = chunkSize / datatype.size
-        val numRows = shape.head
-        val shapeTail = shape.tail.toList
-        val rowSize = shapeTail.foldLeft(1L)(_ * _)
+        val elemsPerChunk = max(1, chunkSize / datatype.size)
+        val numRows = shape.head.arr
+
+        val shapeTail =
+          shape
+            .tail
+            .map(_.arr)
+
+        val rowSize = shapeTail.product
+
         val rowsPerChunk =
           min(
             numRows,
             max(
               1,
-              (elemsPerChunk / rowSize).toInt
+              elemsPerChunk / rowSize
             )
           )
 
-        val _chunkShape = rowsPerChunk :: shapeTail
-
+        // TODO: add /↑ helper for rounding-up division
         val numChunks = (numRows + rowsPerChunk - 1) / rowsPerChunk
 
         val _metadata =
-          new Metadata[T, Seq, Int](
+          Metadata(
             shape = shape,
             dtype = datatype,
             compressor = compressor,
@@ -200,7 +221,10 @@ package object convert
 
         new zarr.Array {
           override type T = tpe.T
-          type ShapeT[U] = Seq[U]
+          type ShapeT[U] = List[U]
+
+          type Idx = Int
+
           override val metadata = _metadata
 
           type     A[U] =        Vector[U]  // we're only chunking by "row" / major-axis; 1-D array of chunks is fine
@@ -208,8 +232,9 @@ package object convert
 
           implicit val traverseA: Traverse[A] = catsStdInstancesForVector
           implicit val foldableChunk: Foldable[Chunk] = Chunk.foldable
+          implicit val traverseShape: Traverse[ShapeT] = cats.instances.list.catsStdInstancesForList
 
-          val shape: Seq[Dimension[Int]] = tpe.shape
+          val shape: List[Dimension[Int]] = tpe.shape
 
           val chunks: A[Chunk[T]] =
             (0 until numChunks)
@@ -231,6 +256,13 @@ package object convert
                   )
               }
               .toVector
+
+          implicit val foldArray: Foldable[Array] =
+            new Foldable[Array] {
+              type F[A] = Array[A]
+              @inline override def foldLeft [A, B](fa: F[A],  b:      B )(f: (B,      A ) ⇒      B ):      B  = fa.foldLeft(b)(f)
+              @inline override def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.foldRight(lb)(f)
+            }
 
           override def save(dir: Path): Throwable | Unit = {
             def chunkResults =
@@ -266,16 +298,16 @@ package object convert
 
             // TODO: optionally write to a tmp dir then "commit" to intended destination
             for {
-              _ ← (metadata: Metadata[T, Shape]).save(dir)
+              _ ← (metadata: Metadata[T, ShapeT, Idx]).save(dir) // TODO: rm type params
               _ ←   attrs.save(dir)
               _ ← chunkResults
             } yield
               ()
           }
 
-          @inline override def apply(idx: Seq[Int]): T = {
+          @inline override def apply(idx: List[Int]): T = {
             require(idx.size == rank, s"Index of size ${idx.size} (${idx.mkString(",")}) for array of rank $rank")
-            val h :: t = idx.toList
+            val h :: t = idx
             val chunk = chunks(h / rowsPerChunk)
             chunk((h % rowsPerChunk) :: t)
           }
@@ -289,7 +321,7 @@ package object convert
    */
   sealed abstract class Type {
     type T
-    def shape: Seq[Dimension[Int]]
+    def shape: List[Dimension[Int]]
     def sectionShape: Array[Int]
     def datatype: DataType.Aux[T]
     def fill_value: FillValue[T]
@@ -298,13 +330,14 @@ package object convert
   }
   object Type {
     def make[_T](
-      _shape: Seq[Int],
+      _shape: List[Dimension[Int]],
       _sectionShape: Array[Int],
       _datatype: DataType.Aux[_T],
       _fill_value: FillValue[_T],
       _next: IndexIterator ⇒ _T
     )(
-      implicit _encoder: FillValue.Encoder[_T]
+      implicit
+      _encoder: FillValue.Encoder[_T]
     ): Type =
       new Type {
         type T = _T
@@ -325,8 +358,8 @@ package object convert
    * @param shape chunk shape
    * @param sectionShape the shape of one element in the chunk; this is generally an array with `rank` copies of the
    *                     literal `1`, but in the case of converting char-arrays to fixed-length strings,
-   * @param next
-   * @tparam T
+   * @param next callback for pulling the next element from an [[IndexIterator]]
+   * @tparam T constituent element type
    */
   case class Chunk[T](
     variable: ucar.nc2.Variable,

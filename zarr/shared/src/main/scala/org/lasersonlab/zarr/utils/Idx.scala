@@ -16,6 +16,7 @@ sealed trait Idx {
 }
 object Idx {
   type T[_T] = Idx { type T = _T }
+  implicit def specify(idx: Idx): Idx.T[idx.T] = ??? //idx
   implicit object Int
     extends Idx {
     type T = scala.Int

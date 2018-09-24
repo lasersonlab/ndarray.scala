@@ -1,8 +1,6 @@
 package org.lasersonlab.zarr
 
 import hammerlab.path._
-import org.hammerlab.cmp.CanEq
-import org.hammerlab.test.Cmp
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.dtype.DataType
@@ -10,7 +8,8 @@ import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.untyped.Struct
 
 class GroupTest
-  extends Suite {
+  extends Suite
+    with zarr.cmp.all {
   test("load") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr")
 
@@ -52,8 +51,6 @@ class GroupTest
         )
       )
 
-    import org.lasersonlab.zarr.cmp.cmpStruct
-
     val expected =
       zarr.Metadata(
         shape = List(Dimension(27998)),
@@ -77,7 +74,7 @@ class GroupTest
 
     ==(
       `var`.metadata,
-       expected
+      expected
     )
 
     val actual = `var2`.metadata

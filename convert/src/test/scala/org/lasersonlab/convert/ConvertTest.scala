@@ -28,7 +28,7 @@ class ConvertTest
     val `64m` = `64m-path`.load[Group[Int]].get
 
     {
-      import metadata.ignoreChunks
+      import dimensions.ignoreChunks
       ==(`2m`, `64m`)
     }
 

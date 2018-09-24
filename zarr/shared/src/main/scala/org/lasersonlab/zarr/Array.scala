@@ -84,8 +84,9 @@ object Array {
 
   type T[_T] = Array { type T = _T }
   type S [S[_], I, _T] = Array { type ShapeT[U] = S[U]; type Idx = I; type T = _T }
-  type SU[S[_], I    ] = Array { type ShapeT[U] = S[U]; type Idx = I              }
+  type Shaped[S[_], I    ] = Array { type ShapeT[U] = S[U]; type Idx = I              }
 
+  // TODO: give these better names
   type Idxs[I] = Array { type ShapeT[U] = List[U]; type Idx =   I }
   type Ints    = Array { type ShapeT[U] = List[U]; type Idx = Int }
   type    L    = Array { type ShapeT[U] = List[U]                 }

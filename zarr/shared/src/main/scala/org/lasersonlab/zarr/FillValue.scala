@@ -139,7 +139,7 @@ object FillValue {
   /**
    * In general, decoding a [[FillValue]] requires a [[DataType]], even when the type [[T]] of the [[FillValue]] is
    * known, because e.g. [[string]] fields are encoded as a specific length that is not captured in the decoded
-   * [[String]] type (which also affects parsing of [[Struct typed]] and [[struct untyped]] structs).
+   * [[String]] type (which also affects parsing of [[Struct typed]] and [[untyped.Struct untyped]] structs).
    *
    * [[Metadata]]-parsing machinery needs to open the JSON, parse the [[DataType]], and then make that implicitly
    * available in order to get [[FillValue]]-decoding

@@ -111,4 +111,7 @@ package object zarr
     extends api {
     type Idx = Long
   }
+
+  type Metadata[Shape[_], Idx, T] = array.metadata.Metadata[Shape, Idx, T]
+  val Metadata = array.metadata.Metadata
 }

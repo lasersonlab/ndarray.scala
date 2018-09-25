@@ -302,7 +302,7 @@ object Array {
       arr
 
   def untyped[Idx](dir: Path)(implicit idx: Idx.T[Idx]): Exception | Array.List[Idx] =
-    zarr.untyped.Metadata(dir)
+    zarr.array.metadata.untyped(dir)
       .flatMap {
         metadata ⇒
           apply[

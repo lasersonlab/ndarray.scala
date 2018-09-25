@@ -33,7 +33,7 @@ sealed trait DataType {
   }
 }
 
-trait DataTypeStructDerivations {
+object DataType {
   import shapeless._
 
   type Aux[_T] = DataType { type T = _T }
@@ -52,22 +52,7 @@ trait DataTypeStructDerivations {
       )
   }
 
-  case class Struct[
-    S,
-    L <: HList
-  ](
-    entries: StructList[L]
-  )(
-    implicit
-    g: Generic.Aux[S, L]
-  )
-  extends DataType {
-    val size: Int = entries.size
-    override type T = S
-    @inline def apply(buff: ByteBuffer): T = g.from(entries(buff))
-    @inline def apply(buffer: ByteBuffer, t: S): Unit = entries(buffer, g.to(t))
-  }
-
+  // TODO: this shouldn't need to extend DataType?
   case class StructList[L <: HList](
     entries: List[StructEntry],
     size: Int
@@ -142,14 +127,10 @@ trait DataTypeStructDerivations {
   ):
     Aux[S] =
     Struct(entries)
-}
 
-object DataType
-  extends DataTypeStructDerivations {
-
-  lazy val structEq: Eq[struct] =
+  lazy val structEq: Eq[untyped.Struct] =
     Eq.by[
-      struct,
+      untyped.Struct,
       List[StructEntry]
     ](
       _
@@ -169,8 +150,8 @@ object DataType
         (x, y) match {
           case (Nil, Nil) ⇒ true
           case (
-            StructEntry(nx, dx) :: tx,
-            StructEntry(ny, dy) :: ty
+            scala.::(StructEntry(nx, dx), tx),
+            scala.::(StructEntry(ny, dy), ty)
           ) ⇒
             nx == ny &&
             dataTypeEq.eqv(dx, dy) &&
@@ -193,7 +174,7 @@ object DataType
       def eqv(x: DataType, y: DataType): Boolean =
         (x, y) match {
           case (x: Primitive, y: Primitive) ⇒ primitive.eqv(x, y)
-          case (x: struct, y: struct) ⇒ structEq.eqv(x, y)
+          case (x: untyped.Struct, y: untyped.Struct) ⇒ structEq.eqv(x, y)
           case (
             Struct(
               StructList(
@@ -226,6 +207,9 @@ object DataType
         }
     }
 
+  /**
+   * Common interface for non-struct datatypes (numerics, strings)
+   */
   sealed abstract class Primitive(
     val order: ByteOrder,
     val dType: DType,
@@ -271,7 +255,7 @@ object DataType
           case p: Primitive ⇒ Json.fromString(p.toString)
           case        StructList(entries, _)  ⇒ apply(entries)
           case Struct(StructList(entries, _)) ⇒ apply(entries)
-          case struct           (entries   )  ⇒ apply(entries)
+          case untyped.Struct    (entries   )  ⇒ apply(entries)
         }
     }
 
@@ -361,43 +345,61 @@ object DataType
   implicit def  _float(implicit e: <>!): Aux[ Float] =  float(e)
   implicit def _double(implicit e: <>!): Aux[Double] = double(e)
 
-  /**
-   * [[untyped.Struct "Untyped" struct]] [[DataType]]
-   */
-  case class struct(entries: Seq[StructEntry])
-    extends DataType {
-    type T = untyped.Struct
+  object untyped {
+    /**
+     * [[org.lasersonlab.zarr.untyped.Struct "Untyped" struct]] [[DataType]]
+     */
+    case class Struct(entries: Seq[StructEntry])
+      extends DataType {
+      type T = org.lasersonlab.zarr.untyped.Struct
 
-    val size: Int =
-      entries
-        .map(_.size)
-        .sum
-
-    def apply(buff: ByteBuffer): T =
-      untyped.Struct(
+      val size: Int =
         entries
-          .foldLeft(
-            Map.newBuilder[String, Any]
-          ) {
-            case (
-              builder,
-              StructEntry(
-                name,
-                datatype
-              )
-            ) ⇒
-              builder +=
-                name → datatype(buff)
-          }
-          .result()
-      )
+          .map(_.size)
+          .sum
 
-    def apply(buffer: ByteBuffer, t: untyped.Struct): Unit =
-      for {
-        StructEntry(name, datatype) ← entries
-      } {
-        datatype(buffer, t[datatype.T](name))
-      }
+      def apply(buff: ByteBuffer): T =
+        org.lasersonlab.zarr.untyped.Struct(
+          entries
+            .foldLeft(
+              Map.newBuilder[String, Any]
+            ) {
+              case (
+                builder,
+                StructEntry(
+                  name,
+                  datatype
+                )
+              ) ⇒
+                builder +=
+                  name → datatype(buff)
+            }
+            .result()
+        )
+
+      def apply(buffer: ByteBuffer, t: org.lasersonlab.zarr.untyped.Struct): Unit =
+        for {
+          StructEntry(name, datatype) ← entries
+        } {
+          datatype(buffer, t[datatype.T](name))
+        }
+    }
+  }
+
+  case class Struct[
+    S,
+    L <: HList
+  ](
+    entries: StructList[L]
+  )(
+    implicit
+    g: Generic.Aux[S, L]
+  )
+  extends DataType {
+    val size: Int = entries.size
+    override type T = S
+    @inline def apply(buffer: ByteBuffer): T = g.from(entries(buffer))
+    @inline def apply(buffer: ByteBuffer, t: S): Unit = entries(buffer, g.to(t))
   }
 
   def get(order: ByteOrder, dtype: DType, size: Int): String | DataType =

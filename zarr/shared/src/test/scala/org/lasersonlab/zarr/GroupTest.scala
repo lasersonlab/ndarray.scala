@@ -4,7 +4,7 @@ import hammerlab.path._
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.dtype.DataType
-import org.lasersonlab.zarr.dtype.DataType._
+import org.lasersonlab.zarr.dtype.DataType.{ untyped, _ }
 import org.lasersonlab.zarr.untyped.Struct
 
 class GroupTest
@@ -38,7 +38,7 @@ class GroupTest
     ==(`var`.shape, Dimension(27998) :: Nil)
 
     val datatype =
-      struct(
+      DataType.untyped.Struct(
         Vector(
           StructEntry(    "index",   long    ),
           StructEntry("Accession", string(18)),

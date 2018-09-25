@@ -2,6 +2,7 @@ package org.lasersonlab.zarr.cmp.untyped
 
 import hammerlab.option._
 import org.hammerlab.test.Cmp
+import org.lasersonlab.zarr
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.{ Dimension, untyped }
@@ -51,7 +52,7 @@ object metadata {
       dim: Cmp[Shape[Dimension[Idx]]]
     ):
       Cmp[
-        untyped.Metadata.Shaped[
+        zarr.array.metadata.Shaped[
           Shape,
           Idx
         ]

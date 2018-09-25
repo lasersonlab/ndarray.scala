@@ -245,7 +245,7 @@ class ArrayTest
       Metadata(
          shape = Dimension(5425) :: ⊥,
         dtype =
-          DataType.struct(
+          DataType.untyped.Struct(
             List[(String, DataType)](
               ("index", long),
               ("Age", byte),

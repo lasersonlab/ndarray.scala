@@ -137,7 +137,7 @@ object Parser {
                 Result,
                 DataType.StructEntry
               ]
-              .map { struct(_) }
+              .map { untyped.Struct(_) }
           }
     }
 }

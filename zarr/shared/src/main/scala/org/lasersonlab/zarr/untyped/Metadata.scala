@@ -36,31 +36,17 @@ trait Metadata {
 
 object Metadata {
 
-  // TODO: simplify/rename these aliases
-  type T[_T, _I] =
+  type Shaped[_Shape[_], _I] =
     Metadata {
-      type T = _T
+      type Shape[U] = _Shape[U]
       type Idx = _I
     }
 
-  type S[_S[_], _I] =
-    Metadata {
-      type Shape[U] = _S[U]
-      type Idx = _I
-    }
-
-  type Aux[_T, _S, _I] =
-    Metadata {
-      type T = _T
-      type Shape = _S
-      type Idx = _I
-    }
-
-  def apply(dir: Path)(implicit idx: Idx): Exception | S[List, idx.T] =
+  def apply(dir: Path)(implicit idx: Idx): Exception | Shaped[List, idx.T] =
     dir ? basename flatMap {
       path ⇒
         decode[
-          S[
+          Shaped[
             List,
             idx.T
           ]
@@ -74,14 +60,14 @@ object Metadata {
     idx: Idx
   ):
     Decoder[
-      S[
+      Shaped[
         List,
         idx.T
       ]
     ] =
-    new Decoder[S[List, idx.T]] {
+    new Decoder[Shaped[List, idx.T]] {
       type Idx = idx.T
-      def apply(c: HCursor): Result[S[List, Idx]] = {
+      def apply(c: HCursor): Result[Shaped[List, Idx]] = {
         for {
                 _shape ← c.downField(      "shape").as[List[Idx]]
                _chunks ← c.downField(     "chunks").as[List[Chunk.Idx]]

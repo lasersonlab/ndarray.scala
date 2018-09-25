@@ -43,20 +43,30 @@ object metadata {
     ]
 
   trait cmp {
-    implicit def baseCmp[Shape[_], Idx](implicit dim: Cmp[Shape[Dimension[Idx]]]): Cmp[untyped.Metadata.S[Shape, Idx]] = {
+    implicit def baseCmp[
+      Shape[_],
+      Idx
+    ](
+      implicit
+      dim: Cmp[Shape[Dimension[Idx]]]
+    ):
+      Cmp[
+        untyped.Metadata.Shaped[
+          Shape,
+          Idx
+        ]
+      ] =
       Cmp.by {
         m ⇒
           import shapeless._
-          m.shape ::
-          m.dtype ::
-          m.compressor ::
-          m.order ::
-          // TODO: fill_value
+          m.      shape ::
+          m.      dtype ::
+          m. compressor ::
+          m.      order ::  // TODO: fill_value
           m.zarr_format ::
-          m.filters ::
+          m.    filters ::
           HNil
       }
-    }
   }
   object cmp extends cmp
 }

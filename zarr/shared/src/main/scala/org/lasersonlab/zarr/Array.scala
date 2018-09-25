@@ -104,10 +104,12 @@ trait Array {
 
 object Array {
 
-  type     Aux[_ShapeT[_], _Idx, _A[_], _Chunk[_], _T] = Array { type ShapeT[U] =    _ShapeT[U]; type Idx = _Idx; type T = _T; type A[U] = _A[U]; type Chunk[U] = _Chunk[U] }
-  type      Of[_ShapeT[_], _Idx,                   _T] = Array { type ShapeT[U] =    _ShapeT[U]; type Idx = _Idx; type T = _T }
+  type       T[                                    _T] = Array {                                                   type T = _T }
+  type     Aux[_ShapeT[_], _Idx, _A[_], _Chunk[_], _T] = Array { type ShapeT[U] =    _ShapeT[U]; type Idx = _Idx ; type T = _T ; type A[U] = _A[U]; type Chunk[U] = _Chunk[U] }
+  type      Of[_ShapeT[_], _Idx,                   _T] = Array { type ShapeT[U] =    _ShapeT[U]; type Idx = _Idx ; type T = _T }
   type Untyped[_ShapeT[_], _Idx                      ] = Array { type ShapeT[U] =    _ShapeT[U]; type Idx = _Idx }
   type    List[            _Idx                      ] = Array { type ShapeT[U] = scala.List[U]; type Idx = _Idx }
+
 
   def unapply(a: Array):
     Option[
@@ -131,9 +133,9 @@ object Array {
    * Each chunk lives in a file with basename given by '.'-joined indices
    */
   private def chunks[
-        _T,
     Shape[_]: Traverse : Zip : Scannable,
       Idx,
+       _T,
         A[_]: Traverse
   ](
            dir: Path,
@@ -301,7 +303,7 @@ object Array {
     } yield
       arr
 
-  def untyped[Idx](dir: Path)(implicit idx: Idx.T[Idx]): Exception | Array.List[Idx] =
+  def untyped[Idx: Idx.T](dir: Path): Exception | Array.List[Idx] =
     zarr.array.metadata.untyped(dir)
       .flatMap {
         metadata ⇒
@@ -320,8 +322,16 @@ object Array {
       }
 
   def apply[
-    _T,
-    _Shape[_]: Scannable : Zip,
+        _T
+          :  DataType.Encoder
+          : FillValue.Encoder
+    ,
+    _Shape[_]
+          : Scannable
+          : Zip
+          : Traverse
+          : EncoderK
+    ,
     _Idx,
     _A[_]
   ](
@@ -329,13 +339,9 @@ object Array {
     _metadata: Metadata[_Shape, _Idx, _T]
   )(
     implicit
-    e: Encoder[DataType.Aux[_T]],
     ti: Indices.Aux[_A, _Shape],
-    traverse: Traverse[_A],
-    _traverseShape: Traverse[_Shape],
+    _traverse: Traverse[_A],
     arrayLike: ArrayLike.Aux[_A, _Shape],
-    et: FillValue.Encoder[_T],
-    senc: EncoderK[_Shape],
     idx: Idx.T[_Idx]
   ):
     Exception |
@@ -355,7 +361,7 @@ object Array {
       _chunks ← {
         implicit val md = _metadata
         import Metadata._
-        chunks[_T, _Shape, _Idx, _A](
+        chunks[_Shape, _Idx, _T, _A](
           dir,
           _metadata.shape
         )
@@ -368,9 +374,10 @@ object Array {
         type A[U] = _A[U]
         type Chunk[U] = zarr.Chunk[ShapeT, U]
 
-        val traverseA = traverse
+        val traverseA     = Traverse[     A]
+        val traverseShape = Traverse[ShapeT]
+
         val foldableChunk = Chunk.foldable
-        val traverseShape = _traverseShape
 
         import idx.{ arithmeticInt, encoder, int }
 
@@ -472,8 +479,6 @@ object Array {
         }
       }
 
-  type T[_T] = Array { type T = _T }
-
   /**
    * Implement [[Foldable]] on an [[Array]] identified only by its element type; part of working around / mitigating
    * https://github.com/scala/bug/issues/11169.
@@ -488,27 +493,37 @@ object Array {
     }
 
   // TODO: would be nice to not need multiple overloads corresponding to different "Aux" aliases
-  implicit def loadArrInt[Shape[_], T, N <: Nat](
+  implicit def loadArrInt[
+    Shape[_],
+        T
+          :  DataType.Decoder
+          :  DataType.Encoder
+          : FillValue.Decoder
+          : FillValue.Encoder
+        ,
+        N <: Nat
+  ](
     implicit
-     v: VectorEvidence.Ax[N, Shape, Int],
-     d: DataType.Decoder[T],
-     e: DataType.Encoder[T],
-    dt: FillValue.Decoder[T],
-    et: FillValue.Encoder[T]
+     v: VectorEvidence.Ax[N, Shape, Int]
   ):
     Load[
       lasersonlab.zarr.Array[Shape, T]
     ] =
-    loadArr[T, N, Int, Shape]
+    loadArr[Shape, Int, T, N]
 
-  // TODO: canonicalize type-param ordering
-  implicit def loadArr[T, N <: Nat, Idx, Shape[_]](
+  implicit def loadArr[
+    Shape[_],
+    Idx,
+    T
+      :  DataType.Decoder
+      :  DataType.Encoder
+      : FillValue.Decoder
+      : FillValue.Encoder
+    ,
+    N <: Nat
+  ](
     implicit
-     v: VectorEvidence.Ax[N, Shape, Idx],
-     d: DataType.Decoder[T],
-     e: DataType.Encoder[T],
-    dt: FillValue.Decoder[T],
-    et: FillValue.Encoder[T]
+     v: VectorEvidence.Ax[N, Shape, Idx]
   ):
     Load[
       Of[Shape, Idx, T]

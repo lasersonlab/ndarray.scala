@@ -16,7 +16,6 @@ sealed trait Idx {
 }
 object Idx {
   type T[_T] = Idx { type T = _T }
-  implicit def specify(idx: Idx): Idx.T[idx.T] = ??? //idx
   implicit object Int
     extends Idx {
     type T = scala.Int
@@ -48,8 +47,16 @@ object Idx {
     val decoder = io.circe.Decoder.decodeLong
   }
 
-  implicit def unwrapEncoder(implicit idx: Idx): Encoder[idx.T] = idx.encoder
-  implicit def unwrapDecoder(implicit idx: Idx): Decoder[idx.T] = idx.decoder
+  // TODO: would be nice to not need all these, but afaict each set is necessary depending whether an `Idx` is
+  // identified as `Idx.T` or not
+  trait syntax {
+    implicit def unwrapEncoder    (implicit idx: Idx     ): Encoder[idx.T] = idx.encoder
+    implicit def unwrapDecoder    (implicit idx: Idx     ): Decoder[idx.T] = idx.decoder
+    implicit def unwrapEncoderT[T](implicit idx: Idx.T[T]): Encoder[    T] = idx.encoder
+    implicit def unwrapDecoderT[T](implicit idx: Idx.T[T]): Decoder[    T] = idx.decoder
+    @inline def makeIdxOps[T](t: T): Ops[T] = Ops(t)
+  }
+  object syntax extends syntax
 
   implicit class Ops[T](val t: T) extends AnyVal {
     def int(implicit idx: Idx.T[T]): CastException | Int = idx.int(t)

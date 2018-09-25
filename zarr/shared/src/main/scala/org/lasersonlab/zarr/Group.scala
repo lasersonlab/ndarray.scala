@@ -8,16 +8,16 @@ import org.lasersonlab.zarr.io._
 import org.lasersonlab.zarr.utils.Idx
 
 case class Group[Idx](
-  arrays: Map[String, Array.Idxs[Idx]] = Map.empty,
-  groups: Map[String, Group[Idx]] = Map.empty,
-  attrs: Opt[Attrs] = None,
-  metadata: Group.Metadata = Group.Metadata()
+    arrays: Map[String, Array.List[Idx]] =      Map.empty,
+    groups: Map[String,      Group[Idx]] =      Map.empty,
+     attrs:                   Opt[Attrs] =           None,
+  metadata:               Group.Metadata = Group.Metadata()
 )(
   implicit
   idx: Idx.T[Idx]
 ) {
-  def array   (name: Str): Array.Idxs[      Idx   ] = arrays(name)
-  def apply[T](name: Str): Array.S   [List, Idx, T] = arrays(name).as[T]
+  def array   (name: Str): Array.List[      Idx   ] = arrays(name)
+  def apply[T](name: Str): Array.  Of[List, Idx, T] = arrays(name).as[T]
 
   def group(name: Str): Group[Idx] = groups(name)
 }
@@ -56,7 +56,7 @@ object Group {
       metadata ← dir.load[Metadata]
          attrs ← dir.load[Opt[Attrs]]
 
-      arrays = Map.newBuilder[String, Array.Idxs[Idx]]
+      arrays = Map.newBuilder[String, Array.List[Idx]]
       groups = Map.newBuilder[String, Group[Idx]]
 
       group ←

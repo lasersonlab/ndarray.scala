@@ -1,9 +1,11 @@
 package org.lasersonlab.zarr.cmp.untyped
 
+import cats.Foldable
 import cats.implicits._
 import hammerlab.either._
 import hammerlab.option._
 import org.hammerlab.test.Cmp
+import org.lasersonlab.zarr.Array.Aux
 import org.lasersonlab.zarr.cmp.untyped.array.ElemsDiff.{ Index, Sizes }
 import org.lasersonlab.zarr.{ Array, Attrs, Dimension }
 import shapeless.the
@@ -20,9 +22,9 @@ object array {
 
   trait cmp {
 
-    implicit def arrayIdxsCmp[Idx](implicit dim: Cmp[Dimension[Idx]]): Cmp[Array.Idxs[Idx]] = arrayShapedCmp[List, Idx]
-    def arrayShapedCmp[Shape[_], Idx](implicit dim: Cmp[Shape[Dimension[Idx]]]): Cmp[Array.Shaped[Shape, Idx]] = {
-      type Arr = Array.Shaped[Shape, Idx]
+    implicit def arrayIdxsCmp[Idx](implicit dim: Cmp[Dimension[Idx]]): Cmp[Array.List[Idx]] = arrayShapedCmp[List, Idx]
+    def arrayShapedCmp[Shape[_], Idx](implicit dim: Cmp[Shape[Dimension[Idx]]]): Cmp[Array.Untyped[Shape, Idx]] = {
+      type Arr = Array.Untyped[Shape, Idx]
       new Cmp[Arr] {
 
         val _metadata = metadata.cmp.baseCmp[Shape, Idx]
@@ -41,9 +43,8 @@ object array {
                 .orElse {
                   var i = 0
                   var diff: Option[ElemsDiff] = None
-                  // TODO: why doesn't cats syntax work here?
-                  val  left = l.traverseA.toList(l.chunks).iterator.flatMap { chunk ⇒ l.foldableChunk.toList(chunk).iterator }
-                  val right = r.traverseA.toList(r.chunks).iterator.flatMap { chunk ⇒ r.foldableChunk.toList(chunk).iterator }
+                  val  left = l.t.toList.iterator
+                  val right = r.t.toList.iterator
                   while (left.hasNext && right.hasNext && diff.isEmpty) {
                     val l =  left.next
                     val r = right.next

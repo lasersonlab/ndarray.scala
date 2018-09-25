@@ -2,7 +2,7 @@ package org.lasersonlab.zarr
 
 import cats.Traverse
 import lasersonlab.shapeless.slist._
-import org.lasersonlab.circe.{ DecoderK, EncoderK }
+import org.lasersonlab.circe.{ CodecK, DecoderK, EncoderK }
 import org.lasersonlab.ndarray.ArrayLike
 import org.lasersonlab.ndarray.Vectors._
 import org.lasersonlab.shapeless.{ Scannable, Zip }
@@ -14,6 +14,8 @@ import shapeless.Nat
  * Type- and value-level function from a [[Nat type-level natural number]] [[N]] and index-type [[Idx]] to corresponding
  * types and implicit values for an [[N]]-dimensional [[Array]] with indices (along each dimension) of type [[Idx]]
  * (typically [[Int]], but potentially e.g. [[Long]])
+ *
+ * TODO: remove [[N]], parameterize by ShapeT and [[Idx]]
  */
 trait VectorEvidence[N <: Nat, Idx] {
   /**
@@ -38,9 +40,8 @@ trait VectorEvidence[N <: Nat, Idx] {
   type Shape = ShapeT[Idx]
 
   implicit val idx: utils.Idx.T[Idx]
-  implicit def sdec: DecoderK[ShapeT]
+  implicit def shapeCodec: CodecK[ShapeT]
   implicit def idec: Decoder[Idx]
-  implicit def senc: EncoderK[ShapeT]
   implicit def ienc: Encoder[Idx]
   implicit def ti: Indices.Aux[A, ShapeT]
   implicit def traverse: Traverse[A]
@@ -61,9 +62,8 @@ object VectorEvidence {
 
   def make[N <: Nat, S[_], Idx, _A[_]](
     implicit
-    _sdec: DecoderK[S],
+    _shapeCodec: CodecK[S],
     _idec: Decoder[Idx],
-    _senc: EncoderK[S],
     _ienc: Encoder[Idx],
     _idx: Idx.T[Idx],
     _ti: Indices.Aux[_A, S],
@@ -79,9 +79,8 @@ object VectorEvidence {
       type A[U] = _A[U]
 
       override implicit val  idx = _idx
-      override implicit val sdec = _sdec
       override implicit val idec = _idec
-      override implicit val senc = _senc
+      override implicit val shapeCodec = _shapeCodec
       override implicit val ienc = _ienc
       override implicit val ti = _ti
       override implicit val traverse = _traverse

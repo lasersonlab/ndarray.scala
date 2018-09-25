@@ -17,7 +17,7 @@ class ArrayTest
     // TODO: remove local paths!
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/matrix")
 
-    implicit val arr = Array.chunks[Float, _2, Int](path).get
+    implicit val arr = Array[Float, _2, Int](path).get
 
     ==(
       arr.metadata,
@@ -106,7 +106,7 @@ class ArrayTest
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/row_attrs/_Valid")
 
     // TODO: push idx-type into an implicit param
-    val Array(metadata, attrs, chunks) = Array.chunks[Long, _1, Int](path).get
+    val Array(metadata, attrs, chunks) = Array[Long, _1, Int](path).get
 
     ==(
       metadata,
@@ -141,7 +141,7 @@ class ArrayTest
   test("1-D strings") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/col_attrs/Sex")
 
-    val a @ Array(metadata, attrs, chunks) = Array.chunks[String, _1, Int](path).get
+    val a @ Array(metadata, attrs, chunks) = Array[String, _1, Int](path).get
 
     ==(
       metadata,
@@ -188,7 +188,7 @@ class ArrayTest
 
     import shapeless._
 
-    val a @ Array(metadata, attrs, chunks) = Array.chunks[Var, _1, Int](path).get
+    val a @ Array(metadata, attrs, chunks) = Array[Var, _1, Int](path).get
 
     implicit val stringDataType = string(18)
     val dtype = !![DataType.Aux[Var]]

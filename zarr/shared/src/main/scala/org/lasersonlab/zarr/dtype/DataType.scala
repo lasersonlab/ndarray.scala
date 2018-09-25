@@ -4,6 +4,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteBuffer._
 
 import cats.Eq
+import io.circe
 import io.circe.Decoder.Result
 import io.circe.DecodingFailure.fromThrowable
 import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }
@@ -233,13 +234,26 @@ object DataType
     override val toString = s"$order$dType$size"
   }
 
-  implicit def dataTypeDecoder[T](implicit parser: Parser[T]): Decoder[Aux[T]] =
-    new Decoder[Aux[T]] {
+  implicit val decoder: circe.Decoder[DataType] =
+    new circe.Decoder[DataType] {
+      import cats.implicits._
+      def apply(c: HCursor): Result[DataType] =
+        c
+        .value
+        .as[String]
+          .fold(
+            _ ⇒ Parser.untypedStruct(c),
+            get(_, c)
+          )
+    }
+
+  implicit def dataTypeDecoder[T](implicit parser: Parser[T]): circe.Decoder[Aux[T]] =
+    new circe.Decoder[Aux[T]] {
       def apply(c: HCursor): Result[Aux[T]] = parser(c)
     }
 
-  implicit def dataTypeEncoder[D <: DataType]: Encoder[D] =
-    new Encoder[D] {
+  implicit def dataTypeEncoder[D <: DataType]: circe.Encoder[D] =
+    new circe.Encoder[D] {
       def apply(entries: Seq[StructEntry]): Json =
         Json.arr(
           entries
@@ -249,8 +263,8 @@ object DataType
                   Json.fromString(name),
                   dataTypeEncoder(datatype)
                 )
-            }:
-            _*
+            }
+            : _*
         )
       def apply(a: D): Json =
         a match {
@@ -401,6 +415,7 @@ object DataType
         )
     }
 
+  val regex = """(.)(.)(\d+)""".r
   def get(str: String, c: HCursor): DecodingFailure | DataType =
     for {
       t ←
@@ -420,18 +435,4 @@ object DataType
       datatype ←    get(order, tpe, size).left.map(DecodingFailure(_, c.history))
     } yield
       datatype
-
-  val regex = """(.)(.)(\d+)""".r
-  implicit val decoder: Decoder[DataType] =
-    new Decoder[DataType] {
-      import cats.implicits._
-      def apply(c: HCursor): Result[DataType] =
-        c
-          .value
-          .as[String]
-          .fold(
-            _ ⇒ Parser.untypedStruct(c),
-            get(_, c)
-          )
-    }
 }

@@ -8,6 +8,7 @@ import org.hammerlab.paths.HasPathOps
 import org.lasersonlab.ndarray.Arithmetic
 import org.lasersonlab.shapeless.Zip
 import org.lasersonlab.zarr.io.{ Load, Save }
+import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.utils.opt.OptCodec
 
 /**
@@ -32,6 +33,7 @@ package object zarr
      with HasPathOps
      with hammerlab.either
      with hammerlab.math.utils
+     with Idx.syntax
      with Load.syntax
      with Save.syntax {
 

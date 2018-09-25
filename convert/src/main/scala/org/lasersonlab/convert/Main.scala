@@ -7,7 +7,6 @@ import lasersonlab._
 import org.lasersonlab.netcdf
 import org.lasersonlab.zarr.Compressor
 import org.lasersonlab.zarr.Compressor.Blosc
-import org.lasersonlab.zarr.utils.Idx
 
 object Main
   extends Cmd {
@@ -37,10 +36,8 @@ object Main
 
         val Seq(in, out) = args.args.map(Path(_))
 
-        val idx = Idx.Int
-
         val  inGroup: netcdf.Group        = in
-        val outGroup:   zarr.Group[idx.T] = convertGroup(inGroup)
+        val outGroup:   zarr.Group = convertGroup(inGroup)  // TODO: support Long indices
 
         println(s"${inGroup.vars.size} vars: ${outGroup.arrays.keys.mkString(",")}, ${inGroup.groups.size} groups: ${outGroup.groups.keys.mkString(",")}")
         println(s"Saving to: $out")

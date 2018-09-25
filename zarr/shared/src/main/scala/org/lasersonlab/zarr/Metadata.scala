@@ -99,7 +99,7 @@ object Metadata {
             Idx
           ]
         ]
-      = {
+      =
         c
           .downField("dtype")
           .success
@@ -135,13 +135,12 @@ object Metadata {
                   zarr_format
                 )
           }
-      }
     }
 
   implicit def encoder[
-        T: FillValue.Encoder,
-    Shape[_] : Traverse : EncoderK,
-      Idx : Encoder
+        T   : FillValue.Encoder,
+    Shape[_]: Traverse : EncoderK,
+      Idx   : Encoder
   ](
     implicit
     datatypeEncoder: Encoder[DataType.Aux[T]]

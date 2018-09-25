@@ -16,6 +16,7 @@ import org.lasersonlab.zarr.circe.parser._
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Basename
 
+// TODO: reorder type-params to put T last, for consistency w/ Array.Of, etc.
 case class Metadata[_T, _Shape[_], _Idx](
    shape: _Shape[Dimension[_Idx]],
   dtype: DataType.Aux[_T],
@@ -132,7 +133,12 @@ object Metadata {
                   compressor,
                   order,
                   fill_value,
-                  zarr_format
+                  zarr_format,
+                  filters =
+                    c
+                      .downField("filters")
+                      .as[Seq[Filter]]
+                      .toOption
                 )
           }
     }
@@ -158,13 +164,14 @@ object Metadata {
         implicit val datatype = m.dtype
         implicit val enc = FillValue.encoder[T]
         Json.obj(
-          "shape" → encode(m.shape.map(_.arr)),
-          "chunks" → encode(m.shape.map(_.chunk)),
-          "compressor" → encode(m.compressor),
-          "dtype" → encode(m.dtype),
-          "order" → encode(m.order),
-          "fill_value" → encode(m.fill_value),
-          "zarr_format" → encode(m.zarr_format)
+                "shape" → encode(m.shape.map(_.arr)),
+               "chunks" → encode(m.shape.map(_.chunk)),
+           "compressor" → encode(m.compressor),
+                "dtype" → encode(m.dtype),
+                "order" → encode(m.order),
+           "fill_value" → encode(m.fill_value),
+          "zarr_format" → encode(m.zarr_format),
+              "filters" → encode(m.filters)
         )
       }
     }

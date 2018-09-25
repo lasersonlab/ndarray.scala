@@ -84,4 +84,25 @@ package object zarr
             Dimension(arr, chunk)
         }
   }
+
+  trait api {
+    type Idx
+    import org.lasersonlab.{ zarr ⇒ z }
+    type Group = z.Group[Idx]
+    object Group {
+      type Metadata = z.Group.Metadata
+    }
+    type Array[Shape[_], T] = z.Array.Of[Shape, Idx, T]
+    object Array {
+      type Metadata[Shape[_], T] = z.Metadata[T, Shape, Idx]
+    }
+  }
+  trait int
+    extends api {
+    type Idx = Int
+  }
+  trait long
+    extends api {
+    type Idx = Long
+  }
 }

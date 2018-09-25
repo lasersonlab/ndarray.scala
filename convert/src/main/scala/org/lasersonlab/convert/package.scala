@@ -300,8 +300,8 @@ package object convert
 
             // TODO: optionally write to a tmp dir then "commit" to intended destination
             for {
-              _ ← (metadata: Metadata[T, ShapeT, Idx]).save(dir) // TODO: rm type params
-              _ ←   attrs.save(dir)
+              _ ← metadata.save(dir)
+              _ ←    attrs.save(dir)
               _ ← chunkResults
             } yield
               ()

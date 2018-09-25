@@ -235,8 +235,8 @@ object Array {
   )(
     implicit
      v: VectorEvidence[N, Idx],
-     d: Decoder[DataType.Aux[T]],
-     e: Encoder[DataType.Aux[T]],
+     d:  DataType.Decoder[T],
+     e:  DataType.Encoder[T],
     dt: FillValue.Decoder[T],
     et: FillValue.Encoder[T]
   ):
@@ -270,8 +270,8 @@ object Array {
     dir: Path
   )(
     implicit
-    d: Decoder[DataType.Aux[_T]],
-    e: Encoder[DataType.Aux[_T]],
+    d: DataType.Decoder[_T],
+    e: DataType.Encoder[_T],
     ti: Indices.Aux[_A, _Shape],
     traverse: Traverse[_A],
     arrayLike: ArrayLike.Aux[_A, _Shape],
@@ -491,8 +491,8 @@ object Array {
   implicit def loadArrInt[Shape[_], T, N <: Nat](
     implicit
      v: VectorEvidence.Ax[N, Shape, Int],
-     d: Decoder[DataType.Aux[T]],
-     e: Encoder[DataType.Aux[T]],
+     d: DataType.Decoder[T],
+     e: DataType.Encoder[T],
     dt: FillValue.Decoder[T],
     et: FillValue.Encoder[T]
   ):
@@ -501,11 +501,12 @@ object Array {
     ] =
     loadArr[T, N, Int, Shape]
 
+  // TODO: canonicalize type-param ordering
   implicit def loadArr[T, N <: Nat, Idx, Shape[_]](
     implicit
      v: VectorEvidence.Ax[N, Shape, Idx],
-     d: Decoder[DataType.Aux[T]],
-     e: Encoder[DataType.Aux[T]],
+     d: DataType.Decoder[T],
+     e: DataType.Encoder[T],
     dt: FillValue.Decoder[T],
     et: FillValue.Encoder[T]
   ):

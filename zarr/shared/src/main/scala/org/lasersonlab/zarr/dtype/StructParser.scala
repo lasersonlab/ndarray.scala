@@ -1,24 +1,27 @@
 package org.lasersonlab.zarr.dtype
 
 import io.circe.{ DecodingFailure, HCursor, Json }
-import org.lasersonlab.zarr.dtype.Parser.StructEntry
+import org.lasersonlab.zarr.dtype.DataType.Decoder
 import org.lasersonlab.zarr.|
 import shapeless._
 import DataType.StructList
+import org.lasersonlab.zarr.dtype.json.Entry
 
+/**
+ * Parse an [[L HList]] from a list of JSON [[Entry field-entries]]
+ */
 trait StructParser[L <: HList] {
   import StructParser.Return
-  def apply(c: List[StructEntry]): Return[L]
+  def apply(c: List[Entry]): Return[L]
 }
 
 object StructParser {
-  import DataType.Struct
   type Return[L <: HList] = DecodingFailure | StructList[L]
 
   implicit val hnil:
         StructParser[HNil] =
     new StructParser[HNil] {
-      def apply(c: List[StructEntry]): Return[HNil] =
+      def apply(c: List[Entry]): Return[HNil] =
         c match {
           case Nil ⇒ Right(DataType.hnil)
           case l ⇒
@@ -37,13 +40,12 @@ object StructParser {
     DTail <: HList
   ](
     implicit
-    // TODO: making these both Lazy breaks [[Parser.structParser]] derivation; why?
-    head: Parser[Head],
+    head: Decoder[Head],
     tail: StructParser[Tail]
   ):
         StructParser[Head :: Tail] =
     new StructParser[Head :: Tail] {
-      def apply(entries: List[StructEntry]): Return[Head :: Tail] =
+      def apply(entries: List[Entry]): Return[Head :: Tail] =
         entries match {
           case Nil ⇒
             Left(
@@ -52,7 +54,7 @@ object StructParser {
                 Nil
               )
             )
-          case scala.::(StructEntry(name, tpe), rest) ⇒
+          case scala.::(Entry(name, tpe), rest) ⇒
             for {
               h ←
                 head(

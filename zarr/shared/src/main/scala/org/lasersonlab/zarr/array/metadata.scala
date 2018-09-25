@@ -131,14 +131,11 @@ object metadata {
     implicit def _datatype  [S[_], T](implicit md: Metadata[S, _, T]): DataType.Aux[T] = md.     dtype
 
     def apply[
-          T   : FillValue.Decoder,
+          T   : DataType.Decoder : FillValue.Decoder,
       Shape[_]: Functor : Zip : DecoderK,
         Idx   : Decoder
     ](
       dir: Path
-    )(
-      implicit
-      d: Decoder[DataType.Aux[T]]
     ):
       Exception |
       Metadata[Shape, Idx, T]
@@ -165,13 +162,11 @@ object metadata {
      */
     implicit def decoder[
           T   : FillValue.Decoder,
-      Shape[_]: Functor : Zip,
-        Idx
+      Shape[_]: Functor : Zip : DecoderK,
+        Idx   : Decoder
     ](
       implicit
-      datatypeDecoder: Decoder[DataType.Aux[T]],
-      ds: DecoderK[Shape],
-      ids: Decoder[Idx]
+      datatypeDecoder: DataType.Decoder[T]
     ):
       Decoder[
         Metadata[
@@ -233,13 +228,10 @@ object metadata {
       }
 
     implicit def encoder[
-          T   : FillValue.Encoder,
+          T   : DataType.Encoder : FillValue.Encoder,
       Shape[_]: Traverse : EncoderK,
         Idx   : Encoder
-    ](
-      implicit
-      datatypeEncoder: Encoder[DataType.Aux[T]]
-    ):
+    ]:
       Encoder[
         Metadata[
           Shape,

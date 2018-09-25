@@ -190,12 +190,12 @@ package object convert
         val ndims = shape.size
 
         val elemsPerChunk = max(1, chunkSize / datatype.size)
-        val numRows = shape.head.arr
+        val numRows = shape.head.size
 
         val shapeTail =
           shape
             .tail
-            .map(_.arr)
+            .map(_.size)
 
         val rowSize = shapeTail.product
 

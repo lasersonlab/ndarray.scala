@@ -96,7 +96,7 @@ class GroupTest
     // casting to a fully-typed representation allows normal checking to succeed; this is redundant with the checks
     // above, but both are included for demonstration purposes
     ==(
-      actual.asInstanceOf[Metadata[Struct, List, Int]],
+      actual.asInstanceOf[Metadata[List, Int, Struct]],
       expected
     )
   }

@@ -16,8 +16,7 @@ import org.lasersonlab.zarr.circe.parser._
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Basename
 
-// TODO: reorder type-params to put T last, for consistency w/ Array.Of, etc.
-case class Metadata[_T, _Shape[_], _Idx](
+case class Metadata[_Shape[_], _Idx, _T](
    shape: _Shape[Dimension[_Idx]],
   dtype: DataType.Aux[_T],
    override val compressor: Compressor = Blosc(),
@@ -35,11 +34,11 @@ extends untyped.Metadata
 object Metadata {
 
   val basename = ".zarray"
-  implicit def _basename[T, Shape[_], Idx]: Basename[Metadata[T, Shape, Idx]] = Basename(basename)
+  implicit def _basename[Shape[_], Idx, T]: Basename[Metadata[Shape, Idx, T]] = Basename(basename)
 
   // Implicit unwrappers for some fields
-  implicit def _compressor[   S[_]](implicit md: Metadata[_, S, _]):      Compressor = md.compressor
-  implicit def _datatype  [T, S[_]](implicit md: Metadata[T, S, _]): DataType.Aux[T] = md.     dtype
+  implicit def _compressor[S[_]   ](implicit md: Metadata[S, _, _]):      Compressor = md.compressor
+  implicit def _datatype  [S[_], T](implicit md: Metadata[S, _, T]): DataType.Aux[T] = md.     dtype
 
   def apply[
         T   : FillValue.Decoder,
@@ -52,11 +51,11 @@ object Metadata {
     d: Decoder[DataType.Aux[T]]
   ):
     Exception |
-    Metadata[T, Shape, Idx]
+    Metadata[Shape, Idx, T]
   =
     dir ? basename flatMap {
       path ⇒
-        decode[Metadata[T, Shape, Idx]](
+        decode[Metadata[Shape, Idx, T]](
           path.read
         )
     }
@@ -86,18 +85,18 @@ object Metadata {
   ):
     Decoder[
       Metadata[
-        T,
         Shape,
-        Idx
+        Idx,
+        T
       ]
     ] =
-    new Decoder[Metadata[T, Shape, Idx]] {
+    new Decoder[Metadata[Shape, Idx, T]] {
       def apply(c: HCursor):
         Result[
           Metadata[
-            T,
             Shape,
-            Idx
+            Idx,
+            T
           ]
         ]
       =
@@ -153,18 +152,18 @@ object Metadata {
   ):
     Encoder[
       Metadata[
-        T,
         Shape,
-        Idx
+        Idx,
+        T
       ]
     ]
   =
-    new Encoder[Metadata[T, Shape, Idx]] {
-      def apply(m: Metadata[T, Shape, Idx]): Json = {
+    new Encoder[Metadata[Shape, Idx, T]] {
+      def apply(m: Metadata[Shape, Idx, T]): Json = {
         implicit val datatype = m.dtype
         implicit val enc = FillValue.encoder[T]
         Json.obj(
-                "shape" → encode(m.shape.map(_.arr)),
+                "shape" → encode(m.shape.map(_.size)),
                "chunks" → encode(m.shape.map(_.chunk)),
            "compressor" → encode(m.compressor),
                 "dtype" → encode(m.dtype),

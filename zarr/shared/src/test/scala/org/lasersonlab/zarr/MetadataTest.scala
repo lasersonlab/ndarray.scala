@@ -12,9 +12,9 @@ class MetadataTest
   test("1-D chars") {
     decode[
       Metadata[
-        String,
         `1`,
-        Int
+        Int,
+        String
       ]
     ](
       `col_attrs/DonorID/.zarray`
@@ -32,9 +32,9 @@ class MetadataTest
   test("2-D floats") {
     decode[
       Metadata[
-        Float,
         `2`,
-        Int
+        Int,
+        Float
       ]
     ](
       `matrix/.zarray`

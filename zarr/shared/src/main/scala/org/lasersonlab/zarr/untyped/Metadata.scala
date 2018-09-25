@@ -31,7 +31,7 @@ trait Metadata {
   type Idx
 
   /** Allows a caller to coerce the type of a [[Metadata]] to include its constituent types */
-  def t = this.asInstanceOf[zarr.Metadata[T, Shape, Idx]]
+  def t = this.asInstanceOf[zarr.Metadata[Shape, Idx, T]]  // TODO use match / sealedness instead
 }
 
 object Metadata {
@@ -91,7 +91,7 @@ object Metadata {
           _zarr_format ← c.downField("zarr_format").as[Format]
         } yield
           if (_shape.size == _chunks.size)
-            new zarr.Metadata[_dtype.T, List, Idx](
+            new zarr.Metadata[List, Idx, _dtype.T](
               _shape
                 .zip(_chunks)
                 .map {

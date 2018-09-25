@@ -63,7 +63,13 @@ package object zarr
     type         HCursor    = c.        HCursor
   }
 
-  case class Dimension[Idx](arr: Idx, chunk: Chunk.Idx)
+  /**
+   * Total size and chunk-size of a given dimension of an [[Array]]
+   *
+   * The [[size total size]] type is [[Idx parameterizable]], while [[chunk chunk-sizes]] must always be
+   * [[Chunk.Idx ints]]
+   */
+  case class Dimension[Idx](size: Idx, chunk: Chunk.Idx)
   object Dimension {
     def apply(arr: Chunk.Idx): Dimension[Chunk.Idx] = Dimension(arr, arr)
   }
@@ -94,7 +100,7 @@ package object zarr
     }
     type Array[Shape[_], T] = z.Array.Of[Shape, Idx, T]
     object Array {
-      type Metadata[Shape[_], T] = z.Metadata[T, Shape, Idx]
+      type Metadata[Shape[_], T] = z.Metadata[Shape, Idx, T]
     }
   }
   trait int

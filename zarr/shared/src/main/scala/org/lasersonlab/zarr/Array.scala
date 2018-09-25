@@ -75,7 +75,7 @@ trait Array {
    */
   def apply(idx: Index): T  // TODO: support exceptions: IndexOutOfBounds, IO, etc.
 
-  val metadata: Metadata[T, ShapeT, Idx]
+  val metadata: Metadata[ShapeT, Idx, T]
 
   /**
    * All the [[Array]]'s data lives here: an N-dimensional array of [[Chunk chunks]] that contain elements of type [[T]]
@@ -112,7 +112,7 @@ object Array {
   def unapply(a: Array):
     Option[
       (
-        Metadata[a.T, a.ShapeT, a.Idx],
+        Metadata[a.ShapeT, a.Idx, a.T],
         Option[Attrs],
         a.A[a.Chunk[a.T]]
       )
@@ -296,7 +296,7 @@ object Array {
     ]
   =
     for {
-      _metadata ← dir.load[Metadata[_T, _Shape, Idx]]
+      _metadata ← dir.load[Metadata[_Shape, Idx, _T]]
       arr ← Array(dir, _metadata)
     } yield
       arr
@@ -326,7 +326,7 @@ object Array {
     _A[_]
   ](
     dir: Path,
-    _metadata: Metadata[_T, _Shape, _Idx]
+    _metadata: Metadata[_Shape, _Idx, _T]
   )(
     implicit
     e: Encoder[DataType.Aux[_T]],

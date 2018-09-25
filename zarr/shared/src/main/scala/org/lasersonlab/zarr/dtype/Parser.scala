@@ -1,5 +1,6 @@
 package org.lasersonlab.zarr.dtype
 
+import cats.implicits._
 import io.circe.Decoder.Result
 import io.circe.{ Decoder, DecodingFailure, HCursor }
 import org.hammerlab.lines.Name
@@ -10,6 +11,8 @@ import org.lasersonlab.zarr.{ Int, | }
 
 /**
  * Parse some JSON to identify and construct a [[DataType]] for a [[T given type]]
+ *
+ * TODO: this is just a Decoder[ DataType.Aux[T] ]
  */
 trait Parser[T] {
   def apply(c: HCursor): Return[T]
@@ -54,8 +57,8 @@ object Parser {
 
   implicit val   _byte: Parser[  Byte] = make { case           '|' :: 'i' :: Int(   1) ⇒   byte       }
   implicit val  _short: Parser[ Short] = make { case Endianness(e) :: 'i' :: Int(   2) ⇒  short(   e) }
-  implicit val    _int: Parser[   Int] = make { case Endianness(e) :: 'i' :: Int(   4) ⇒ int(e) }
-  implicit val   _long: Parser[  Long] = make { case Endianness(e) :: 'i' :: Int(   8) ⇒   long(e) }
+  implicit val    _int: Parser[   Int] = make { case Endianness(e) :: 'i' :: Int(   4) ⇒    int(   e) }
+  implicit val   _long: Parser[  Long] = make { case Endianness(e) :: 'i' :: Int(   8) ⇒   long(   e) }
   implicit val  _float: Parser[ Float] = make { case Endianness(e) :: 'f' :: Int(   4) ⇒  float(   e) }
   implicit val _double: Parser[Double] = make { case Endianness(e) :: 'f' :: Int(   8) ⇒ double(   e) }
   implicit val _string: Parser[String] = make { case           '|' :: 'S' :: Int(size) ⇒ string(size) }
@@ -112,7 +115,6 @@ object Parser {
 
   implicit val untypedStruct: Parser[Struct] =
     new Parser[Struct] {
-      import cats.implicits._
       override def apply(c: HCursor): Return[Struct] =
         c
           .value
@@ -137,7 +139,7 @@ object Parser {
                 Result,
                 DataType.StructEntry
               ]
-              .map { untyped.Struct(_) }
+              .map { untyped.Struct }
           }
     }
 }

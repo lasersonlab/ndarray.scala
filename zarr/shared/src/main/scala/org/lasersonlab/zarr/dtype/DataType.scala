@@ -7,16 +7,29 @@ import cats.Eq
 import io.circe
 import io.circe.Decoder.Result
 import io.circe.DecodingFailure.fromThrowable
-import io.circe.{ DecodingFailure, HCursor, Json }
-import org.lasersonlab.ndarray.io.{ Read, Write }
-import org.lasersonlab.zarr.dtype.DataType.{ Struct, StructEntry, StructList }
+import io.circe._
+import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.|
 import shapeless._
 
 import scala.util.Try
 
 /**
- * Representation of a Zarr record-type; includes functionality for reading a record from a [[ByteBuffer]]
+ * Representation of a Zarr record-type; includes functionality for IO to and from a [[ByteBuffer]]
+ *
+ * Subclasses:
+ *
+ * - [[Primitive]]s:
+ *   - Integer types: [[byte]], [[short]], [[int]], [[long]]
+ *   - Floating-point types: [[float]], [[double]]
+ *   - [[string]]
+ * - Structs:
+ *   - [[Struct "typed"]]: auto-derived for a case-class
+ *   - [[untyped.Struct "untyped"]]: "bag of fields", corresponding to [[org.lasersonlab.zarr.untyped.Struct]]
+ *
+ * "Typed" and "Untyped" structs can represent the same logical underlying datatype (e.g. the JSON representation, in
+ * [[org.lasersonlab.zarr.Metadata array metadata]]'s "dtype" field will be the same), but allow for call-sites that
+ * know/enforce a more structured schema vs. not
  */
 sealed trait DataType {
   def size: Int
@@ -34,6 +47,9 @@ sealed trait DataType {
   }
 }
 
+/**
+ * Auto-derivations of [[Struct]] instances for case-classes
+ */
 trait StructDerivations {
 
   type Aux[_T] = DataType { type T = _T }
@@ -90,8 +106,8 @@ trait StructDerivations {
     Struct[S, L](l)
 }
 
-object DataType
-  extends StructDerivations {
+trait EqInstances {
+
   lazy val structEq: Eq[untyped.Struct] =
     Eq.by[
       untyped.Struct,
@@ -155,28 +171,12 @@ object DataType
           ) ⇒
             structEntriesEq.eqv(xEntries, yEntries) &&
             x.size == y.size
-          case (
-            untyped.Struct(lEntries),
-            untyped.Struct(rEntries),
-          ) ⇒
-            structEntriesEq.eqv(
-              lEntries,
-              rEntries
-            )
+          case _ ⇒ false  // different datatype-types
         }
     }
+}
 
-  /**
-   * Common interface for non-struct datatypes (numerics, strings)
-   */
-  sealed abstract class Primitive(
-    val order: ByteOrder,
-    val dType: DType,
-    val size: Int
-  ) extends DataType {
-    override val toString = s"$order$dType$size"
-  }
-
+trait Coders {
   implicit val decoder: circe.Decoder[DataType] =
     new circe.Decoder[DataType] {
       import cats.implicits._
@@ -216,16 +216,23 @@ object DataType
           case untyped.Struct    (entries   )  ⇒ apply(entries)
         }
     }
+}
 
-  implicit def read[T](implicit dataType: DataType.Aux[T]): Read[T] =
-    new Read[T] {
-      @inline def apply(buff: ByteBuffer, idx: Int): T = dataType.read(buff, idx)
-    }
+object DataType
+  extends StructDerivations
+     with EqInstances
+     with Coders {
 
-  implicit def write[T](implicit dataType: DataType.Aux[T]): Write[T] =
-    new Write[T] {
-      @inline def apply(buffer: ByteBuffer, t: T): Unit = dataType(buffer, t)
-    }
+  /**
+   * Common interface for non-struct datatypes (numerics, strings)
+   */
+  sealed abstract class Primitive(
+    val order: ByteOrder,
+    val dType: DType,
+    val size: Int
+  ) extends DataType {
+    override val toString = s"$order$dType$size"
+  }
 
   import ByteOrder._
   type Order = ByteOrder

@@ -39,7 +39,7 @@ class GroupTest
 
     val datatype =
       DataType.untyped.Struct(
-        Vector(
+        List(
           StructEntry(    "index",   long    ),
           StructEntry("Accession", string(18)),
           StructEntry(     "Gene",  short    ),

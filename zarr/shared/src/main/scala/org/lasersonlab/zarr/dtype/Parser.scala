@@ -117,7 +117,7 @@ object Parser {
         c
           .value
           .as[
-            Vector[
+            List[
               StructEntry
             ]
           ]

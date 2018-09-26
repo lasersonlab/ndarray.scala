@@ -50,11 +50,11 @@ trait EqInstances {
     new Eq[DataType] {
       import cats.derived.auto.eq._
       import cats.implicits.catsKernelStdOrderForInt
-      val primitive = the[Eq[Primitive]]
+      val primitive = the[Eq[Primitive[_]]]
 
       def eqv(x: DataType, y: DataType): Boolean =
         (x, y) match {
-          case (x: Primitive, y: Primitive) ⇒ primitive.eqv(x, y)
+          case (x: Primitive[_], y: Primitive[_]) ⇒ primitive.eqv(x, y)
           case (x: untyped.Struct, y: untyped.Struct) ⇒ structEq.eqv(x, y)
           case (
             Struct(

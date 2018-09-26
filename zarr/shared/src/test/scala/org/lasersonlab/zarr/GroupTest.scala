@@ -4,7 +4,7 @@ import hammerlab.path._
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.dtype.DataType
-import org.lasersonlab.zarr.dtype.DataType.{ untyped, _ }
+import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.untyped.Struct
 
 class GroupTest
@@ -33,7 +33,7 @@ class GroupTest
     ==(metadata, Group.Metadata(`2`))
 
     val `var`  = group[Struct]('var)
-    val `var2` = group.array('var)
+    val `var2` = group ! 'var
 
     ==(`var`.shape, Dimension(27998) :: Nil)
 
@@ -56,9 +56,7 @@ class GroupTest
         shape = List(Dimension(27998)),
         dtype = datatype,
         fill_value =
-          // TODO: fill untyped values are null atm; fix is to move fill-value handling into datatype
-          FillValue.Null
-          /*Struct(
+          Struct(
             Map(
                   "index" → 0L,
               "Accession" → "",
@@ -69,7 +67,7 @@ class GroupTest
                  "_Total" → 0.0,
                  "_Valid" → 0L
             )
-          )*/
+          )
       )
 
     ==(
@@ -77,26 +75,10 @@ class GroupTest
       expected
     )
 
-    val actual = `var2`.metadata
-
-    // auto-Cmp-derivation doesn't work  for `var2` because its element-type is unknown at compile-time
-    // here we verify its the fields individually
-    ==( actual       shape, expected       shape )
-    ==( actual  compressor, expected  compressor )
-    ==( actual       order, expected       order )
-    ==( actual zarr_format, expected zarr_format )
-    ==( actual     filters, expected     filters )
-
-    // drop opaque dependent-type from the left side
-    ==( actual dtype: DataType, expected dtype )
-
-    // TODO: fold fill-values into datatype
-    ==( actual. fill_value.asInstanceOf[FillValue[Struct]], expected fill_value )
-
-    // casting to a fully-typed representation allows normal checking to succeed; this is redundant with the checks
-    // above, but both are included for demonstration purposes
     ==(
-      actual.asInstanceOf[Metadata[List, Int, Struct]],
+      `var2`
+        .metadata
+        .as[Struct],  // `var2` was accessed via the "untyped" group.array method
       expected
     )
   }

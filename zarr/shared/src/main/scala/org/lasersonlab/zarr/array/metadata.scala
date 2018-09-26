@@ -13,6 +13,7 @@ import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr._
+import org.lasersonlab.zarr.array.metadata.untyped.Interface
 import org.lasersonlab.zarr.circe.Decoder.Result
 import org.lasersonlab.zarr.circe._
 import org.lasersonlab.zarr.circe.parser._
@@ -21,31 +22,50 @@ import org.lasersonlab.zarr.io.Basename
 import org.lasersonlab.zarr.utils.Idx
 
 object metadata {
-  sealed trait Interface {
-    val shape: Shape[Dimension[Idx]]
-    val dtype: DataType
-    val compressor: Compressor = Blosc()
-    val order: Order = C
-    val fill_value: FillValue[T] = Null
-    val zarr_format: Format = `2`
-    val filters: Opt[Seq[Filter]] = None
-
-    type T = dtype.T
-    type Shape[_]
-    type Idx
-
-    /** Allows a caller to coerce the type of a [[Interface]] to include its constituent types */
-    def t = this.asInstanceOf[zarr.Metadata[Shape, Idx, T]]  // TODO use match / sealedness instead
-  }
-
-  type Shaped[_Shape[_], _I] =
-    Interface {
-      type Shape[U] = _Shape[U]
-      type Idx = _I
-    }
 
   object untyped {
+    /**
+     * Base-trait for [[Metadata]] where type-params are type-members, allowing for construction in situations where
+     * relevant types (particularly [[Metadata.T]], the element-type) are not known ahead of time.
+     *
+     * The only implementation of this interface is [[Metadata]], and generally the interface should not be used
+     * directly outside this file
+     */
+    sealed trait Interface {
+      val shape: Shape[Dimension[Idx]]
+      val dtype: DataType
+      val compressor: Compressor = Blosc()
+      val order: Order = C
+      val fill_value: FillValue[T] = Null
+      val zarr_format: Format = `2`
+      val filters: Opt[Seq[Filter]] = None
+
+      type T = dtype.T
+      type Shape[_]
+      type Idx
+
+      /** Allows a caller to coerce the type of a [[Interface]] to include its constituent types */
+      def t =
+        this match {
+          case m: Metadata[Shape, Idx, T] ⇒ m
+        }
+      def as[_T] = this.asInstanceOf[zarr.Metadata[Shape, Idx, _T]]
+    }
+
+    type Shaped[_Shape[_], _I] =
+      Interface {
+        type Shape[U] = _Shape[U]
+        type Idx = _I
+      }
+
     import Metadata.basename
+
+    /**
+     * Load an [[Shaped "untyped"]] [[Metadata]] from the path to a containing directory
+     *
+     * @param dir directory containing `.zarray` metadata file
+     * @param idx "index" type to use for dimensions' coordinates
+     */
     def apply(dir: Path)(implicit idx: Idx): Exception | Shaped[List, idx.T] =
       dir ? basename flatMap {
         path ⇒
@@ -59,6 +79,7 @@ object metadata {
           )
       }
 
+    // TODO: parameterize Shape?
     implicit def decoder(
       implicit
       idx: Idx
@@ -69,52 +90,51 @@ object metadata {
           idx.T
         ]
       ] =
-      new Decoder[Shaped[List, idx.T]] {
+      new Decoder[
+        Shaped[
+          List,
+          idx.T
+        ]
+      ] {
         type Idx = idx.T
+        import Dimensions.decodeList
         def apply(c: HCursor): Result[Shaped[List, Idx]] = {
           for {
-                  _shape ← c.downField(      "shape").as[List[Idx]]
-                 _chunks ← c.downField(     "chunks").as[List[Chunk.Idx]]
+              dimensions ← c.as[List[Dimension[idx.T]]]
                   _dtype ← c.downField(      "dtype").as[DataType]
              _compressor ← c.downField( "compressor").as[Compressor]
                   _order ← c.downField(      "order").as[Order]
             _zarr_format ← c.downField("zarr_format").as[Format]
+             _fill_value ← {
+                           implicit val d: DataType.Aux[_dtype.T] = _dtype
+                           c.downField("fill_value").as[FillValue[_dtype.T]]
+                           }
           } yield
-            if (_shape.size == _chunks.size)
-              new Metadata[List, Idx, _dtype.T](
-                _shape
-                  .zip(_chunks)
-                  .map {
-                    case (arr, chunk) ⇒
-                      Dimension(arr, chunk)
-                  },
-                _dtype,
-                _compressor,
-                _order,
-                // TODO: move fill-value parsing into datatype
-                FillValue.Null,
-                _zarr_format,
-                c
-                  .downField("filters")
-                  .as[Seq[Filter]]
-                  .toOption
-              )
-            else
-              throw new IllegalStateException(
-                s"Shape and chunks arrays have unequal sizes (${_shape.size} vs ${_chunks.size}): ${_shape.mkString(",")} ${_chunks.mkString(",")}"
-              )
+            new Metadata[List, Idx, _dtype.T](
+              dimensions,
+              _dtype,
+              _compressor,
+              _order,
+              _fill_value,
+              _zarr_format,
+              c
+                .downField("filters")
+                .as[Seq[Filter]]
+                .toOption
+            )
+            : Shaped[List, Idx]
         }
       }
   }
 
   case class Metadata[_Shape[_], _Idx, _T](
-     shape: _Shape[Dimension[_Idx]],
-    dtype: DataType.Aux[_T],
-     override val compressor: Compressor = Blosc(),
-     override val order: Order = C,
-     override val fill_value: FillValue[_T] = Null,
-     override val zarr_format: Format = `2`,
-     override val filters: Opt[Seq[Filter]] = None
+                       shape: _Shape[Dimension[_Idx]],
+                       dtype:   DataType.Aux[_T],
+    override val  compressor:     Compressor     = Blosc(),
+    override val       order:          Order     = C,
+    override val  fill_value:      FillValue[_T] = Null,
+    override val zarr_format:         Format     = `2`,
+    override val     filters: Opt[Seq[Filter]]   = None
   )
   extends Interface
   {

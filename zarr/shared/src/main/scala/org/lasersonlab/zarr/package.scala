@@ -2,14 +2,18 @@ package org.lasersonlab
 
 import cats.Functor
 import cats.implicits._
+import io.circe.Decoder.Result
 import io.circe.generic.AutoDerivation
-import io.circe.{ Parser, ParsingFailure }
+import io.circe.{ Decoder, DecodingFailure, HCursor, Parser, ParsingFailure }
 import org.hammerlab.paths.HasPathOps
+import org.lasersonlab.circe.DecoderK
 import org.lasersonlab.ndarray.Arithmetic
 import org.lasersonlab.shapeless.Zip
 import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.utils.opt.OptCodec
+
+import scala.util.Try
 
 /**
  * Spec / Format questions:
@@ -89,6 +93,48 @@ package object zarr
           case (arr, chunk) ⇒
             Dimension(arr, chunk)
         }
+
+    implicit def decodeList[
+      Shape[_]
+        : DecoderK
+        : Zip
+        : Functor
+    ](
+      implicit
+      idx: Idx
+    ):
+      Decoder[
+        Shape[
+          Dimension[
+            idx.T
+          ]
+        ]
+      ] =
+      new Decoder[Shape[Dimension[idx.T]]] {
+        override def apply(c: HCursor): Result[Shape[Dimension[idx.T]]] =
+          for {
+                 shape ← c.downField( "shape").as[Shape[idx.T]]
+                chunks ← c.downField("chunks").as[Shape[Chunk.Idx]]
+            dimensions ←
+                   Try {
+                     shape
+                       .zip(chunks)
+                       .map {
+                         case (shape, chunk) ⇒
+                           Dimension(shape, chunk)
+                       }
+                   }
+                   .toEither
+                   .left
+                   .map {
+                     DecodingFailure.fromThrowable(
+                       _,
+                       c.history
+                     )
+                   }
+          } yield
+            dimensions
+      }
   }
 
   trait api {

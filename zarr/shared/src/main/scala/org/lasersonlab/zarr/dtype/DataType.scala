@@ -57,11 +57,12 @@ object DataType
   /**
    * Common interface for non-struct datatypes (numerics, strings)
    */
-  sealed abstract class Primitive(
+  sealed abstract class Primitive[_T](
     val order: ByteOrder,
     val dType: DType,
     val size: Int
   ) extends DataType {
+    type T = _T
     override val toString = s"$order$dType$size"
   }
 
@@ -73,13 +74,13 @@ object DataType
   val `0` = 0.toByte
 
   // TODO: setting the buffer's order every time seems suboptimal; some different design that streamlines that would be nice
-  case object   byte                                 extends Primitive( None, d.   int,    1) { type T =   Byte; @inline def apply(buf: ByteBuffer): T = {                   buf.get       }; @inline override def apply(b: ByteBuffer, t: T) = b             .put      (t) }
-  case  class  short(override val order: Endianness) extends Primitive(order, d.   int,    2) { type T =  Short; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getShort  }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putShort (t) }
-  case  class    int(override val order: Endianness) extends Primitive(order, d.   int,    4) { type T =    Int; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getInt    }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putInt   (t) }
-  case  class   long(override val order: Endianness) extends Primitive(order, d.   int,    8) { type T =   Long; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getLong   }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putLong  (t) }
-  case  class  float(override val order: Endianness) extends Primitive(order, d. float,    4) { type T =  Float; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getFloat  }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putFloat (t) }
-  case  class double(override val order: Endianness) extends Primitive(order, d. float,    8) { type T = Double; @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getDouble }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putDouble(t) }
-  case  class string(override val  size:        Int) extends Primitive( None, d.string, size) { type T = String
+  case object   byte                                 extends Primitive[  Byte]( None, d.   int,    1) { @inline def apply(buf: ByteBuffer): T = {                   buf.get       }; @inline override def apply(b: ByteBuffer, t: T) = b             .put      (t) }
+  case  class  short(override val order: Endianness) extends Primitive[ Short](order, d.   int,    2) { @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getShort  }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putShort (t) }
+  case  class    int(override val order: Endianness) extends Primitive[   Int](order, d.   int,    4) { @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getInt    }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putInt   (t) }
+  case  class   long(override val order: Endianness) extends Primitive[  Long](order, d.   int,    8) { @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getLong   }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putLong  (t) }
+  case  class  float(override val order: Endianness) extends Primitive[ Float](order, d. float,    4) { @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getFloat  }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putFloat (t) }
+  case  class double(override val order: Endianness) extends Primitive[Double](order, d. float,    8) { @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getDouble }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putDouble(t) }
+  case  class string(override val  size:        Int) extends Primitive[String]( None, d.string, size) {
     import scala.Array.fill
     val arr = fill(size)(`0`)
     def apply(buf: ByteBuffer): T = {

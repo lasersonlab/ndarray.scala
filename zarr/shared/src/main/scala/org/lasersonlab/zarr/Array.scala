@@ -2,14 +2,14 @@ package org.lasersonlab.zarr
 
 import cats.data.Nested
 import cats.implicits._
-import cats.{ Applicative, Eval, Foldable, Traverse }
+import cats.{ Eval, Foldable, Traverse }
 import hammerlab.option._
 import hammerlab.path._
-import org.lasersonlab.circe.{ Codec, CodecK, DecoderK, EncoderK }
+import org.lasersonlab.circe.{ CodecK, EncoderK }
 import org.lasersonlab.ndarray.ArrayLike
 import org.lasersonlab.shapeless.{ Scannable, Zip }
 import org.lasersonlab.zarr
-import org.lasersonlab.zarr.circe.{ Decoder, Encoder }
+import org.lasersonlab.zarr.array.metadata
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.untyped.FlatArray
@@ -26,14 +26,39 @@ import scala.util.Try
  * companion-object for some convenient constructors
  */
 trait Array {
+  /** Element type */
   type T
+
+  /** Structure of this [[Array]]'s [[Shape "shape"]] (and, as a result, [[Index indices]] of individual elements) */
   type ShapeT[_]
+
+  /**
+   * "Index" data-type; typically [[Int]], but [[Long]] is also supported
+   *
+   * Note that the number of chunks in any dimension, as well as the size of each chunk in each dimension, must still be
+   * an [[Int]]
+   */
   type Idx
+
+  /** Type of the "shape" of this [[Array]] */
   type Shape = ShapeT[Idx]
+
+  /** Type of elements' indices; same as the [[Array]]'s [[Shape]] */
   type Index = Shape
+
+  /** N-dimensional container for this [[Array]]'s "chunks" */
   type A[_]
+
+  /** N-dimensional container that each "chunk" uses to store its [[T elements]] */
   type Chunk[_]
 
+  /**
+   * Useful evidences:
+   *
+   * - [[chunks the chunks array]] is [[Traverse traversable]]
+   * - [[ShapeT the "shape" type]] is [[Traverse traversable]]
+   * - a [[Chunk]] is [[Foldable]]
+   */
   implicit val traverseA: Traverse[A]
   implicit val traverseShape: Traverse[ShapeT]
   implicit val foldableChunk: Foldable[Chunk]
@@ -104,13 +129,19 @@ trait Array {
 
 object Array {
 
+  /**
+   * "Aux" aliases for various subsets of [[Array]]'s type-members that might be known / required in various contexts
+   */
   type       T[                                    _T] = Array {                                                   type T = _T }
   type     Aux[_ShapeT[_], _Idx, _A[_], _Chunk[_], _T] = Array { type ShapeT[U] =    _ShapeT[U]; type Idx = _Idx ; type T = _T ; type A[U] = _A[U]; type Chunk[U] = _Chunk[U] }
   type      Of[_ShapeT[_], _Idx,                   _T] = Array { type ShapeT[U] =    _ShapeT[U]; type Idx = _Idx ; type T = _T }
   type Untyped[_ShapeT[_], _Idx                      ] = Array { type ShapeT[U] =    _ShapeT[U]; type Idx = _Idx }
   type    List[            _Idx                      ] = Array { type ShapeT[U] = scala.List[U]; type Idx = _Idx }
 
-
+  /**
+   * De-structure an [[Array]] into its [[Metadata]], [[Attrs]], and [[Array.chunks]] members, preserving whatever is
+   * known about their types
+   */
   def unapply(a: Array):
     Option[
       (
@@ -156,7 +187,6 @@ object Array {
     ]
   = {
     import _idx._
-
     for {
       chunkRanges ←
         shape
@@ -166,54 +196,43 @@ object Array {
                 (arr + chunk - 1) / chunk
               }
           }
-          .sequence[CastException | ?, Chunk.Idx]
+          .sequence
 
       sizeHint = shape.foldLeft(1) { _ * _.chunk }
 
-      arr ← {
-        val chunks =
-          indices(chunkRanges)
-            .map {
-              idx: Shape[Chunk.Idx] ⇒
-                import Zip.Ops
-                for {
-                  chunkShape ←
-                    // chunks in the last "row" of any dimension may be smaller
-                    shape
-                      .zip(idx)
-                      .map {
-                        case (Dimension(arr, chunk), idx) ⇒
-                          val start = idx * chunk
-                          val end = arr min ((idx + 1) * chunk)
+      arr ←
+        indices(chunkRanges)
+          .map {
+            idx: Shape[Chunk.Idx] ⇒
+              import Zip.Ops
+              for {
+                chunkShape ←
+                  // chunks in the last "row" of any dimension may be smaller
+                  shape
+                    .zip(idx)
+                    .map {
+                      case (Dimension(arr, chunk), idx) ⇒
+                        val start = idx * chunk
+                        val end = arr min ((idx + 1) * chunk)
 
-                          int { end - start }
-                      }
-                      .sequence[
-                        CastException | ?,
-                        Chunk.Idx
-                      ]
+                        int { end - start }
+                    }
+                    .sequence
 
-                  basename = Key(idx)
+                basename = Key(idx)
 
-                  chunk ←
-                    Chunk(
-                      dir / basename,
-                      chunkShape,
-                      idx,
-                      compressor,
-                      sizeHint * datatype.size
-                    )
-                } yield
-                  chunk
-            }
-
-        // A[Err | Chunk] -> Err | A[Chunk]
-        chunks
-          .sequence[
-            Exception | ?,
-            Chunk[Shape, _T]
-          ]
-      }
+                chunk ←
+                  Chunk(
+                    dir / basename,
+                    chunkShape,
+                    idx,
+                    compressor,
+                    sizeHint * datatype.size
+                  )
+              } yield
+                chunk
+          }
+          .sequence  // A[Err | Chunk] -> Err | A[Chunk]
     } yield
       arr
   }
@@ -248,18 +267,18 @@ object Array {
     import v._
     apply[T, v.ShapeT, Idx, v.A](dir)(
       // shouldn't have to list all these explicitly: https://github.com/scala/bug/issues/11086
-      d = d,
-      e = e,
-      ti = ti,
-      traverse = traverse,
-      arrayLike = arrayLike,
-      dt = dt,
-      et = et,
-      shapeCodec = shapeCodec,
-      idx = idx,
+                  d = d,
+                  e = e,
+                 ti = ti,
+           traverse = traverse,
+          arrayLike = arrayLike,
+                 dt = dt,
+                 et = et,
+         shapeCodec = shapeCodec,
+                idx = idx,
       traverseShape = traverseShape,
-      zipShape = zipShape,
-      scannable = scannable
+           zipShape = zipShape,
+          scannable = scannable
     )
   }
 
@@ -272,18 +291,18 @@ object Array {
     dir: Path
   )(
     implicit
-    d: DataType.Decoder[_T],
-    e: DataType.Encoder[_T],
-    ti: Indices.Aux[_A, _Shape],
-    traverse: Traverse[_A],
-    arrayLike: ArrayLike.Aux[_A, _Shape],
-    dt: FillValue.Decoder[_T],
-    et: FillValue.Encoder[_T],
-    shapeCodec: CodecK[_Shape],
-    idx: Idx.T[Idx],
+                d: DataType.Decoder[_T],
+                e: DataType.Encoder[_T],
+               ti: Indices.Aux[_A, _Shape],
+         traverse: Traverse[_A],
+        arrayLike: ArrayLike.Aux[_A, _Shape],
+               dt: FillValue.Decoder[_T],
+               et: FillValue.Encoder[_T],
+       shapeCodec: CodecK[_Shape],
+              idx: Idx.T[Idx],
     traverseShape: Traverse[_Shape],
-    zipShape: Zip[_Shape],
-    scannable: Scannable[_Shape]
+         zipShape: Zip[_Shape],
+        scannable: Scannable[_Shape]
   ):
     Exception |
     Aux[
@@ -303,8 +322,20 @@ object Array {
     } yield
       arr
 
-  def untyped[Idx: Idx.T](dir: Path): Exception | Array.List[Idx] =
-    zarr.array.metadata.untyped(dir)
+  /**
+   * Load an [[Array]] whose element-type and number of dimensions are unknown
+   *
+   * Dimensions are loaded as a [[List]], and the element-type is loaded as a type-member `T`
+   */
+  def untyped[
+    Idx: Idx.T
+  ](
+    dir: Path
+  ):
+    Exception |
+    Array.List[Idx]
+  =
+    metadata.untyped(dir)
       .flatMap {
         metadata ⇒
           apply[
@@ -332,8 +363,8 @@ object Array {
           : Traverse
           : EncoderK
     ,
-    _Idx,
-    _A[_]
+      _Idx,
+        _A[_]
   ](
     dir: Path,
     _metadata: Metadata[_Shape, _Idx, _T]
@@ -382,7 +413,7 @@ object Array {
         import idx.{ arithmeticInt, encoder, int }
 
         val metadata = _metadata
-        val datatype = metadata.dtype
+        val datatype =  metadata.dtype
         val   chunks =   _chunks
         val    attrs =    _attrs
 
@@ -411,7 +442,9 @@ object Array {
           type G[U] = `2`[U]
           type T = Chunk.Idx
 
-          val chunkIdx :: offset :: ⊥ =  // ShapeT[Int] :: ShapeT[Int]
+          // traverse the dimensions in the requested idx, as well as this array's shape, to obtain the chunk index and
+          // the intra-chunk offset (each of which has a component along each dimension)
+          val chunkIdx :: offset ::  ⊥ =
             Nested(
               idx
                 .zip(shape)
@@ -424,8 +457,7 @@ object Array {
             )
             .sequence               // E[F[G[T]]]
             .map(_.value.sequence)  // E[G[F[T]]]
-            .right
-            .get                     :   G[F[T]]
+            .right.get               :   G[F[T]]
 
           arrayLike(
             chunks,

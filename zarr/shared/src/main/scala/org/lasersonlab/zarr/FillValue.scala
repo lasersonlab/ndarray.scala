@@ -40,7 +40,7 @@ object FillValue {
     def apply(json: Json, datatype: DataType.Aux[T]): Result[T]
   }
   trait StructDecoder {
-    implicit def decoder[T]: Decoder[T] =
+    implicit def base64StringDecoder[T]: Decoder[T] =
       new Decoder[T] {
         def apply(
           json: Json,
@@ -76,8 +76,25 @@ object FillValue {
               }
       }
   }
-  object Decoder
+  trait FromDataType
     extends StructDecoder {
+    implicit def fromDataType[T](implicit d: DataType.Aux[T]): Decoder[T] =
+      d match {
+        case p: Primitive[T] ⇒
+          p match {
+            case d @ DataType.  byte    ⇒ Decoder.  byte
+            case d @ DataType. short(_) ⇒ Decoder. short
+            case d @ DataType.   int(_) ⇒ Decoder.   int
+            case d @ DataType.  long(_) ⇒ Decoder.  long
+            case d @ DataType. float(_) ⇒ Decoder. float
+            case d @ DataType.double(_) ⇒ Decoder.double
+            case d @ DataType.string(_) ⇒ Decoder.string
+          }
+        case _ ⇒ base64StringDecoder
+      }
+  }
+  object Decoder
+    extends FromDataType {
 
     type Result[T] = circe.Decoder.Result[FillValue[T]]
 
@@ -104,7 +121,7 @@ object FillValue {
     implicit val double: Decoder[Double] = make[Double]
     implicit val string: Decoder[String] =
       new Decoder[String] {
-        val base64Decoder = decoder[String]
+        val stringDecoder = base64StringDecoder[String]
         def apply(json: Json, datatype: DataType.Aux[String]): Result[String] =
           if (json.isNull)
             Right(Null)
@@ -128,7 +145,7 @@ object FillValue {
                 // 0's ("A"s)?
                 case "" ⇒ Right("")
                 case _ ⇒
-                  base64Decoder(
+                  stringDecoder(
                     json,
                     datatype
                   )
@@ -158,15 +175,6 @@ object FillValue {
           c.value,
           datatype
         )
-    }
-
-  /**
-   * When parsing [[untyped.Metadata untyped metadata]], the `fill_value` may be a literal (e.g. a number), or a
-   * base64-encoded string or struct; we store it as opaque [[Json]], and this [[Decoder]] parses it
-   */
-  implicit val decodeJson: circe.Decoder[FillValue[Json]] =
-    new circe.Decoder[FillValue[Json]] {
-      def apply(c: HCursor): Result[Json] = Right(c.value)
     }
 
   sealed class Encoder[T](val apply: (T, DataType.Aux[T]) ⇒ Json)
@@ -203,18 +211,9 @@ object FillValue {
       }
   }
 
-  implicit val encodeJson: circe.Encoder[FillValue[Json]] =
-    new circe.Encoder[FillValue[Json]] {
-      def apply(a: FillValue[Json]): Json =
-        a match {
-          case Null ⇒ Json.Null
-          case NonNull(json) ⇒ json
-        }
-    }
-
   implicit def encoder[T](
     implicit
-    encoder: Encoder[T],
+     encoder:  Encoder    [T],
     datatype: DataType.Aux[T]
   ):
     circe.Encoder[

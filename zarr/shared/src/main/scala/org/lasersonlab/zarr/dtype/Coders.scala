@@ -105,7 +105,7 @@ trait Coders
         )
       def apply(a: D): Json =
         a match {
-          case p: Primitive ⇒ Json.fromString(p.toString)
+          case p: Primitive[_] ⇒ Json.fromString(p.toString)
           case Struct(StructList(entries, _)) ⇒ seq(entries)
           case untyped.Struct   (entries    ) ⇒ seq(entries)
         }

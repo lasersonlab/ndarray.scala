@@ -37,7 +37,7 @@ object Main
         val Seq(in, out) = args.args.map(Path(_))
 
         val  inGroup: netcdf.Group = in
-        val outGroup:   zarr.Group = convertGroup(inGroup)  // TODO: support Long indices
+        val outGroup:   zarr.Group = inGroup  // TODO: support Long indices
 
         println(s"${inGroup.vars.size} vars: ${outGroup.arrays.keys.mkString(",")}, ${inGroup.groups.size} groups: ${outGroup.groups.keys.mkString(",")}")
         println(s"Saving to: $out")

@@ -14,7 +14,7 @@ object Main
   case class Opts(
     @O("c")  chunkSize:            Bytes =              64 MB  ,
     @O("z") compressor:       Compressor =              Blosc(),
-    @R         gcpOpts: netcdf.Main.Opts =   netcdf.Main.Opts()
+    @R             gcp: netcdf.Main.Opts =   netcdf.Main.Opts()
   )
 
   val main =

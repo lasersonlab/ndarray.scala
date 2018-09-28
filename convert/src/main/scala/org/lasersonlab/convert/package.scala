@@ -2,14 +2,15 @@ package org.lasersonlab
 
 import _root_.cats.implicits._
 import _root_.cats.instances.list.catsStdInstancesForList
-import _root_.cats.{ Eval, Foldable, Traverse }
+import _root_.cats.{ Foldable, Traverse }
 import _root_.shapeless.the
 import com.tom_e_white.hdf5_java_cloud.NioReadOnlyRandomAccessFile
 import hammerlab.bytes._
 import hammerlab.option._
 import hammerlab.path.Path
 import io.circe.Json
-import org.lasersonlab.netcdf.{ Attribute, Group, Variable }
+import lasersonlab.zarr.Group
+import org.lasersonlab.netcdf.{ Attribute, Variable }
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Save
@@ -36,13 +37,13 @@ package object convert
   implicit val __int = Idx.Int
 
   implicit def convertGroup(
-    group: Group
+    group: netcdf.Group
   )(
     implicit
     compressor: Compressor,
     chunkSize: Bytes
   ):
-    zarr.Group[Int] =
+    Group =
     new zarr.Group[Int](
       arrays =
         group

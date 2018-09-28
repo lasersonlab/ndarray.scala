@@ -7,7 +7,7 @@ import ucar.ma2.IndexIterator
 /**
  * Wrapper for some properties, and a dependent type, that are being converted from HDF5
  */
-sealed abstract class Type {
+abstract class Type {
   type T
   def shape: List[Dimension[Int]]
   def sectionShape: Array[Int]

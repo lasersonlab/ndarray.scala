@@ -1,8 +1,6 @@
 package org.lasersonlab.ndarray
 
-import cats.Monoid
 import hammerlab.shapeless.tlist._
-import org.lasersonlab.ndarray.io.Write
 
 class ToArrayTest
   extends hammerlab.Suite {

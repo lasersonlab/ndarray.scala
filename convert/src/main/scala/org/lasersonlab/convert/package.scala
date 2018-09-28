@@ -1,26 +1,25 @@
 package org.lasersonlab
 
-import cats.{ Eval, Foldable, Traverse }
-import cats.implicits._
+import _root_.cats.implicits._
+import _root_.cats.instances.list.catsStdInstancesForList
+import _root_.cats.{ Eval, Foldable, Traverse }
+import _root_.shapeless.the
 import com.tom_e_white.hdf5_java_cloud.NioReadOnlyRandomAccessFile
 import hammerlab.bytes._
-import hammerlab.either._
 import hammerlab.option._
 import hammerlab.path.Path
-import io.circe.{ Encoder, Json }
+import io.circe.Json
 import org.lasersonlab.netcdf.{ Attribute, Group, Variable }
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Save
 import org.lasersonlab.zarr.utils.Idx
-import org.lasersonlab.zarr.{ Attrs, Compressor, Dimension, FillValue, Key, Metadata }
-import _root_.shapeless.the
+import org.lasersonlab.zarr.{ Attrs, Compressor, Dimension, FillValue, Metadata }
 import ucar.ma2.IndexIterator
 import ucar.nc2.NetcdfFile
 
 import scala.Array.fill
 import scala.math.{ max, min }
-import scala.util.Try
 
 package object convert
   extends Save.syntax
@@ -33,6 +32,8 @@ package object convert
       null
     )
     .getRootGroup
+
+  implicit val __int = Idx.Int
 
   implicit def convertGroup(
     group: Group
@@ -128,7 +129,7 @@ package object convert
           shape
             .map {
               shape ⇒
-                Dimension(
+                Dimension.int(
                   shape,
                   max(
                     1,
@@ -233,9 +234,11 @@ package object convert
 
           implicit val traverseA: Traverse[A] = catsStdInstancesForVector
           implicit val foldableChunk: Foldable[Chunk] = Chunk.foldable
-          implicit val traverseShape: Traverse[ShapeT] = cats.instances.list.catsStdInstancesForList
+          implicit val traverseShape: Traverse[ShapeT] = catsStdInstancesForList
 
           val shape: List[Dimension[Int]] = tpe.shape
+
+          val chunkRanges = shape.map(_.range)
 
           val chunks: A[Chunk[T]] =
             (0 until numChunks)
@@ -257,55 +260,6 @@ package object convert
                   )
               }
               .toVector
-
-          // TODO: move this out
-          implicit val foldArray: Foldable[Array] =
-            new Foldable[Array] {
-              type F[A] = Array[A]
-              @inline override def foldLeft [A, B](fa: F[A],  b:      B )(f: (B,      A ) ⇒      B ):      B  = fa.foldLeft(b)(f)
-              @inline override def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.foldRight(lb)(f)
-            }
-
-          override def save(dir: Path): Throwable | Unit = {
-            def chunkResults =
-              chunks
-                .zipWithIndex
-                .map {
-                  case (chunk, idx) ⇒
-                    val basename = {
-                      // since we chunk by rows only, chunk indices will always be all zeros except for their first
-                      // coordinate
-                      val idxs = fill(ndims)(0)
-                      idxs(0) = idx
-                      Key(idxs)
-                    }
-
-                    Try {
-                      val path = dir / basename
-                      path.mkdirs
-
-                      import java.nio.ByteBuffer._
-                      val buffer = allocate(datatype.size * chunk.shape.product)
-
-                      chunk.foldLeft(()) {
-                        (_, elem) ⇒
-
-                          datatype(buffer, elem)
-                        ()
-                      }
-                    }
-                    .toEither
-                }
-                .sequence
-
-            // TODO: optionally write to a tmp dir then "commit" to intended destination
-            for {
-              _ ← metadata.save(dir)
-              _ ←    attrs.save(dir)
-              _ ← chunkResults
-            } yield
-              ()
-          }
 
           @inline override def apply(idx: List[Int]): T = {
             require(idx.size == rank, s"Index of size ${idx.size} (${idx.mkString(",")}) for array of rank $rank")

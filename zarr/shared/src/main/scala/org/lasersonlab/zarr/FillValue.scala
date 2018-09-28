@@ -177,11 +177,10 @@ object FillValue {
         )
     }
 
-  sealed class Encoder[T](val apply: (T, DataType.Aux[T]) ⇒ Json)
+  sealed case class Encoder[T](apply: (T, DataType.Aux[T]) ⇒ Json)
   trait LowPriorityEncoder {
-    case class Make[T](f: (T, DataType.Aux[T]) ⇒ Json) extends Encoder(f)
-    implicit def default[T]: Encoder[T] =
-      Make {
+    def default[T]: Encoder[T] =
+      Encoder {
         (t, datatype) ⇒
           Json.fromString(
             Base64
@@ -190,17 +189,35 @@ object FillValue {
           )
       }
   }
-  object Encoder
+  trait MedPriorityEncoder
     extends LowPriorityEncoder {
+    implicit def fromDataType[T](implicit d: DataType.Aux[T]): Encoder[T] =
+      d match {
+        case p: Primitive[T] ⇒
+          p match {
+            case d @ DataType.  byte    ⇒ Encoder._encodeByte
+            case d @ DataType. short(_) ⇒ Encoder._encodeShort
+            case d @ DataType.   int(_) ⇒ Encoder._encodeInt
+            case d @ DataType.  long(_) ⇒ Encoder._encodeLong
+            case d @ DataType. float(_) ⇒ Encoder._encodeFloat
+            case d @ DataType.double(_) ⇒ Encoder._encodeDouble
+            case d @ DataType.string(_) ⇒ Encoder._encodeString
+          }
+        case _ ⇒
+          default[T]
+      }
+  }
+  object Encoder
+    extends MedPriorityEncoder {
     import circe.Encoder._
-    implicit val _encodeByte  : Encoder[  Byte] = Make { (t, _) ⇒ encodeByte  (t) }
-    implicit val _encodeShort : Encoder[ Short] = Make { (t, _) ⇒ encodeShort (t) }
-    implicit val _encodeInt   : Encoder[   Int] = Make { (t, _) ⇒ encodeInt   (t) }
-    implicit val _encodeLong  : Encoder[  Long] = Make { (t, _) ⇒ encodeLong  (t) }
-    implicit val _encodeFloat : Encoder[ Float] = Make { (t, _) ⇒ encodeFloat (t) }
-    implicit val _encodeDouble: Encoder[Double] = Make { (t, _) ⇒ encodeDouble(t) }
+    implicit val _encodeByte  : Encoder[  Byte] = Encoder { (t, _) ⇒ encodeByte  (t) }
+    implicit val _encodeShort : Encoder[ Short] = Encoder { (t, _) ⇒ encodeShort (t) }
+    implicit val _encodeInt   : Encoder[   Int] = Encoder { (t, _) ⇒ encodeInt   (t) }
+    implicit val _encodeLong  : Encoder[  Long] = Encoder { (t, _) ⇒ encodeLong  (t) }
+    implicit val _encodeFloat : Encoder[ Float] = Encoder { (t, _) ⇒ encodeFloat (t) }
+    implicit val _encodeDouble: Encoder[Double] = Encoder { (t, _) ⇒ encodeDouble(t) }
     implicit val _encodeString: Encoder[String] =
-      Make {
+      Encoder {
         case ("", _) ⇒ Json.fromString("")
         case (t, datatype) ⇒
           Json.fromString(

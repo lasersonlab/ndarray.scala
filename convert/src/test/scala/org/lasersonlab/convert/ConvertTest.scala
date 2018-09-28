@@ -4,8 +4,8 @@ import hammerlab.path._
 import lasersonlab.zarr._
 import org.hammerlab.test.resources.File
 import org.lasersonlab.zarr
-import org.lasersonlab.zarr.{ Dimension, HasGetOps }
 import org.lasersonlab.zarr.io.Load
+import org.lasersonlab.zarr.{ Dimension, HasGetOps }
 
 class ConvertTest
   extends hammerlab.test.Suite
@@ -32,7 +32,7 @@ class ConvertTest
     ==(
       barcodes.shape,
       List(
-        Dimension(
+        Dimension.int(
           737280,
           116508
         )

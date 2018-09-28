@@ -76,6 +76,7 @@ trait Array {
    * known at a given call-site
    */
   def t: Array.T[this.T] = this
+  def aux: Array.Aux[ShapeT, Idx, A, Chunk, T] = this
 
   /**
    * Short-hand for imbuing this [[Array]] with an element type at runtime, e.g. in the case where it was loaded without
@@ -94,6 +95,7 @@ trait Array {
       ]
 
   val shape: ShapeT[Dimension[Idx]]
+  val chunkRanges: ShapeT[Chunk.Idx]
 
   /**
    * Random-indexing operation
@@ -109,8 +111,6 @@ trait Array {
 
   // TODO: this should be type-parameterizable, and validated accordingly during JSON-parsing
   val attrs: Opt[Attrs]
-
-  def save(dir: Path): Throwable | Unit
 
   def foldLeft[B](b: B)(f: (B, T) ⇒ B): B =
     chunks
@@ -187,50 +187,42 @@ object Array {
     ]
   = {
     import _idx._
+    val sizeHint = shape.foldLeft(1) { _ * _.chunk }
     for {
-      chunkRanges ←
-        shape
-          .map {
-            case Dimension(arr, chunk) ⇒
-              int {
-                (arr + chunk - 1) / chunk
-              }
-          }
-          .sequence
-
-      sizeHint = shape.foldLeft(1) { _ * _.chunk }
-
       arr ←
-        indices(chunkRanges)
-          .map {
-            idx: Shape[Chunk.Idx] ⇒
-              import Zip.Ops
-              for {
-                chunkShape ←
-                  // chunks in the last "row" of any dimension may be smaller
-                  shape
-                    .zip(idx)
-                    .map {
-                      case (Dimension(arr, chunk), idx) ⇒
-                        val start = idx * chunk
-                        val end = arr min ((idx + 1) * chunk)
+        indices(
+          shape
+            .map { _.range }
+        )
+        .map {
+          idx: Shape[Chunk.Idx] ⇒
+            import Zip.Ops
+            for {
+              chunkShape ←
+                // chunks in the last "row" of any dimension may be smaller
+                shape
+                  .zip(idx)
+                  .map {
+                    case (Dimension(arr, chunk, _), idx) ⇒
+                      val start = idx * chunk
+                      val end = arr min ((idx + 1) * chunk)
 
-                        int { end - start }
-                    }
-                    .sequence
+                      int { end - start }
+                  }
+                  .sequence
 
-                basename = Key(idx)
+              basename = Key(idx)
 
-                chunk ←
-                  Chunk(
-                    dir / basename,
-                    chunkShape,
-                    idx,
-                    compressor,
-                    sizeHint * datatype.size
-                  )
-              } yield
-                chunk
+              chunk ←
+                Chunk(
+                  dir / basename,
+                  chunkShape,
+                  idx,
+                  compressor,
+                  sizeHint * datatype.size
+                )
+            } yield
+              chunk
           }
           .sequence  // A[Err | Chunk] -> Err | A[Chunk]
     } yield
@@ -247,7 +239,7 @@ object Array {
    * situations where that is important (in general, it shouldn't be; tests may wish to verify / operate on chunks, but
    * users shouldn't ever need to).
    */
-  def apply[
+  def tni[  // TODO: rename
     T,
     N <: Nat,
     Idx  // TODO: move this to implicit evidence
@@ -257,23 +249,19 @@ object Array {
     implicit
      v: VectorEvidence[N, Idx],
      d:  DataType.Decoder[T],
-     e:  DataType.Encoder[T],
     dt: FillValue.Decoder[T],
-    et: FillValue.Encoder[T]
   ):
     Exception |
     Aux[v.ShapeT, Idx, v.A, Chunk[v.ShapeT, ?], T]
   = {
     import v._
-    apply[T, v.ShapeT, Idx, v.A](dir)(
+    apply[T, v.ShapeT, v.A](dir)(
       // shouldn't have to list all these explicitly: https://github.com/scala/bug/issues/11086
                   d = d,
-                  e = e,
                  ti = ti,
            traverse = traverse,
           arrayLike = arrayLike,
                  dt = dt,
-                 et = et,
          shapeCodec = shapeCodec,
                 idx = idx,
       traverseShape = traverseShape,
@@ -285,21 +273,18 @@ object Array {
   def apply[
     _T,
     _Shape[_],
-    Idx,
     _A[_]
   ](
     dir: Path
   )(
     implicit
                 d: DataType.Decoder[_T],
-                e: DataType.Encoder[_T],
                ti: Indices.Aux[_A, _Shape],
          traverse: Traverse[_A],
         arrayLike: ArrayLike.Aux[_A, _Shape],
                dt: FillValue.Decoder[_T],
-               et: FillValue.Encoder[_T],
        shapeCodec: CodecK[_Shape],
-              idx: Idx.T[Idx],
+              idx: Idx,
     traverseShape: Traverse[_Shape],
          zipShape: Zip[_Shape],
         scannable: Scannable[_Shape]
@@ -307,7 +292,7 @@ object Array {
     Exception |
     Aux[
       _Shape,
-      Idx,
+      idx.T,
       _A,
       Chunk[
         _Shape,
@@ -317,8 +302,14 @@ object Array {
     ]
   =
     for {
-      _metadata ← dir.load[Metadata[_Shape, Idx, _T]]
-      arr ← Array(dir, _metadata)
+      _metadata ← {
+        import Idx.helpers.specify
+        dir.load[Metadata[_Shape, idx.T, _T]]
+      }
+      arr ← {
+        import Idx.helpers.specify
+        Array(dir, _metadata)
+      }
     } yield
       arr
 
@@ -327,35 +318,35 @@ object Array {
    *
    * Dimensions are loaded as a [[List]], and the element-type is loaded as a type-member `T`
    */
-  def untyped[
-    Idx: Idx.T
-  ](
+  def untyped(
     dir: Path
+  )(
+    implicit
+    idx: Idx
   ):
     Exception |
-    Array.List[Idx]
+    Array.List[idx.T]
   =
     metadata.untyped(dir)
       .flatMap {
         metadata ⇒
+          import Idx.helpers.specify
           apply[
             metadata.T,
             scala.List,
-            Idx,
+            idx.T,
             FlatArray
           ](
             dir,
             metadata.t
           )
           .map {
-            arr ⇒ arr: List[Idx]
+            arr ⇒ arr: List[idx.T]
           }
       }
 
   def apply[
         _T
-          :  DataType.Encoder
-          : FillValue.Encoder
     ,
     _Shape[_]
           : Scannable
@@ -410,7 +401,7 @@ object Array {
 
         val foldableChunk = Chunk.foldable
 
-        import idx.{ arithmeticInt, encoder, int }
+        import idx._
 
         val metadata = _metadata
         val datatype =  metadata.dtype
@@ -421,15 +412,7 @@ object Array {
 
         val chunkRanges =
           shape
-            .map {
-              case Dimension(arr, chunk) ⇒
-                int {
-                  (arr + chunk - 1) / chunk
-                }
-            }
-            .sequence
-            .right
-            .get
+            .map { _.range }
 
         import lasersonlab.shapeless.slist._
 
@@ -449,7 +432,7 @@ object Array {
               idx
                 .zip(shape)
                 .map {
-                  case (idx, Dimension(_, chunk)) ⇒
+                  case (idx, Dimension(_, chunk, _)) ⇒
                     int { idx / chunk } ::
                     int { idx % chunk } ::
                     ⊥
@@ -465,49 +448,6 @@ object Array {
           )(
             offset
           )
-        }
-
-        // TODO: move this implementation into base trait, or separate Save instance
-        def save(dir: Path): Throwable | Unit = {
-
-          def chunkResults: Throwable | Unit = {
-            ti(chunkRanges)
-              .map {
-                idx ⇒
-                  val chunk: Chunk[_T] = arrayLike(chunks, idx)
-                  val path = dir / Key(idx)
-                  Try {
-                    import java.nio.ByteBuffer._
-                    val buffer = allocate(datatype.size * chunk.size)
-                    chunk.foldLeft(()) {
-                      (_, elem) ⇒
-                        datatype(buffer, elem: _T)
-
-                        ()
-                    }
-
-                    val os =
-                      metadata.compressor(
-                        path.outputStream(mkdirs = true),
-                        datatype.size
-                      )
-
-                    os.write(buffer.array())
-                    os.close()
-                  }
-                  .toEither
-              }
-              .sequence
-              .map { _ ⇒ () }
-          }
-
-          // TODO: configure ability to write to a temporary location and then "commit" all results
-          for {
-            _ ← _metadata.save(dir)
-            _ ← attrs.save(dir)
-            _ ← chunkResults
-          } yield
-            ()
         }
       }
 
@@ -529,9 +469,7 @@ object Array {
     Shape[_],
         T
           :  DataType.Decoder
-          :  DataType.Encoder
           : FillValue.Decoder
-          : FillValue.Encoder
         ,
         N <: Nat
   ](
@@ -548,9 +486,7 @@ object Array {
     Idx,
     T
       :  DataType.Decoder
-      :  DataType.Encoder
       : FillValue.Decoder
-      : FillValue.Encoder
     ,
     N <: Nat
   ](
@@ -562,18 +498,147 @@ object Array {
     ] =
     new Load[Of[Shape, Idx, T]] {
       override def apply(dir: Path): Exception | Of[Shape, Idx, T] =
-        Array[T, N, Idx](dir)
+        Array.tni[T, N, Idx](dir)
+    }
+
+  implicit def saveOf[
+    Shape[_]
+            : EncoderK
+            : Scannable,
+  ](
+    implicit
+    idx: Idx
+  ):
+    Save[
+      Untyped[Shape, idx.T]
+    ] =
+    new Save[
+      Untyped[
+        Shape,
+        idx.T
+      ]
+    ] {
+      def apply(
+        a: Untyped[Shape, idx.T],
+        dir: Path
+      ):
+        Throwable |
+        Unit
+      =
+        save[
+          Shape,
+          a.A,
+          a.Chunk,
+          a.T
+        ]
+        .apply(
+          a,
+          dir
+        )
     }
 
   implicit def save[
-    T,
-    Shape[_],
-    Idx
-  ]:
+    _Shape[_]
+            : EncoderK
+            : Scannable,
+         A[_],
+     Chunk[_],
+        _T
+  ](
+    implicit
+    idx: Idx
+  ):
     Save[
-      Of[Shape, Idx, T]
+      Aux[_Shape, idx.T, A, Chunk, _T]
     ] =
-    new Save[Of[Shape, Idx, T]] {
-      def apply(t: Of[Shape, Idx, T], dir: Path): Throwable | Unit = t.save(dir)
+    new Save[Aux[_Shape, idx.T, A, Chunk, _T]] {
+      type _Idx = idx.T
+      def apply(
+        a: Aux[_Shape, idx.T, A, Chunk, _T],
+        dir: Path
+      ):
+        Throwable |
+        Unit
+      = {
+        // TODO: these implicit vals shouldn't be necessary; minimize+file
+        implicit val ta: Traverse[     A] = a.traverseA
+        implicit val ts: Traverse[_Shape] = a.traverseShape
+        implicit val fc: Foldable[ Chunk] = a.foldableChunk
+
+        import a._
+
+        def chunkResults: Throwable | Unit = {
+          import Scannable.Ops
+          val (_, chunkStrides) = chunkRanges.scanRight(1)(_ * _)
+          val chunkSize =
+            shape
+              .foldLeft(1) {
+                _ * _.chunk
+              }
+
+          a
+            .aux
+            .chunks
+            .mapWithIndex {
+              (chunk, int) ⇒
+                // traverse chunk-strides to convert linear/integer index to structured N-dimensional index
+                val idx =
+                  chunkStrides
+                    .scanLeft_→(
+                      (
+                        int,  // output
+                        int
+                      )
+                    ) {
+                      case (
+                        (
+                          _,
+                          remaining
+                        ),
+                        stride
+                      ) ⇒
+                        (
+                          remaining / stride,
+                          remaining % stride
+                        )
+                    }
+                    .map { _._1 }
+
+                val path = dir / Key(idx)
+                Try {
+                  import java.nio.ByteBuffer._
+                  val datatype = a.metadata.dtype
+                  val buffer = allocate(datatype.size * chunkSize)
+                  chunk
+                    .foldLeft(()) {
+                      (_, elem) ⇒
+                        datatype(buffer, elem)
+
+                        ()
+                    }
+
+                  val os =
+                    a.metadata.compressor(
+                      path.outputStream(mkdirs = true),
+                      datatype.size
+                    )
+
+                  os.write(buffer.array())
+                  os.close()
+                }
+                .toEither
+            }
+            .sequence[Throwable | ?, Unit]
+            .map { _ ⇒ () }
+        }
+
+        // TODO: configure ability to write to a temporary location and then "commit" all results
+        for {
+          _ ← a.metadata.save(dir)
+          _ ← a.attrs.save(dir)
+          _ ← chunkResults
+        } yield
+          ()
+      }
     }
 }

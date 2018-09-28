@@ -8,6 +8,7 @@ import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.dtype.DataType._
+import org.lasersonlab.zarr.utils.Idx
 import shapeless.nat._
 
 class ArrayTest
@@ -17,12 +18,12 @@ class ArrayTest
     // TODO: remove local paths!
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/matrix")
 
-    implicit val arr = Array[Float, _2, Int](path).get
+    implicit val arr = Array.tni[Float, _2, Int](path).get
 
     ==(
       arr.metadata,
       Metadata(
-             shape = Dimension(27998, 3092) :: Dimension(5425) :: ⊥,
+             shape = Dimension(27998, 3092).get :: Dimension(5425) :: ⊥,
              dtype = float,
         fill_value = 0.0f
       )
@@ -106,7 +107,7 @@ class ArrayTest
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/row_attrs/_Valid")
 
     // TODO: push idx-type into an implicit param
-    val Array(metadata, attrs, chunks) = Array[Long, _1, Int](path).get
+    val Array(metadata, attrs, chunks) = Array.tni[Long, _1, Int](path).get
 
     ==(
       metadata,
@@ -141,7 +142,7 @@ class ArrayTest
   test("1-D strings") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/col_attrs/Sex")
 
-    val a @ Array(metadata, attrs, chunks) = Array[String, _1, Int](path).get
+    val a @ Array(metadata, attrs, chunks) = Array.tni[String, _1, Int](path).get
 
     ==(
       metadata,
@@ -188,7 +189,7 @@ class ArrayTest
 
     import shapeless._
 
-    val a @ Array(metadata, attrs, chunks) = Array[Var, _1, Int](path).get
+    val a @ Array(metadata, attrs, chunks) = Array.tni[Var, _1, Int](path).get
 
     implicit val stringDataType = string(18)
     val dtype = !![DataType.Aux[Var]]
@@ -236,7 +237,7 @@ class ArrayTest
   test("1-D untyped structs") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr/obs")
 
-    val Array(metadata, attrs, chunks) = Array[Obs, _1, Int](path).get
+    val Array(metadata, attrs, chunks) = Array.tni[Obs, _1, Int](path).get
 
     import org.lasersonlab.zarr.cmp.untyped.struct
 

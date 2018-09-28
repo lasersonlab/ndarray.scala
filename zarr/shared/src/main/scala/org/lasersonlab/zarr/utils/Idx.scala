@@ -16,7 +16,7 @@ sealed trait Idx {
 }
 object Idx {
   type T[_T] = Idx { type T = _T }
-  implicit object Int
+  object Int
     extends Idx {
     type T = scala.Int
     val arithmeticId: Id[Int] = Arithmetic.intint
@@ -45,6 +45,11 @@ object Idx {
         )
     val encoder = io.circe.Encoder.encodeLong
     val decoder = io.circe.Decoder.decodeLong
+  }
+
+  object helpers {
+    // TODO: remove explicit imports of this, mix it in instead
+    implicit def specify(implicit idx: Idx): Idx.T[idx.T] = idx
   }
 
   // TODO: would be nice to not need all these, but afaict each set is necessary depending whether an `Idx` is

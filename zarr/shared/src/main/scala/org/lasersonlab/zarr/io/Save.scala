@@ -3,7 +3,8 @@ package org.lasersonlab.zarr.io
 import hammerlab.either._
 import hammerlab.option._
 import hammerlab.path._
-import io.circe.{ Encoder, Printer }
+import io.circe.Encoder
+import org.lasersonlab.zarr.pprint
 
 import scala.util.Try
 
@@ -11,7 +12,6 @@ trait Save[T] {
   def apply(t: T, dir: Path): Throwable | Unit
 }
 object Save {
-  val print = Printer.spaces4.copy(colonLeft = "").pretty _
   implicit def withBasenameAsJSON[T](
     implicit
     basename: Basename[T],
@@ -25,7 +25,7 @@ object Save {
           path.mkdirs
           path
             .write(
-              print(
+              pprint(
                 encoder(t)
               )
             )

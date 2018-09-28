@@ -45,6 +45,7 @@ sealed trait DataType {
     apply(buff, t)
     buff.array()
   }
+  def t: Aux[T] = this
 }
 
 object DataType

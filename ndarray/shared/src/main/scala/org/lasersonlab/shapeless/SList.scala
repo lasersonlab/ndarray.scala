@@ -181,8 +181,16 @@ object SList {
           )
         }
 
+        override def scanLeft_→[A, B](fa: F[A], b: B, f: (B, A) ⇒ B): F[B] = {
+          val next = f(b, fa.head)
+          next :: tl.scanLeft_→(fa.tail, next, f)
+        }
+
+        override def scanRight_←[A, B](fa: F[A], b: B, f: (A, B) ⇒ B): F[B] =
+          f(fa.head, b) :: tl.scanRight_←(fa.tail, b, f)
+
         val size = tail.size + 1
-        // FromList
+
         override def apply[T](l: List[T]): Err | F[T] =
           l match {
             case Nil ⇒ L(TooFew(size))
@@ -217,8 +225,10 @@ object SList {
         def foldLeft [A, B](fa: F[A],  b:      B )(f: (B,      A ) ⇒      B ):      B  =  b
         def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = lb
 
-        def scanLeft [A, B](fa: F[A], b: B, f: (B, A) ⇒ B): (F[B],  B ) = (`0`, b)
-        def scanRight[A, B](fa: F[A], b: B, f: (A, B) ⇒ B): (  B, F[B]) = (b, `0`)
+        def scanLeft   [A, B](fa: F[A], b: B, f: (B, A) ⇒ B): (F[B],  B ) = (`0`, b)
+        def scanLeft_→ [A, B](fa: F[A], b: B, f: (B, A) ⇒ B):  F[B]       =  `0`
+        def scanRight  [A, B](fa: F[A], b: B, f: (A, B) ⇒ B): (  B, F[B]) = (b, `0`)
+        def scanRight_←[A, B](fa: F[A], b: B, f: (A, B) ⇒ B):       F[B]  =     `0`
 
         def apply[A, B](fa: F[A], fb: F[B]): F[(A, B)] = `0`
 

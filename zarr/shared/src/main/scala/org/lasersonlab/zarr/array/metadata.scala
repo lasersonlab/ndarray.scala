@@ -13,13 +13,14 @@ import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr._
-import org.lasersonlab.zarr.array.metadata.untyped.Interface
+import org.lasersonlab.zarr.array.metadata.untyped.{ Interface, Shaped }
 import org.lasersonlab.zarr.circe.Decoder.Result
 import org.lasersonlab.zarr.circe._
 import org.lasersonlab.zarr.circe.parser._
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Basename
 import org.lasersonlab.zarr.utils.Idx
+import shapeless.the
 
 object metadata {
 
@@ -32,15 +33,16 @@ object metadata {
      * directly outside this file
      */
     sealed trait Interface {
-      val shape: Shape[Dimension[Idx]]
-      val dtype: DataType
-      val compressor: Compressor = Blosc()
-      val order: Order = C
-      val fill_value: FillValue[T] = Null
-      val zarr_format: Format = `2`
-      val filters: Opt[Seq[Filter]] = None
+      val       shape: Shape[Dimension[Idx]]
+      val       dtype:        DataType
+      val  compressor:      Compressor    = Blosc()
+      val       order:           Order    =     C
+      val  fill_value:       FillValue[T] =  Null
+      val zarr_format:          Format    =    `2`
+      val     filters:  Opt[Seq[Filter]]  =  None
 
-      type T = dtype.T
+      def d: DataType.Aux[T] = dtype
+      final type T = dtype.T
       type Shape[_]
       type Idx
 
@@ -100,7 +102,7 @@ object metadata {
         import Dimensions.decodeList
         def apply(c: HCursor): Result[Shaped[List, Idx]] = {
           for {
-              dimensions ← c.as[List[Dimension[idx.T]]]
+              dimensions ← c.as[List[Dimension[idx.T]]](decodeList[List](the[DecoderK[List]], the[Zip[List]], the[Traverse[List]], idx))
                   _dtype ← c.downField(      "dtype").as[DataType]
              _compressor ← c.downField( "compressor").as[Compressor]
                   _order ← c.downField(      "order").as[Order]
@@ -127,7 +129,11 @@ object metadata {
       }
   }
 
-  case class Metadata[_Shape[_], _Idx, _T](
+  case class Metadata[
+    _Shape[_],
+      _Idx,
+        _T
+  ](
                        shape: _Shape[Dimension[_Idx]],
                        dtype:   DataType.Aux[_T],
     override val  compressor:     Compressor     = Blosc(),
@@ -151,20 +157,36 @@ object metadata {
     implicit def _datatype  [S[_], T](implicit md: Metadata[S, _, T]): DataType.Aux[T] = md.     dtype
 
     def apply[
-          T   : DataType.Decoder : FillValue.Decoder,
-      Shape[_]: Functor : Zip : DecoderK,
-        Idx   : Decoder
+          T
+             :  DataType.Decoder
+             : FillValue.Decoder,
+      Shape[_]
+             : Traverse
+             : Zip
+             : DecoderK,
     ](
       dir: Path
+    )(
+      implicit
+      idx: Idx
     ):
       Exception |
-      Metadata[Shape, Idx, T]
+      Metadata[Shape, idx.T, T]
     =
       dir ? basename flatMap {
         path ⇒
-          decode[Metadata[Shape, Idx, T]](
+          import Idx.helpers.specify
+          decode[
+            Metadata[
+              Shape,
+              idx.T,
+              T
+            ]
+          ](
             path.read
-          )
+          )/*(
+            decoder
+          )*/
       }
 
     /**
@@ -181,12 +203,13 @@ object metadata {
      * - running a normal generic auto-derivation to get a [[Metadata]]-[[Decoder]]
      */
     implicit def decoder[
+      Shape[_]: Traverse : Zip : DecoderK,
           T   : FillValue.Decoder,
-      Shape[_]: Functor : Zip : DecoderK,
-        Idx   : Decoder
+        Idx
     ](
       implicit
-      datatypeDecoder: DataType.Decoder[T]
+      datatypeDecoder: DataType.Decoder[T],
+      idx: Idx.T[Idx]
     ):
       Decoder[
         Metadata[
@@ -205,13 +228,19 @@ object metadata {
             ]
           ]
         =
+          // first decode the datatype, then use it to decode the fill-value (and everything else); fill-value-decoding
+          // may need to know the expected length of fixed-length string fields, which can vary despite the downstream
+          // type exposed being simply "String"
           c
             .downField("dtype")
             .success
-            .fold[DecodingFailure | HCursor](
+            .fold[
+              DecodingFailure |
+              HCursor
+            ](
               Left(
                 DecodingFailure(
-                  "",
+                  s"No 'dtype' field on metadata: ${pprint(c.value)}",
                   c.history
                 )
               )
@@ -224,15 +253,14 @@ object metadata {
             .flatMap {
               implicit datatype ⇒
                 for {
-                          arr ← c.downField(      "shape").as[Shape[Idx]]
-                       chunks ← c.downField(     "chunks").as[Shape[Chunk.Idx]]
+                   dimensions ← c.as[Shape[Dimension[Idx]]](Dimensions.decodeList[Shape])
                    compressor ← c.downField( "compressor").as[Compressor]
                         order ← c.downField(      "order").as[Order]
                   fill_value  ← c.downField( "fill_value").as[FillValue[T]]
                   zarr_format ← c.downField("zarr_format").as[Format]
                 } yield
                   Metadata(
-                    Dimensions(arr, chunks),
+                    dimensions,
                     datatype,
                     compressor,
                     order,
@@ -247,10 +275,34 @@ object metadata {
             }
       }
 
-    implicit def encoder[
-          T   : DataType.Encoder : FillValue.Encoder,
+    implicit def encodeShaped[
       Shape[_]: Traverse : EncoderK,
-        Idx   : Encoder
+        Idx   : Encoder,
+    ]:
+      Encoder[
+        Shaped[
+          Shape,
+          Idx
+        ]
+      ]
+    =
+      new Encoder[
+        Shaped[
+          Shape,
+          Idx
+        ]
+      ] {
+        @inline def apply(m: Shaped[Shape, Idx]): Json = {
+          implicit val d = m.d
+          FillValue.Encoder.fromDataType[m.T](d.t)
+          encoder[Shape, Idx, m.T].apply(m.t)
+        }
+      }
+
+    implicit def encoder[
+      Shape[_]: Traverse : EncoderK,
+        Idx   : Encoder,
+          T   //: DataType.Encoder : FillValue.Encoder,
     ]:
       Encoder[
         Metadata[
@@ -263,7 +315,8 @@ object metadata {
       new Encoder[Metadata[Shape, Idx, T]] {
         def apply(m: Metadata[Shape, Idx, T]): Json = {
           implicit val datatype = m.dtype
-          implicit val enc = FillValue.encoder[T]
+          val edt = the[FillValue.Encoder[T]]
+          implicit val enc = FillValue.encoder[T](FillValue.Encoder.fromDataType, datatype)
           Json.obj(
                   "shape" → encode(m.shape.map(_.size)),
                  "chunks" → encode(m.shape.map(_.chunk)),

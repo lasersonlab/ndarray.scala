@@ -42,7 +42,6 @@ trait VectorEvidence[N <: Nat, Idx] {
   implicit val idx: utils.Idx.T[Idx]
   implicit def shapeCodec: CodecK[ShapeT]
   implicit def idec: Decoder[Idx]
-  implicit def ienc: Encoder[Idx]
   implicit def ti: Indices.Aux[A, ShapeT]
   implicit def traverse: Traverse[A]
   implicit def traverseShape: Traverse[ShapeT]
@@ -64,7 +63,6 @@ object VectorEvidence {
     implicit
     _shapeCodec: CodecK[S],
     _idec: Decoder[Idx],
-    _ienc: Encoder[Idx],
     _idx: Idx.T[Idx],
     _ti: Indices.Aux[_A, S],
     _traverse: Traverse[_A],
@@ -81,7 +79,6 @@ object VectorEvidence {
       override implicit val  idx = _idx
       override implicit val idec = _idec
       override implicit val shapeCodec = _shapeCodec
-      override implicit val ienc = _ienc
       override implicit val ti = _ti
       override implicit val traverse = _traverse
       override implicit val traverseShape = _traverseShape
@@ -93,6 +90,8 @@ object VectorEvidence {
   import cats.implicits._
   import lasersonlab.shapeless.slist._
   import shapeless.nat._
+
+  implicit val int = Idx.Int
 
   implicit val `1` = make[_1, `1`, Int, Vector1]
   implicit val `2` = make[_2, `2`, Int, Vector2]

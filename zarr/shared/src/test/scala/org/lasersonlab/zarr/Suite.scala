@@ -1,6 +1,7 @@
 package org.lasersonlab.zarr
 
 import org.lasersonlab.zarr.io.Load
+import org.lasersonlab.zarr.utils.Idx
 import org.scalatest.FunSuite
 
 trait HasGetOps {
@@ -16,4 +17,6 @@ trait HasGetOps {
 abstract class Suite
   extends hammerlab.Suite
      with HasGetOps
-     with Load.syntax
+     with Load.syntax {
+  implicit val int: Idx.T[Int] = Idx.Int
+}

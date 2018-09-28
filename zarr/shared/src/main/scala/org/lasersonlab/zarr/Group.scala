@@ -125,7 +125,7 @@ object Group {
         Group(dir)
     }
 
-  implicit def save[Idx]: Save[Group[Idx]] =
+  implicit def save[Idx: Idx.T]: Save[Group[Idx]] =
     new Save[Group[Idx]] {
       def apply(t: Group[Idx], dir: Path): Throwable | Unit = {
         import cats.implicits._
@@ -144,7 +144,7 @@ object Group {
             for {
               (name, array) ← t.arrays.toList
             } yield
-              array.save(dir / name)
+              array.aux.save(dir / name)
           )
           .sequence
 

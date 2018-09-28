@@ -4,21 +4,27 @@ import cats.implicits._
 import hammerlab.path._
 import hammerlab.shapeless._1
 import lasersonlab.shapeless.slist._
+import lasersonlab.zarr.Array
 import org.lasersonlab.anndata.loom.{ Obs, Var }
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.dtype.DataType.string
+import org.lasersonlab.zarr.io.Load
 import org.lasersonlab.zarr.{ Dimension, Suite }
 
 class LoadTest
   extends Suite {
+
   test("load") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr")
+
+    !![Load[Array[`2`, Float]]]
+    !![Load[Array[`1`,   Obs]]]
 
     val ad = path.load[AnnData[Obs, Var]].get
 
     implicit val AnnData(x, obs, v, uns) = ad
 
-    ==(x.shape, Dimension(5425, 299) :: Dimension(27998) :: ⊥)
+    ==(x.shape, Dimension(5425, 299).get :: Dimension(27998) :: ⊥)
 
     ==(x.foldLeft(0.0f)(_ + _), 8596396.0f)
 
@@ -36,7 +42,7 @@ class LoadTest
         .sortBy(_._1)
         .map {
           case (k, arr) ⇒
-            val Seq(Dimension(shape, _)) = arr.shape
+            val Seq(Dimension(shape, _, _)) = arr.shape
             shape → (arr.metadata.dtype: DataType) → k
         },
       Seq[((Int, DataType), String)](

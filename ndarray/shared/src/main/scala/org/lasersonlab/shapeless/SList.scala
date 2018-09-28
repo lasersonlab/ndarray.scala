@@ -84,7 +84,41 @@ object SList {
        with Reducible[F]
 
   trait instances {
-    import cats.implicits._
+    implicit val utils0 =
+      new Base[`0`] {
+        type F[T] = `0`[T]
+        val size = 0
+
+        def traverse[G[_], A, B](fa: F[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[F[B]] = ev.pure(`0`)
+
+        def foldLeft [A, B](fa: F[A],  b:      B )(f: (B,      A ) ⇒      B ):      B  =  b
+        def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = lb
+
+        def scanLeft   [A, B](fa: F[A], b: B, f: (B, A) ⇒ B): (F[B],  B ) = (`0`, b)
+        def scanLeft_→ [A, B](fa: F[A], b: B, f: (B, A) ⇒ B):  F[B]       =  `0`
+        def scanRight  [A, B](fa: F[A], b: B, f: (A, B) ⇒ B): (  B, F[B]) = (b, `0`)
+        def scanRight_←[A, B](fa: F[A], b: B, f: (A, B) ⇒ B):       F[B]  =     `0`
+
+        def apply[A, B](fa: F[A], fb: F[B]): F[(A, B)] = `0`
+
+        def apply[T](f: `0`[T]): List[T] = Nil
+        def apply[T](l: List[T]): Err | F[T] =
+          l match {
+            case   Nil ⇒ R(`0`)
+            case extra ⇒ L(TooMany(extra))
+          }
+
+        override def pure[A](x: A): `0`[A] = ⊥
+
+        override def ap[A, B](ff: `0`[A ⇒ B])(fa: `0`[A]): `0`[B] = ⊥
+      }
+
+    implicit val utils1 = cons[`0`]
+    implicit val utils2 = cons[`1`]
+    implicit val utils3 = cons[`2`]
+    implicit val utils4 = cons[`3`]
+    implicit val utils5 = cons[`4`]
+    implicit val utils6 = cons[`5`]
 
     def cons[Tail[_]](implicit tail: Base[Tail], ev: Cons[Tail]): Utils[ev.Out] = {
       type F[T] = ev.Out[T]
@@ -214,42 +248,6 @@ object SList {
           }
       }
     }
-
-    implicit val utils0 =
-      new Base[`0`] {
-        type F[T] = `0`[T]
-        val size = 0
-
-        def traverse[G[_], A, B](fa: F[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[F[B]] = ev.pure(`0`)
-
-        def foldLeft [A, B](fa: F[A],  b:      B )(f: (B,      A ) ⇒      B ):      B  =  b
-        def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = lb
-
-        def scanLeft   [A, B](fa: F[A], b: B, f: (B, A) ⇒ B): (F[B],  B ) = (`0`, b)
-        def scanLeft_→ [A, B](fa: F[A], b: B, f: (B, A) ⇒ B):  F[B]       =  `0`
-        def scanRight  [A, B](fa: F[A], b: B, f: (A, B) ⇒ B): (  B, F[B]) = (b, `0`)
-        def scanRight_←[A, B](fa: F[A], b: B, f: (A, B) ⇒ B):       F[B]  =     `0`
-
-        def apply[A, B](fa: F[A], fb: F[B]): F[(A, B)] = `0`
-
-        def apply[T](f: `0`[T]): List[T] = Nil
-        def apply[T](l: List[T]): Err | F[T] =
-          l match {
-            case   Nil ⇒ R(`0`)
-            case extra ⇒ L(TooMany(extra))
-          }
-
-        override def pure[A](x: A): `0`[A] = ⊥
-
-        override def ap[A, B](ff: `0`[A ⇒ B])(fa: `0`[A]): `0`[B] = ⊥
-      }
-
-    implicit val utils1 = cons[`0`]
-    implicit val utils2 = cons[`1`]
-    implicit val utils3 = cons[`2`]
-    implicit val utils4 = cons[`3`]
-    implicit val utils5 = cons[`4`]
-    implicit val utils6 = cons[`5`]
   }
   object instances extends instances
 }

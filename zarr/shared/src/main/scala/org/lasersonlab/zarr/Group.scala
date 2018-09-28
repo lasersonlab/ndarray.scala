@@ -16,10 +16,10 @@ case class Group[Idx](
   implicit
   idx: Idx.T[Idx]
 ) {
-  def    !    (name: Str): Array.List[      Idx   ] = arrays(name)
+  def     !   (name: Str): Array.List[      Idx   ] = arrays(name)
   def array   (name: Str): Array.List[      Idx   ] = arrays(name)
   def apply[T](name: Str): Array.  Of[List, Idx, T] = arrays(name).as[T]
-  def    → [T](name: Str): Array.  Of[List, Idx, T] = arrays(name).as[T]
+  def     →[T](name: Str): Array.  Of[List, Idx, T] = arrays(name).as[T]
 
   def     /(name: Str): Group[Idx] = groups(name)
   def group(name: Str): Group[Idx] = groups(name)
@@ -33,8 +33,6 @@ object Group {
     val basename = ".zgroup"
     implicit val _basename = Basename[Metadata](basename)
   }
-
-  import cats.implicits._
 
   case class InvalidChild(
     path: Path,
@@ -107,7 +105,7 @@ object Group {
            * transpose the per-child [[Either]]s out; the elements themselves were type-less; we accreted [[Group]]s
            * and [[Array]]s into the builders ([[arrays]], [[groups]]) along the way
            */
-          .sequence[Either[Exception, ?], Any]
+          .sequence
           .map {
             a ⇒
               Group(
@@ -128,8 +126,6 @@ object Group {
   implicit def save[Idx: Idx.T]: Save[Group[Idx]] =
     new Save[Group[Idx]] {
       def apply(t: Group[Idx], dir: Path): Throwable | Unit = {
-        import cats.implicits._
-
         val groups =
           (
             for {

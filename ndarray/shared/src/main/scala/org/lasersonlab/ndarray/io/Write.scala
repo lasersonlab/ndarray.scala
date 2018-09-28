@@ -1,10 +1,10 @@
 package org.lasersonlab.ndarray.io
 
-import java.io.{ ByteArrayOutputStream, DataOutputStream }
+import java.io.DataOutputStream
 import java.nio.ByteBuffer
 
-import cats.{ Foldable, Functor }
 import cats.implicits._
+import cats.{ Foldable, Functor }
 
 /**
  * Type-class for writing elements to a [[DataOutputStream]]

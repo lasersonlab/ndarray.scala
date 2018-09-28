@@ -75,15 +75,14 @@ trait Coders
    */
   implicit val decoder: circe.Decoder[DataType] =
     new circe.Decoder[DataType] {
-      import cats.implicits._
       def apply(c: HCursor): Result[DataType] =
         c
-        .value
-        .as[String]
-          .fold(
-            _ ⇒ untypedStructDecoder(c),
-            get(_, c)
-          )
+          .value
+          .as[String]
+            .fold(
+              _ ⇒ untypedStructDecoder(c),
+              get(_, c)
+            )
     }
 
   /**
@@ -105,7 +104,7 @@ trait Coders
         )
       def apply(a: D): Json =
         a match {
-          case p: Primitive[_] ⇒ Json.fromString(p.toString)
+          case p:   Primitive[_]                      ⇒ Json.fromString(p.toString)
           case         Struct(StructList(entries, _)) ⇒ seq(entries)
           case untyped.Struct           (entries    ) ⇒ seq(entries)
         }

@@ -1,7 +1,6 @@
 package org.lasersonlab.zarr
 
 import cats.data.Nested
-import cats.implicits._
 import cats.{ Eval, Foldable, Traverse }
 import hammerlab.option._
 import hammerlab.path._
@@ -109,7 +108,7 @@ trait Array {
    */
   val chunks: A[Chunk[T]]
 
-  // TODO: this should be type-parameterizable, and validated accordingly during JSON-parsing
+  // TODO: make this type-parameterizable, and validate accordingly during JSON-parsing
   val attrs: Opt[Attrs]
 
   def foldLeft[B](b: B)(f: (B, T) ⇒ B): B =
@@ -169,8 +168,8 @@ object Array {
        _T,
         A[_]: Traverse
   ](
-           dir: Path,
-         shape: Shape[Dimension[Idx]]
+      dir: Path,
+    shape: Shape[Dimension[Idx]]
   )(
    implicit
    indices: Indices.Aux[A, Shape],

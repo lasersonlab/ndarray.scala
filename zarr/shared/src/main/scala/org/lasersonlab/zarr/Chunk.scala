@@ -4,7 +4,6 @@ import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 
 import cats.{ Eval, Foldable, Semigroupal }
-import cats.implicits._
 import hammerlab.option._
 import hammerlab.path._
 import org.lasersonlab.shapeless.{ Scannable, Zip }

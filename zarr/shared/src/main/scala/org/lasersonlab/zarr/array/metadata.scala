@@ -1,7 +1,6 @@
 package org.lasersonlab.zarr.array
 
-import cats.implicits._
-import cats.{ Functor, Traverse }
+import cats.Traverse
 import hammerlab.option.Opt
 import hammerlab.path.Path
 import io.circe.generic.auto._
@@ -102,14 +101,14 @@ object metadata {
         import Dimensions.decodeList
         def apply(c: HCursor): Result[Shaped[List, Idx]] = {
           for {
-              dimensions ← c.as[List[Dimension[idx.T]]](decodeList[List](the[DecoderK[List]], the[Zip[List]], the[Traverse[List]], idx))
-                  _dtype ← c.downField(      "dtype").as[DataType]
-             _compressor ← c.downField( "compressor").as[Compressor]
-                  _order ← c.downField(      "order").as[Order]
-            _zarr_format ← c.downField("zarr_format").as[Format]
+              dimensions ←   c.as[List[Dimension[idx.T]]]
+                  _dtype ←   c.downField(      "dtype").as[DataType]
+             _compressor ←   c.downField( "compressor").as[Compressor]
+                  _order ←   c.downField(      "order").as[Order]
+            _zarr_format ←   c.downField("zarr_format").as[Format]
              _fill_value ← {
-                           implicit val d: DataType.Aux[_dtype.T] = _dtype
-                           c.downField("fill_value").as[FillValue[_dtype.T]]
+                             implicit val d: DataType.Aux[_dtype.T] = _dtype
+                             c.downField("fill_value").as[FillValue[_dtype.T]]
                            }
           } yield
             new Metadata[List, Idx, _dtype.T](

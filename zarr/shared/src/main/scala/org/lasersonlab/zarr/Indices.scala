@@ -1,6 +1,5 @@
 package org.lasersonlab.zarr
 
-import cats.implicits._
 import cats.{ Id, Traverse }
 import lasersonlab.shapeless.slist._
 import org.lasersonlab.ndarray.Vectors

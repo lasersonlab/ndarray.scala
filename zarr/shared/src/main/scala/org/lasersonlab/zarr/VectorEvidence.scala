@@ -1,8 +1,9 @@
 package org.lasersonlab.zarr
 
 import cats.Traverse
+import cats.implicits._
 import lasersonlab.shapeless.slist._
-import org.lasersonlab.circe.{ CodecK, DecoderK, EncoderK }
+import org.lasersonlab.circe.CodecK
 import org.lasersonlab.ndarray.ArrayLike
 import org.lasersonlab.ndarray.Vectors._
 import org.lasersonlab.shapeless.{ Scannable, Zip }
@@ -87,7 +88,6 @@ object VectorEvidence {
       override implicit val arrayLike = _arrayLike
     }
 
-  import cats.implicits._
   import lasersonlab.shapeless.slist._
   import shapeless.nat._
 

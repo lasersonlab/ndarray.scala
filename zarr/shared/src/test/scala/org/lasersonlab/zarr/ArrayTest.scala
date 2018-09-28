@@ -1,6 +1,5 @@
 package org.lasersonlab.zarr
 
-import cats.implicits._
 import hammerlab.path._
 import lasersonlab.shapeless.slist._
 import org.lasersonlab.anndata.loom.{ Obs, Var }

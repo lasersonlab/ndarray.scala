@@ -4,6 +4,7 @@ import io.circe.generic.AutoDerivation
 import io.circe.{ Parser, ParsingFailure, Printer }
 import org.hammerlab.paths.HasPathOps
 import org.lasersonlab.ndarray.Arithmetic
+import org.lasersonlab.shapeless.{ Scannable, Zip }
 import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.utils.opt.OptCodec
@@ -33,6 +34,8 @@ package object zarr
      with Idx.syntax
      with Load.syntax
      with Save.syntax
+     with Scannable.syntax
+     with Zip.syntax
      with _root_.cats.   syntax.AllSyntax
      with _root_.cats.instances.AllInstances
 {

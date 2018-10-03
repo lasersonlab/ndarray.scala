@@ -8,7 +8,7 @@ object Zip {
     def zip[B](fb: F[B])(implicit zip: Zip[F]) = zip(fa, fb)
   }
   trait syntax {
-    @inline def zipOps[F[_], A](fa: F[A]): Ops[F, A] = Ops(fa)
+    @inline implicit def zipOps[F[_], A](fa: F[A]): Ops[F, A] = Ops(fa)
   }
 
   implicit val list: Zip[List] =

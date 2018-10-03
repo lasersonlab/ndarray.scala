@@ -63,7 +63,6 @@ case class Chunk[
 
   @inline def apply(idx: Int): T = dtype.read(buff, idx)
 
-  import Zip.Ops
   def apply(idx: Shape): T =
     dtype.read(
       buff,
@@ -108,17 +107,18 @@ object Chunk {
    * Does some error-checking, and computes the per-dimension strides and total size of the chunk
    */
   def apply[
-    ShapeT[_]: Foldable : Scannable : Zip,
-    T
+    ShapeT[_]
+            : Foldable
+            : Scannable
+            : Zip,
+         T
+            : DataType.Aux
   ](
           path: Path,
          shape: ShapeT[Idx],
            idx: ShapeT[Idx],
     compressor: Compressor,
       sizeHint: Opt[Int] = None
-  )(
-    implicit
-    dt: DataType.Aux[T]
   ):
     Exception |
     Chunk[ShapeT, T]
@@ -130,7 +130,6 @@ object Chunk {
         )
       )
     else {
-      import Scannable.Ops
       val (size, sizeProducts) = shape.scanRight(1) { _ * _ }
       Right(
         Chunk(
@@ -148,7 +147,7 @@ object Chunk {
   implicit def foldable[Shape[_]]: Foldable[Chunk[Shape, ?]] =
     new Foldable[Chunk[Shape, ?]] {
       type F[A] = Chunk[Shape, A]
-      def foldLeft[A, B](fa: F[A], b: B)(f: (B, A) ⇒ B): B = fa.foldLeft(b)(f)
+      def foldLeft [A, B](fa: F[A],  b:      B )(f: (B,      A ) ⇒      B ):      B  = fa.foldLeft ( b)(f)
       def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.foldRight(lb)(f)
     }
 }

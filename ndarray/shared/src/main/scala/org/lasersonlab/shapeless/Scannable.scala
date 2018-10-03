@@ -14,6 +14,10 @@ object Scannable {
     @inline def scanRight_←[B](b: B)(f: (A, B) ⇒ B)(implicit s: Scannable[F]):     F[B]  = s.scanRight_←(fa, b, f)
   }
 
+  trait syntax {
+    @inline implicit def scannableOps[F[_], A](fa: F[A]): Ops[F, A] = Ops(fa)
+  }
+
   implicit val list: Scannable[List] =
     new Scannable[List] {
       override def scanLeft[A, B](fa: List[A], b: B, f: (B, A) ⇒ B): (List[B], B) =

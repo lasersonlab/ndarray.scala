@@ -52,7 +52,6 @@ object Dimension {
   }
 }
 object Dimensions {
-  import org.lasersonlab.shapeless.Zip.Ops
   implicit def decodeList[
     Shape[_]
     : DecoderK

@@ -93,8 +93,8 @@ trait Array {
         ]
       ]
 
-  val shape: ShapeT[Dimension[Idx]]
-  val chunkRanges: ShapeT[Chunk.Idx]
+  val       shape: ShapeT[Dimension[Idx]]
+  val chunkRanges: ShapeT[    Chunk.Idx ]
 
   /**
    * Random-indexing operation
@@ -176,10 +176,10 @@ object Array {
     shape: Shape[Dimension[Idx]]
   )(
    implicit
-   indices: Indices.Aux[A, Shape],
-   _idx: Idx.T[Idx],
+      indices:    Indices.Aux[A, Shape],
+          idx:        Idx.  T[     Idx],
+     datatype:   DataType.Aux[      _T],
    compressor: Compressor,
-   datatype: DataType.Aux[_T],
   ):
     Exception |
     A[
@@ -189,7 +189,7 @@ object Array {
       ]
     ]
   = {
-    import _idx._
+    import idx._
     val sizeHint = shape.foldLeft(1) { _ * _.chunk }
     for {
       arr ←
@@ -199,7 +199,6 @@ object Array {
         )
         .map {
           idx ⇒
-            import Zip.Ops
             for {
               chunkShape ←
                 // chunks in the last "row" of any dimension may be smaller
@@ -316,10 +315,10 @@ object Array {
       ],
       T
     ]
-  =
+  = {
+    import Idx.helpers.specify
     for {
-      _metadata ← {
-        import Idx.helpers.specify
+      _metadata ←
         dir.load[
           Metadata[
             Shape,
@@ -327,13 +326,10 @@ object Array {
             T
           ]
         ]
-      }
-      arr ← {
-        import Idx.helpers.specify
-        Array(dir, _metadata)
-      }
+      arr ← Array(dir, _metadata)
     } yield
       arr
+  }
 
   /**
    * Load an [[Array]] whose element-type and number of dimensions are unknown
@@ -439,7 +435,6 @@ object Array {
         import lasersonlab.shapeless.slist._
 
         def apply(idx: Shape): T = {
-          import Zip.Ops
 
           // aliases for annotating the `.sequence` shenanigans below
           type E[U] = CastException | U
@@ -522,7 +517,7 @@ object Array {
         Array[Shape, T](dir)
     }
 
-  implicit def saveOf[
+  implicit def saveUntyped[
     Shape[_]
            : EncoderK
            : Scannable,
@@ -589,7 +584,6 @@ object Array {
         import a._
 
         def chunkResults: Throwable | Unit = {
-          import Scannable.Ops
           val (_, chunkStrides) = chunkRanges.scanRight(1)(_ * _)
           val chunkSize =
             shape

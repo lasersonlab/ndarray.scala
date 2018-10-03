@@ -7,12 +7,18 @@ import org.lasersonlab.ndarray.Vectors._
 import shapeless.Lazy
 
 /**
- * Iterate over an N-dimensional range of integers (provided as a `Shape`), stored as an [[A]]
+ * Generate an N-dimensional array (ot type [[A]]) filled with N-dimensional indices (of type `Shape`)
  */
 trait Indices[A[_]] {
   type Shape[_]
+
+  /**
+   * Generate all lattice points in the hyperrectangle between the origin (inclusive) and a provided [[Shape]]
+   * (exclusive)
+   */
   def apply(shape: Shape[Int]): A[Shape[Int]]
 }
+
 object Indices {
 
   type Aux[A[_], _Shape[_]] = Indices[A] { type Shape[U] = _Shape[U] }

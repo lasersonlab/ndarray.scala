@@ -18,5 +18,5 @@ abstract class Suite
   extends hammerlab.Suite
      with HasGetOps
      with Load.syntax {
-  implicit val int: Idx.T[Int] = Idx.Int
+  implicit val __int: Idx.T[Int] = Idx.Int
 }

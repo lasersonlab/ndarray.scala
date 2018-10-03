@@ -14,8 +14,6 @@ import scala.util.Try
  *
  * The [[size total size]] type is [[Idx parameterizable]], while [[chunk chunk-sizes]] must always be
  * [[Chunk.Idx ints]]
- *
- * // TODO: move to own file
  */
 case class Dimension[Idx](
   size: Idx,

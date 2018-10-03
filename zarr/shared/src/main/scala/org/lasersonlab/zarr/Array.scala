@@ -7,7 +7,7 @@ import hammerlab.path._
 import org.lasersonlab.circe.{ CodecK, EncoderK }
 import org.lasersonlab.ndarray.ArrayLike
 import org.lasersonlab.shapeless.{ Scannable, Zip }
-import org.lasersonlab.zarr
+import org.lasersonlab.{ zarr ⇒ z }
 import org.lasersonlab.zarr.array.metadata
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.{ Load, Save }
@@ -163,10 +163,14 @@ object Array {
    * Each chunk lives in a file with basename given by '.'-joined indices
    */
   private def chunks[
-    Shape[_]: Traverse : Zip : Scannable,
+    Shape[_]
+           : Traverse
+           : Zip
+           : Scannable,
       Idx,
        _T,
-        A[_]: Traverse
+        A[_]
+           : Traverse
   ](
       dir: Path,
     shape: Shape[Dimension[Idx]]
@@ -194,7 +198,7 @@ object Array {
             .map { _.range }
         )
         .map {
-          idx: Shape[Chunk.Idx] ⇒
+          idx ⇒
             import Zip.Ops
             for {
               chunkShape ←
@@ -229,32 +233,45 @@ object Array {
   }
 
   /**
-   * Convenience-constructor: given a data-type and a [[Nat (type-level) number of dimensions]], load an [[Array]] from
-   * a [[Path directory]]
+   * Convenience-constructor: given [[ShapeT shape]]- and [[T data]]-types, load an [[Array]] from a [[Path directory]]
    *
    * Uses a [[VectorEvidence]] as evidence for mapping from the [[Nat]] to a concrete shape
    *
    * Differs from [[apply]] above in that it returns full-resolved [[Array.A]] and [[Array.Chunk]] type-members, for
    * situations where that is important (in general, it shouldn't be; tests may wish to verify / operate on chunks, but
    * users shouldn't ever need to).
+   *
+   * @param dir path to load as a Zarr [[Array]]
+   * @param v implementation of [[ShapeT]]-type
+   * @param idx "index" type to use (e.g. [[Int]] or [[Long]])
+   * @param d datatype-decoder
+   * @param dt fill-value-decoder
+   * @tparam ShapeT "shape" of the [[Array]]; also the type of elements' indices
+   * @tparam T element-type of this [[Array]]
    */
-  def tni[  // TODO: rename
-    T,
-    N <: Nat,
-    Idx  // TODO: move this to implicit evidence
+  def apply[
+    ShapeT[_],
+         T,
   ](
     dir: Path
   )(
     implicit
-     v: VectorEvidence[N, Idx],
-     d:  DataType.Decoder[T],
-    dt: FillValue.Decoder[T],
+      v:    VectorEvidence[ShapeT],
+      d:  DataType.Decoder[     T],
+     dt: FillValue.Decoder[     T],
+    idx:               Idx
   ):
     Exception |
-    Aux[v.ShapeT, Idx, v.A, Chunk[v.ShapeT, ?], T]
+    Aux[
+      ShapeT,
+      idx.T,
+      v.A,
+      Chunk[ShapeT, ?],
+      T
+    ]
   = {
     import v._
-    apply[T, v.ShapeT, v.A](dir)(
+    apply[ShapeT, A, T](dir)(
       // shouldn't have to list all these explicitly: https://github.com/scala/bug/issues/11086
                   d = d,
                  ti = ti,
@@ -270,40 +287,46 @@ object Array {
   }
 
   def apply[
-    _T,
-    _Shape[_],
-    _A[_]
+    Shape[_],
+        A[_],
+        T
   ](
     dir: Path
   )(
     implicit
-                d: DataType.Decoder[_T],
-               ti: Indices.Aux[_A, _Shape],
-         traverse: Traverse[_A],
-        arrayLike: ArrayLike.Aux[_A, _Shape],
-               dt: FillValue.Decoder[_T],
-       shapeCodec: CodecK[_Shape],
+                d: DataType.Decoder[T],
+               ti: Indices.Aux[A, Shape],
+         traverse: Traverse[A],
+        arrayLike: ArrayLike.Aux[A, Shape],
+               dt: FillValue.Decoder[T],
+       shapeCodec: CodecK[Shape],
               idx: Idx,
-    traverseShape: Traverse[_Shape],
-         zipShape: Zip[_Shape],
-        scannable: Scannable[_Shape]
+    traverseShape: Traverse[Shape],
+         zipShape: Zip[Shape],
+        scannable: Scannable[Shape]
   ):
     Exception |
     Aux[
-      _Shape,
+      Shape,
       idx.T,
-      _A,
+      A,
       Chunk[
-        _Shape,
+        Shape,
         ?
       ],
-      _T
+      T
     ]
   =
     for {
       _metadata ← {
         import Idx.helpers.specify
-        dir.load[Metadata[_Shape, idx.T, _T]]
+        dir.load[
+          Metadata[
+            Shape,
+            idx.T,
+            T
+          ]
+        ]
       }
       arr ← {
         import Idx.helpers.specify
@@ -389,11 +412,11 @@ object Array {
       }
     } yield
       new Array {
-        type T = _T
-        type Idx = _Idx
-        type ShapeT[U] = _Shape[U]
-        type A[U] = _A[U]
-        type Chunk[U] = zarr.Chunk[ShapeT, U]
+        type      T    =      _T
+        type    Idx    =    _Idx
+        type ShapeT[U] =  _Shape[U]
+        type      A[U] =      _A[U]
+        type  Chunk[U] = z.Chunk[ShapeT, U]
 
         val traverseA     = Traverse[     A]
         val traverseShape = Traverse[ShapeT]
@@ -469,41 +492,40 @@ object Array {
         T
           :  DataType.Decoder
           : FillValue.Decoder
-        ,
-        N <: Nat
   ](
     implicit
-     v: VectorEvidence.Ax[N, Shape, Int]
+    v: VectorEvidence[Shape],
   ):
     Load[
       lasersonlab.zarr.Array[Shape, T]
     ] =
-    loadArr[Shape, Int, T, N]
+  {
+    implicit val int = Idx.Int
+    loadArr[Shape, T]
+  }
 
   implicit def loadArr[
     Shape[_],
-    Idx,
     T
       :  DataType.Decoder
       : FillValue.Decoder
-    ,
-    N <: Nat
   ](
     implicit
-     v: VectorEvidence.Ax[N, Shape, Idx]
+      v: VectorEvidence[Shape],
+    idx: Idx
   ):
     Load[
-      Of[Shape, Idx, T]
+      Of[Shape, idx.T, T]
     ] =
-    new Load[Of[Shape, Idx, T]] {
-      override def apply(dir: Path): Exception | Of[Shape, Idx, T] =
-        Array.tni[T, N, Idx](dir)
+    new Load[Of[Shape, idx.T, T]] {
+      override def apply(dir: Path): Exception | Of[Shape, idx.T, T] =
+        Array[Shape, T](dir)
     }
 
   implicit def saveOf[
     Shape[_]
-            : EncoderK
-            : Scannable,
+           : EncoderK
+           : Scannable,
   ](
     implicit
     idx: Idx

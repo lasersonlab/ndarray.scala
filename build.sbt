@@ -135,7 +135,7 @@ lazy val zarr =
         sourcecode,
 
         "org.typelevel" ^^ "kittens" ^ "1.1.0",
-        "org.blosc" ^ "jblosc" ^ "1.0.1" snapshot
+        "org.lasersonlab" ^ "jblosc" ^ "1.0.1"
       ),
       kindProjector,
       partialUnification

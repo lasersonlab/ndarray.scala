@@ -43,5 +43,5 @@ object ByteOrder
       }
   }
 
-  val get = InstanceMap[ByteOrder]()
+  val map = InstanceMap[ByteOrder]()
 }

@@ -1,5 +1,8 @@
 package org.lasersonlab.zarr.io
 
+import cats.instances.either.catsStdInstancesForEither
+import cats.implicits._
+
 import hammerlab.either._
 import hammerlab.option._
 import hammerlab.path._
@@ -23,7 +26,6 @@ trait LowPriorityLoad {
       def apply(dir: Path): Exception | T =
         dir ? basename flatMap {
           path ⇒
-
             parse(path.read)
               .flatMap {
                 decoder.decodeJson

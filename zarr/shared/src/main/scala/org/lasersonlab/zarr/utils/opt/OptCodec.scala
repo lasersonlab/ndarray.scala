@@ -1,5 +1,8 @@
 package org.lasersonlab.zarr.utils.opt
 
+import cats.instances.either.catsStdInstancesForEither
+import cats.implicits._
+
 import hammerlab.option._
 import io.circe.Decoder._
 import io.circe.Encoder._

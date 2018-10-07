@@ -23,7 +23,7 @@ trait StructDerivations {
   ](
     implicit
     head: Aux[Head],
-    tail: StructList[Tail],
+    tail: StructList[Tail]
   ):
     StructList[Head :: Tail]
   = {

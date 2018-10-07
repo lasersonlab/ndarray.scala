@@ -3,11 +3,10 @@ package org.lasersonlab.zarr.dtype
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer._
 
-import cats.Eq
-import io.circe
-import io.circe.Decoder.Result
+import cats.implicits._
 import io.circe.DecodingFailure.fromThrowable
 import io.circe._
+import lasersonlab.xscala._
 import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.|
 import shapeless._
@@ -35,7 +34,7 @@ sealed trait DataType {
   def size: Int
   type T
   def apply(buff: ByteBuffer): T
-  def read(buff: ByteBuffer, idx: Int): T = {
+  def  read(buff: ByteBuffer, idx: Int): T = {
     buff.position(size * idx)
     apply(buff)
   }
@@ -254,11 +253,11 @@ object DataType
         .map(
           fromThrowable(_, c.history)
         )
-      (order, tpe, size) = t
-         order ←     ByteOrder.get(order).left.map(DecodingFailure(_, c.history))
-           tpe ←         DType.get(  tpe).left.map(DecodingFailure(_, c.history))
+      (order, dtype, size) = t
+         order ← ByteOrder.map.get(order).fold[DecodingFailure | ByteOrder] { Left(DecodingFailure(s"Unrecognized order: $order", c.history)) } { Right(_) }
+         dtype ←     DType.map.get(dtype).fold[DecodingFailure |     DType] { Left(DecodingFailure(s"Unrecognized dtype: $dtype", c.history)) } { Right(_) }
           size ← Try(size.toInt).toEither.left.map(  fromThrowable(_, c.history))
-      datatype ←    get(order, tpe, size).left.map(DecodingFailure(_, c.history))
+      datatype ←  get(order, dtype, size).left.map(DecodingFailure(_, c.history))
     } yield
       datatype
 }

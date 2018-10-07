@@ -1,8 +1,6 @@
 package org.lasersonlab.convert
 
-import hammerlab.path._
 import lasersonlab.zarr._
-import org.hammerlab.test.resources.File
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.io.Load
 import org.lasersonlab.zarr.{ Dimension, HasGetOps }
@@ -12,10 +10,6 @@ class ConvertTest
      with HasGetOps
      with Load.syntax
      with zarr.cmp.all {
-
-  // TODO: move to test-utils
-  def resource(name: String): Path = File(name).path
-
   test("hdf5 conversion") {
     val hdf5 = resource("hgmm_100_raw_gene_bc_matrices_h5.h5")
 

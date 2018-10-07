@@ -9,6 +9,8 @@ import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.utils.opt.OptCodec
 
+import scala.util.{ Failure, Success, Try }
+
 /**
  * Spec / Format questions:
  *
@@ -36,6 +38,7 @@ package object zarr
      with Save.syntax
      with Scannable.syntax
      with Zip.syntax
+     with xscala.shims
      with _root_.cats.   syntax.AllSyntax
      with _root_.cats.instances.AllInstances
 {

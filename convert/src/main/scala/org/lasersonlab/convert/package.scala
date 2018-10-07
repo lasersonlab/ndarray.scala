@@ -119,7 +119,7 @@ package object convert
         import ucar.ma2.DataType._
 
         val chunkSize =
-          if (_chunkSize.bytes > Int.MaxValue)
+          if (_chunkSize.bytes > scala.Int.MaxValue)
             throw new IllegalArgumentException(
               s"Chunks should be <2GB; got ${Bytes.format(_chunkSize)}"
             )

@@ -3,7 +3,6 @@ package org.lasersonlab.zarr.array
 import cats.Traverse
 import hammerlab.option.Opt
 import hammerlab.path.Path
-import io.circe.generic.auto._
 import org.lasersonlab.circe.{ DecoderK, EncoderK }
 import org.lasersonlab.shapeless.Zip
 import org.lasersonlab.zarr
@@ -80,28 +79,32 @@ object metadata {
           )
       }
 
-    // TODO: parameterize Shape?
-    implicit def decoder(
+    implicit def decoder[
+      Shape[_]
+      : DecoderK
+      : Zip
+      : Traverse
+    ](
       implicit
       idx: Idx
     ):
       Decoder[
         Shaped[
-          List,
+          Shape,
           idx.T
         ]
       ] =
       new Decoder[
         Shaped[
-          List,
+          Shape,
           idx.T
         ]
       ] {
         type Idx = idx.T
         import Dimensions.decodeList
-        def apply(c: HCursor): Result[Shaped[List, Idx]] = {
+        def apply(c: HCursor): Result[Shaped[Shape, Idx]] =
           for {
-              dimensions ←   c.as[List[Dimension[idx.T]]]
+              dimensions ←   c.as[Shape[Dimension[idx.T]]]
                   _dtype ←   c.downField(      "dtype").as[DataType]
              _compressor ←   c.downField( "compressor").as[Compressor]
                   _order ←   c.downField(      "order").as[Order]
@@ -111,7 +114,7 @@ object metadata {
                              c.downField("fill_value").as[FillValue[_dtype.T]]
                            }
           } yield
-            new Metadata[List, Idx, _dtype.T](
+            new Metadata[Shape, Idx, _dtype.T](
               dimensions,
               _dtype,
               _compressor,
@@ -123,8 +126,7 @@ object metadata {
                 .as[Seq[Filter]]
                 .toOption
             )
-            : Shaped[List, Idx]
-        }
+            : Shaped[Shape, Idx]
       }
   }
 
@@ -162,7 +164,7 @@ object metadata {
       Shape[_]
              : Traverse
              : Zip
-             : DecoderK,
+             : DecoderK
     ](
       dir: Path
     )(
@@ -275,8 +277,10 @@ object metadata {
       }
 
     implicit def encodeShaped[
-      Shape[_]: Traverse : EncoderK,
-        Idx   : Encoder,
+      Shape[_]
+             : Traverse
+             : EncoderK,
+        Idx  : Encoder
     ]:
       Encoder[
         Shaped[

@@ -8,7 +8,7 @@ import org.hammerlab.lines.Name
 import org.lasersonlab.zarr.dtype.ByteOrder.Endianness
 import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.dtype.json.Entry
-import org.lasersonlab.zarr.{ Int, | }
+import org.lasersonlab.zarr.|
 
 object json {
   /**
@@ -146,6 +146,10 @@ trait Coders
     }
 
   import DataType.{ Struct ⇒ _, _ }
+
+  object Int {
+    def unapply(s: Seq[Char]): Option[Int] = Some( s.mkString.toInt )
+  }
 
   implicit val _decodeByte   : Decoder[  Byte] = make { case           '|' :: 'i' :: Int(   1) ⇒   byte       }
   implicit val _decodeShort  : Decoder[ Short] = make { case Endianness(e) :: 'i' :: Int(   2) ⇒  short(   e) }

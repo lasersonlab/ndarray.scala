@@ -179,7 +179,7 @@ object Array {
       indices:    Indices.Aux[A, Shape],
           idx:        Idx.  T[     Idx],
      datatype:   DataType.Aux[      _T],
-   compressor: Compressor,
+   compressor: Compressor
   ):
     Exception |
     A[
@@ -250,7 +250,7 @@ object Array {
    */
   def apply[
     ShapeT[_],
-         T,
+         T
   ](
     dir: Path
   )(
@@ -417,7 +417,7 @@ object Array {
         val traverseA     = Traverse[     A]
         val traverseShape = Traverse[ShapeT]
 
-        val foldableChunk = Chunk.foldable
+        val foldableChunk = Chunk.foldable[ShapeT]
 
         import idx._
 
@@ -489,7 +489,7 @@ object Array {
           : FillValue.Decoder
   ](
     implicit
-    v: VectorEvidence[Shape],
+    v: VectorEvidence[Shape]
   ):
     Load[
       lasersonlab.zarr.Array[Shape, T]
@@ -520,7 +520,7 @@ object Array {
   implicit def saveUntyped[
     Shape[_]
            : EncoderK
-           : Scannable,
+           : Scannable
   ](
     implicit
     idx: Idx

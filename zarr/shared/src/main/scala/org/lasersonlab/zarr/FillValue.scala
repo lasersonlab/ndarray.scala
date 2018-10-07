@@ -4,6 +4,7 @@ import java.nio.ByteBuffer
 import java.util.Base64
 
 import circe._
+import lasersonlab.xscala._
 import org.lasersonlab.zarr.FillValue.Decoder.Result
 import org.lasersonlab.zarr.dtype.DataType
 

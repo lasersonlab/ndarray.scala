@@ -4,6 +4,7 @@ import hammerlab.either._
 import hammerlab.option._
 import hammerlab.path._
 import io.circe.Encoder
+import lasersonlab.xscala._
 import org.lasersonlab.zarr.pprint
 
 import scala.util.Try

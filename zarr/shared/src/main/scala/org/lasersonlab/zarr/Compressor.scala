@@ -16,7 +16,6 @@ import hammerlab.path._
 import org.apache.commons.io.IOUtils
 import org.blosc.JBlosc
 import org.blosc.JBlosc._
-import org.lasersonlab.zarr.Compressor.Blosc.CName.lz4
 import shapeless.the
 import Runtime.getRuntime
 
@@ -62,7 +61,7 @@ object Compressor {
     def apply(os: OutputStream, itemsize: Int): OutputStream = os
   }
 
-  import Blosc._
+  import Blosc._, CName._
 
   case class NumThreads(value: Int)
   object NumThreads {
@@ -153,7 +152,8 @@ object Compressor {
         math.min(
           Integer.MAX_VALUE - OVERHEAD,
           bytes.length
-        ) + OVERHEAD
+        ) +
+        OVERHEAD
 
       val dest = allocate(destLength)
 
@@ -197,34 +197,15 @@ object Compressor {
   }
 
   object Blosc {
-    val regex = """blosc(?:\((\d)\))""".r
-    object parse {
-      def unapply(s: String): Option[Blosc] =
-        s match {
-          case regex(level) ⇒
-            Some(
-              Option(level)
-                .map(_.toInt)
-                .fold(
-                  Blosc()
-                ) {
-                  level ⇒
-                    Blosc(clevel = level)
-                }
-            )
-          case _ ⇒ scala.None
-        }
-    }
-
     sealed abstract class CName(implicit name: sourcecode.Name) {
       override val toString: String = name.value
     }
+    case object    lz4   extends CName
+    case object    lz4hc extends CName
+    case object   zlib   extends CName
+    case object   zstd   extends CName
+    case object snappy   extends CName
     object CName {
-      case object    lz4   extends CName
-      case object    lz4hc extends CName
-      case object   zlib   extends CName
-      case object   zstd   extends CName
-      case object snappy   extends CName
 
       implicit def toName(cname: CName): String = cname.toString
 
@@ -243,16 +224,38 @@ object Compressor {
               .as[String]
               .flatMap {
                 str ⇒
-                  instances(str)
-                    .left
-                    .map {
-                      _ ⇒
+                  instances
+                    .get(str)
+                    .fold[Result[CName]] {
+                      Left(
                         DecodingFailure(
                           s"Unrecognized blosc cname: $str",
                           c.history
                         )
+                      )
+                    } {
+                      Right(_)
                     }
               }
+        }
+    }
+
+    val regex = """blosc(?:\((\d)\))""".r
+    object parse {
+      def unapply(s: String): Option[Blosc] =
+        s match {
+          case regex(level) ⇒
+            Some(
+              Option(level)
+                .map(_.toInt)
+                .fold(
+                  Blosc()
+                ) {
+                  level ⇒
+                    Blosc(clevel = level)
+                }
+            )
+          case _ ⇒ scala.None
         }
     }
   }

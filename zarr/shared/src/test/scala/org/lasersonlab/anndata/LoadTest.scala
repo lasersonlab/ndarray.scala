@@ -4,11 +4,9 @@ import cats.implicits._
 import hammerlab.path._
 import hammerlab.shapeless._1
 import lasersonlab.shapeless.slist._
-import lasersonlab.zarr.Array
 import org.lasersonlab.anndata.loom.{ Obs, Var }
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.dtype.DataType.string
-import org.lasersonlab.zarr.io.Load
 import org.lasersonlab.zarr.{ Dimension, Suite }
 
 class LoadTest
@@ -16,9 +14,6 @@ class LoadTest
 
   test("load") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr")
-
-    !![Load[Array[`2`, Float]]]
-    !![Load[Array[`1`,   Obs]]]
 
     val ad = path.load[AnnData[Obs, Var]].get
 

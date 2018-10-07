@@ -1,10 +1,9 @@
 package org.lasersonlab.netcdf
 
 import java.net.URI
+import java.nio.ByteBuffer
 import java.nio.file.{ FileSystems, Files, Paths }
 
-import com.amazonaws.services.s3.AmazonS3ClientBuilder
-import com.amazonaws.services.s3.model.GetObjectRequest
 import com.upplication.s3fs.S3Path
 
 import scala.collection.JavaConverters._
@@ -28,24 +27,32 @@ class MainTest
       6666864827L
     )
 
-    val bucket = s3path.getFileStore.name()
-    val path = s3path.getKey
+    val n = 100
+    val buffer = ByteBuffer.allocate(n)
+    val ch = Files.newByteChannel(s3path)
+    ==(ch.read(buffer), n)
 
-    val s3 = AmazonS3ClientBuilder.defaultClient
-    //val uri = path.toUri
-    //val bucket = uri.getAuthority
-
-    val response = s3.getObject(new GetObjectRequest(bucket, path).withRange(0, 1000))
-    val stream = response.getObjectContent
-
-    val bytes = Array.fill(1000)(0.toByte)
-    stream.read(bytes)
-
-    val avilable = stream.available()
-
-    //Files.newInputStream()
-
-    //val ch = Files.newByteChannel(s3path)
-
+    ==(
+      buffer
+        .array()
+        .map("%2x".format(_))
+        .grouped(4).map(_.mkString(" " ))
+        .grouped(2).map(_.mkString("  "))
+        .mkString("\n"),
+      """89 48 44 46   d  a 1a  a
+        | 0  0  0  0   0  8  8  0
+        | 4  0 10  0   0  0  0  0
+        | 0  0  0  0   0  0  0  0
+        |ff ff ff ff  ff ff ff ff
+        |bb 48 60 8d   1  0  0  0
+        |ff ff ff ff  ff ff ff ff
+        | 0  0  0  0   0  0  0  0
+        |60  0  0  0   0  0  0  0
+        | 1  0  0  0   0  0  0  0
+        |88  0  0  0   0  0  0  0
+        |a8  2  0  0   0  0  0  0
+        | 1  0  7  0"""
+        .stripMargin
+    )
   }
 }

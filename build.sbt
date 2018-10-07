@@ -121,7 +121,6 @@ lazy val `xscala-x` = xscala.x
 // TODO: make x-platform blosc, cross-build zarr
 lazy val zarr =
   project
-    .in(new File("zarr/shared"))
     .settings(
       dep(
         circe,

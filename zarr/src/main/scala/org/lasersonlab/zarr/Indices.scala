@@ -37,15 +37,15 @@ object Indices {
     cons: Cons[TL]
   ):
   Aux[
-    Vectors.Aux[?, Row],
+    Vectors.Aux[Row, ?],
     cons.Out
   ] =
-    new Indices[Vectors.Aux[?, Row]] {
+    new Indices[Vectors.Aux[Row, ?]] {
       type Shape[U] = cons.Out[U]
-      def apply(shape: Shape[Int]): Vectors.Aux[Shape[Int], Row] =
+      def apply(shape: Shape[Int]): Vectors.Aux[Row, Shape[Int]] =
         shape match {
           case h :: t ⇒
-            Vectors.make[Shape[Int], Row](
+            Vectors.make[Row, Shape[Int]](
               (0 until h)
                 .map {
                   i ⇒

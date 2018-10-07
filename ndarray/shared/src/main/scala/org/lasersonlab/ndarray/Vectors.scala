@@ -13,22 +13,21 @@ trait Vectors[T] {
 }
 
 object Vectors {
-  // TODO: swap order, may allow partial-unification
-  type Aux[T, _R[_]] = Vectors[T] { type Row[U] = _R[U] }
+  type Aux[_R[_], T] = Vectors[T] { type Row[U] = _R[U] }
 
   /**
    * Convenience constructor for [[Vectors]] instances
    */
   def make[
-    T,
-    _Row[U]
+    _Row[_],
+       T
   ](
     _rows: Vector[_Row[T]]
   )(
     implicit
     _traverseRow: Traverse[_Row]
   ):
-    Aux[T, _Row] =
+    Aux[_Row, T] =
     new Vectors[T] {
       type Row[U] = _Row[U]
       val rows = _rows
@@ -39,16 +38,13 @@ object Vectors {
   implicit val traverse: Traverse[Vectors] =
     new Traverse[Vectors] {
       override def traverse[
-        G[_],
+        G[_]: Applicative,
         A,
         B
       ](
         fa: Vectors[A]
       )(
         f: A ⇒ G[B]
-      )(
-        implicit
-        ev: Applicative[G]
       ):
         G[Vectors[B]] = {
         implicit val tr = fa.traverseRow
@@ -62,7 +58,7 @@ object Vectors {
           }
           .sequence
           .map {
-            make[B, fa.Row](_)(tr)
+            make[fa.Row, B](_)(tr)
           }
       }
 
@@ -87,66 +83,47 @@ object Vectors {
       }
     }
 
-  type Nested[A, Row[_]] = Vector[Row[A]]
-
-  def makeVectorTraverse[Row[U]](implicit tr: Traverse[Row]): Traverse[Nested[?, Row]] = {
-    type V[A] = Nested[A, Row]
-    new Traverse[V] {
-      def traverse[G[_], A, B](fa: V[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[V[B]] =
-        fa
-          .map {
-            row ⇒
-              tr.traverse(row)(f)
-          }
-          .sequence
-      def foldLeft[A, B](fa: V[A], b: B)(f: (B, A) ⇒ B): B = ???
-      def foldRight[A, B](fa: V[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = ???
-    }
-  }
-
   /**
    * Non-implicit version of [[traverse]] that makes [[Row]]-type explicit; necessary in some cases (in this file) to
    * make the compiler happy
    */
   def makeTraverse[
-    Row[U]
+    Row[_]
   ]:
     Traverse[
-      Aux[?, Row]
+      Aux[Row, ?]
     ] =
-    new Traverse[Aux[?, Row]] {
-      type C[T] = Aux[T, Row]
-      override def traverse[G[_], A, B](fa: C[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[C[B]] = {
-        implicit val tr = fa.traverseRow
+    new Traverse[Aux[Row, ?]] {
+      type F[T] = Aux[Row, T]
+      override def traverse[G[_]: Applicative, A, B](fa: F[A])(f: A ⇒ G[B]): G[F[B]] = {
+        implicit val tr: Traverse[Row] = fa.traverseRow
         fa
           .rows
           .map {
-            row ⇒
-              tr.sequence(
-                tr.map(row)(f)
-              )
+            _
+              .map(f)
+              .sequence
           }
           .sequence
-          .map { make[B, fa.Row](_)(tr) }
+          .map { make[Row, B] }
       }
 
-      override def foldLeft[A, B](fa: C[A], b: B)(f: (B, A) ⇒ B): B = {
-        implicit val tr = fa.traverseRow
+      override def foldLeft[A, B](fa: F[A], b: B)(f: (B, A) ⇒ B): B = {
+        implicit val tr: Traverse[Row] = fa.traverseRow
         fa
           .rows
           .foldLeft(b) {
             (b, row) ⇒
-              tr.foldLeft(row, b)(f)
+              row.foldLeft(b)(f)
           }
       }
 
-      override def foldRight[A, B](fa: C[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = {
-        implicit val tr = fa.traverseRow
+      override def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = {
+        implicit val tr: Traverse[Row] = fa.traverseRow
         fa
           .rows
           .foldRight(lb) {
-            (row, lb) ⇒
-              tr.foldRight(row, lb)(f)
+              _.foldRight(_)(f)
           }
       }
     }
@@ -166,16 +143,15 @@ object Vectors {
       @inline def foldRight[A, B](fa: Vector[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.foldRight(lb)(f)
     }
 
-  // HACK: manually unroll 6 dimesions' worth for now; couldn't get implicit derivations to work.
-  // TODO: reversing the order of the type-params in [[Aux]] should allow partial-unification to work, and allow
-  // automatic derivation of these cases (as well as allowing removing the Vectors.traverseRow member, etc.)
+  // HACK: manually unroll 6 dimesions' worth for now; couldn't get implicit derivations to work, perhaps due to
+  // https://github.com/scala/bug/issues/11169
 
   type Vector1[T] = Vector[T]
-  type Vector2[T] = Vectors.Aux[T, Vector1]
-  type Vector3[T] = Vectors.Aux[T, Vector2]
-  type Vector4[T] = Vectors.Aux[T, Vector3]
-  type Vector5[T] = Vectors.Aux[T, Vector4]
-  type Vector6[T] = Vectors.Aux[T, Vector5]
+  type Vector2[T] = Aux[Vector1, T]
+  type Vector3[T] = Aux[Vector2, T]
+  type Vector4[T] = Aux[Vector3, T]
+  type Vector5[T] = Aux[Vector4, T]
+  type Vector6[T] = Aux[Vector5, T]
 
   implicit val traverseV2: Traverse[Vector2] = makeTraverse[Vector1]
   implicit val traverseV3: Traverse[Vector3] = makeTraverse[Vector2]
@@ -188,10 +164,10 @@ object Vectors {
    *
    * Any sequence of arguments whose least upper-bound [[In]] has an [[Arg]] instance can be made into a [[Vectors]]
    */
-  def apply[In](args: In*)(implicit arg: Arg[In]): Aux[arg.Elem, Aux[?, arg.Row]] =
+  def apply[In](args: In*)(implicit arg: Arg[In]): Aux[Aux[arg.Row, ?], arg.Elem] =
     make[
-      arg.Elem,
-      Aux[?, arg.Row]
+      Aux[arg.Row, ?],
+      arg.Elem
     ](
       args
         .map(arg(_))
@@ -208,7 +184,7 @@ object Vectors {
     type Elem
     type Row[_]
     implicit def traverseRow: Traverse[Row]
-    def apply(in: In): Aux[Elem, Row]
+    def apply(in: In): Aux[Row, Elem]
   }
   trait LowPriArg {
 
@@ -218,17 +194,17 @@ object Vectors {
         type Row[U] = _R[U]
       }
 
-    def make[In, _E, _R[_]](fn: In ⇒ Vectors.Aux[_E, _R])(implicit _traverseRow: Traverse[_R]) =
+    def make[In, _E, _R[_]](fn: In ⇒ Vectors.Aux[_R, _E])(implicit _traverseRow: Traverse[_R]) =
       new Arg[In] {
         type Elem = _E
         type Row[U] = _R[U]
         implicit val traverseRow: Traverse[_R] = _traverseRow
-        @inline def apply(in: In): Vectors.Aux[_E, _R] = fn(in)
+        @inline def apply(in: In): Vectors.Aux[_R, _E] = fn(in)
       }
 
-    implicit def base[T]: Aux[Vector[T], T, Id] = make[Vector[T], T, Id](Vectors.make[T, Id](_))
+    implicit def base[T]: Aux[Vector[T], T, Id] = make[Vector[T], T, Id](Vectors.make[Id, T])
 
-    implicit def range[R <: Range]: Aux[R, Int, Id] = make[R, Int, Id](r ⇒ Vectors.make[Int, Id](r.toVector))
+    implicit def range[R <: Range]: Aux[R, Int, Id] = make[R, Int, Id](r ⇒ Vectors.make[Id, Int](r.toVector))
   }
 
   object Arg
@@ -247,15 +223,15 @@ object Vectors {
       Aux[
         I[Prev],
         prev.value.Elem,
-        Vectors.Aux[?, prev.value.Row]
+        Vectors.Aux[prev.value.Row, ?]
       ] =
       make[
         I[Prev],
         prev.value.Elem,
-        Vectors.Aux[?, prev.value.Row]
+        Vectors.Aux[prev.value.Row, ?]
       ](
         rows ⇒ {
-          val converted: Vector[Vectors.Aux[prev.value.Elem, prev.value.Row]] =
+          val converted: Vector[Vectors.Aux[prev.value.Row, prev.value.Elem]] =
             rows
               .map(
                 prev.value(_)
@@ -263,8 +239,8 @@ object Vectors {
               .toVector
 
           Vectors.make[
-            prev.value.Elem,
-            Vectors.Aux[?, prev.value.Row]
+            Vectors.Aux[prev.value.Row, ?],
+            prev.value.Elem
           ](
             converted
           )(

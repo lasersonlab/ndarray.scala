@@ -28,19 +28,19 @@ object ArrayLike {
     cons: Cons[_Shape]
   ):
     Aux[
-      Vectors.Aux[?, A],
+      Vectors.Aux[A, ?],
       cons.Out
     ] =
-    new ArrayLike[Vectors.Aux[?, A]] {
+    new ArrayLike[Vectors.Aux[A, ?]] {
       type Shape[T] = cons.Out[T]
-      def shape(a: Vectors.Aux[_, A]): Shape[Int] =
+      def shape(a: Vectors.Aux[A, _]): Shape[Int] =
         a.size ::
         prev.shape(
           // TODO: check sizes on Vectors construction, store Shape on Vectors
           a.rows.head
         )
       def apply[T](
-        a: Vectors.Aux[T, A],
+        a: Vectors.Aux[A, T],
         idx: Shape[Int]
       ):
         T =

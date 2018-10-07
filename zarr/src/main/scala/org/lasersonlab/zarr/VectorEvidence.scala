@@ -23,13 +23,14 @@ trait VectorEvidence[ShapeT[_]] {
    */
   type A[_]
 
-  implicit def shapeCodec: CodecK[ShapeT]
-  implicit def ti: Indices.Aux[A, ShapeT]
-  implicit def traverse: Traverse[A]
-  implicit def traverseShape: Traverse[ShapeT]
-  implicit def zipShape: Zip[ShapeT]
-  implicit def scannable: Scannable[ShapeT]
+  implicit def        ti:   Indices.Aux[A, ShapeT]
   implicit def arrayLike: ArrayLike.Aux[A, ShapeT]
+
+  implicit def traverse     :  Traverse[     A]
+  implicit def traverseShape:  Traverse[ShapeT]
+  implicit def     zipShape :       Zip[ShapeT]
+  implicit def     scannable: Scannable[ShapeT]
+  implicit def    shapeCodec:    CodecK[ShapeT]
 }
 object VectorEvidence {
 

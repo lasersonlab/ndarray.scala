@@ -6,7 +6,7 @@ import org.lasersonlab.ndarray.ArrayLike
 import org.lasersonlab.zarr.Indices
 
 case class FlatArray[T](shape: List[Int], elems: Vector[T]) {
-  val size :: strides = shape.scanRight(1)(_ * _).toList
+  val size :: strides = shape.scanRight(1)(_ * _)
   val rank = shape.size
   def apply(idx: Seq[Int]): T = {
     var sum = 0

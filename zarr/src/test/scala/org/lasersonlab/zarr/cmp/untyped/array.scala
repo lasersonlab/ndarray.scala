@@ -20,9 +20,9 @@ object array {
 
   trait cmp {
 
-    implicit def arrayIdxsCmp[Idx](implicit dim: Cmp[Dimension[Idx]]): Cmp[Array.List[Idx]] = arrayShapedCmp[List, Idx]
-    def arrayShapedCmp[Shape[_], Idx](implicit dim: Cmp[Shape[Dimension[Idx]]]): Cmp[Array.Untyped[Shape, Idx]] = {
-      type Arr = Array.Untyped[Shape, Idx]
+    implicit def arrayIdxsCmp[Idx](implicit dim: Cmp[Dimension[Idx]]): Cmp[Array.??[Idx]] = arrayShapedCmp[List, Idx]
+    def arrayShapedCmp[Shape[_], Idx](implicit dim: Cmp[Shape[Dimension[Idx]]]): Cmp[Array.?[Shape, Idx]] = {
+      type Arr = Array.?[Shape, Idx]
       new Cmp[Arr] {
 
         val _metadata = metadata.cmp.baseCmp[Shape, Idx]

@@ -8,18 +8,18 @@ import org.lasersonlab.zarr.io._
 import org.lasersonlab.zarr.utils.Idx
 
 case class Group[Idx](
-    arrays: Map[String, Array.List[Idx]] =      Map.empty,
-    groups: Map[String,      Group[Idx]] =      Map.empty,
-     attrs:                   Opt[Attrs] =           None,
-  metadata:               Group.Metadata = Group.Metadata()
+    arrays: Map[String, Array.??[Idx]] =      Map.empty,
+    groups: Map[String, Group   [Idx]] =      Map.empty,
+     attrs:                 Opt[Attrs] =           None,
+  metadata:             Group.Metadata = Group.Metadata()
 )(
   implicit
   idx: Idx.T[Idx]
 ) {
-  def     !   (name: Str): Array.List[      Idx   ] = arrays(name)
-  def array   (name: Str): Array.List[      Idx   ] = arrays(name)
-  def apply[T](name: Str): Array.  Of[List, Idx, T] = arrays(name).as[T]
-  def     →[T](name: Str): Array.  Of[List, Idx, T] = arrays(name).as[T]
+  def     !   (name: Str): Array.??[      Idx   ] = arrays(name)
+  def array   (name: Str): Array.??[      Idx   ] = arrays(name)
+  def apply[T](name: Str): Array.Of[List, Idx, T] = arrays(name).as[T]
+  def     →[T](name: Str): Array.Of[List, Idx, T] = arrays(name).as[T]
 
   def     /(name: Str): Group[Idx] = groups(name)
   def group(name: Str): Group[Idx] = groups(name)
@@ -57,8 +57,8 @@ object Group {
       metadata ← dir.load[Metadata]
          attrs ← dir.load[Opt[Attrs]]
 
-      arrays = Map.newBuilder[String, Array.List[Idx]]
-      groups = Map.newBuilder[String, Group[Idx]]
+      arrays = Map.newBuilder[String, Array.??[Idx]]
+      groups = Map.newBuilder[String, Group   [Idx]]
 
       group ←
         dir
@@ -74,8 +74,8 @@ object Group {
           .map {
             path: Path ⇒
               /** First, try to parse as an [[Array]] */
-              Array.untyped(path)
-                .fold(
+              Array.?(path)
+              .fold(
                   arrayError ⇒
                     /** If that failed, parse as a [[Group]] */
                     Group(path)

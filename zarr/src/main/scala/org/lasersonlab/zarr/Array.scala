@@ -70,8 +70,8 @@ trait Array {
    * arr.t.toList
    * }}}
    *
-   * This is necessary due to some unification limitations relating to the various aliases ([[Array.Untyped]],
-   * [[Array.Aux]], [[Array.List]], etc.) used to specify different subsets of an [[Array]]'s dependent types' that are
+   * This is necessary due to some unification limitations relating to the various aliases ([[Array.?]],
+   * [[Array.Aux]], [[Array.??]], etc.) used to specify different subsets of an [[Array]]'s dependent types' that are
    * known at a given call-site
    */
   def t: Array.T[this.T] = this
@@ -131,11 +131,11 @@ object Array {
   /**
    * "Aux" aliases for various subsets of [[Array]]'s type-members that might be known / required in various contexts
    */
-  type       T[                                    _T] = Array {                                                   type T = _T }
-  type     Aux[_ShapeT[_], _Idx, _A[_], _Chunk[_], _T] = Array { type ShapeT[U] =    _ShapeT[U]; type Idx = _Idx ; type T = _T ; type A[U] = _A[U]; type Chunk[U] = _Chunk[U] }
-  type      Of[_ShapeT[_], _Idx,                   _T] = Array { type ShapeT[U] =    _ShapeT[U]; type Idx = _Idx ; type T = _T }
-  type Untyped[_ShapeT[_], _Idx                      ] = Array { type ShapeT[U] =    _ShapeT[U]; type Idx = _Idx }
-  type    List[            _Idx                      ] = Array { type ShapeT[U] = scala.List[U]; type Idx = _Idx }
+  type   T[                                    _T] = Array {                                                type T = _T }
+  type Aux[_ShapeT[_], _Idx, _A[_], _Chunk[_], _T] = Array { type ShapeT[U] = _ShapeT[U]; type Idx = _Idx ; type T = _T ; type A[U] = _A[U]; type Chunk[U] = _Chunk[U] }
+  type  Of[_ShapeT[_], _Idx,                   _T] = Array { type ShapeT[U] = _ShapeT[U]; type Idx = _Idx ; type T = _T }
+  type   ?[_ShapeT[_], _Idx                      ] = Array { type ShapeT[U] = _ShapeT[U]; type Idx = _Idx }  // element-type unknown
+  type  ??[            _Idx                      ] = Array { type ShapeT[U] =    List[U]; type Idx = _Idx }  // element-type and number of dimensions unknown
 
   /**
    * De-structure an [[Array]] into its [[Metadata]], [[Attrs]], and [[Array.chunks]] members, preserving whatever is
@@ -334,18 +334,18 @@ object Array {
   /**
    * Load an [[Array]] whose element-type and number of dimensions are unknown
    *
-   * Dimensions are loaded as a [[List]], and the element-type is loaded as a type-member `T`
+   * Dimensions are loaded as a [[??]], and the element-type is loaded as a type-member `T`
    */
-  def untyped(
+  def ?(
     dir: Path
   )(
     implicit
     idx: Idx
   ):
     Exception |
-    Array.List[idx.T]
+    Array.??[idx.T]
   =
-    metadata.untyped(dir)
+    metadata.?(dir)
       .flatMap {
         metadata ⇒
           import Idx.helpers.specify
@@ -359,7 +359,7 @@ object Array {
             metadata.t
           )
           .map {
-            arr ⇒ arr: List[idx.T]
+            arr ⇒ arr: ??[idx.T]
           }
       }
 
@@ -380,7 +380,7 @@ object Array {
   )(
     implicit
     ti: Indices.Aux[_A, _Shape],
-    _traverse: Traverse[_A],
+    traverse: Traverse[_A],
     arrayLike: ArrayLike.Aux[_A, _Shape],
     idx: Idx.T[_Idx]
   ):
@@ -526,16 +526,16 @@ object Array {
     idx: Idx
   ):
     Save[
-      Untyped[Shape, idx.T]
+      Array.?[Shape, idx.T]
     ] =
     new Save[
-      Untyped[
+      Array.?[
         Shape,
         idx.T
       ]
     ] {
       def apply(
-        a: Untyped[Shape, idx.T],
+        a: Array.?[Shape, idx.T],
         dir: Path
       ):
         Throwable |
@@ -643,7 +643,7 @@ object Array {
                 }
                 .toEither
             }
-            .sequence[Throwable | ?, Unit]
+            .sequence//[Throwable | ?, Unit]
             .map { _ ⇒ () }
         }
 

@@ -22,6 +22,9 @@ import shapeless.the
 
 object metadata {
 
+  type ? = untyped.Interface
+
+  val ? = untyped
   object untyped {
     /**
      * Base-trait for [[Metadata]] where type-params are type-members, allowing for construction in situations where
@@ -44,7 +47,7 @@ object metadata {
       type Shape[_]
       type Idx
 
-      /** Allows a caller to coerce the type of a [[Interface]] to include its constituent types */
+      /** Allows a caller to coerce the type of a [[metadata.?]] to include its constituent types */
       def t =
         this match {
           case m: Metadata[Shape, Idx, T] ⇒ m
@@ -53,7 +56,7 @@ object metadata {
     }
 
     type Shaped[_Shape[_], _I] =
-      Interface {
+      ? {
         type Shape[U] = _Shape[U]
         type Idx = _I
       }

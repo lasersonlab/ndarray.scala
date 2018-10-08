@@ -50,7 +50,8 @@ object Arithmetic {
     def min [R] (r: R)(implicit a: Arithmetic[L, R]): L = a.min(l, r)
   }
 
-  trait HasOps {
-    implicit def arithmeticOps[L](l: L): Ops[L] = Ops(l)
+  trait syntax {
+    @inline implicit def arithmeticOps[L](l: L): Ops[L] = Ops(l)
   }
+  object syntax extends syntax
 }

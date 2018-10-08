@@ -27,17 +27,17 @@ import scala.util.{ Failure, Success, Try }
  * of full-sized/interior chunks? Seems like the latter… some edges to check here around handling that as well.
  */
 package object zarr
-  extends Arithmetic.HasOps
-     with OptCodec
+  extends OptCodec
      with utils.slist.Codecs
      with HasPathOps
      with hammerlab.either
      with hammerlab.math.utils
-     with Idx.syntax
-     with Load.syntax
-     with Save.syntax
-     with Scannable.syntax
-     with Zip.syntax
+     with Arithmetic.syntax
+     with        Idx.syntax
+     with       Load.syntax
+     with       Save.syntax
+     with  Scannable.syntax
+     with        Zip.syntax
      with xscala.shims
      with VectorEvidence.flat
      with _root_.cats.   syntax.AllSyntax

@@ -1,12 +1,10 @@
-package org.lasersonlab.zarr
+package org.lasersonlab.ndarray
 
-import cats.{ Id, Traverse }
 import cats.implicits._
+import cats.{ Id, Traverse }
 import lasersonlab.shapeless.slist._
-import org.lasersonlab.ndarray.Vectors
-import org.lasersonlab.ndarray.Vectors.{ Aux ⇒ _, _ }
-import org.lasersonlab.zarr.Indices.Idx
-import shapeless.Lazy
+import org.lasersonlab.ndarray.Indices.Idx
+import org.lasersonlab.ndarray.Vectors._
 
 /**
  * Generate an N-dimensional array (ot type [[A]]) filled with N-dimensional indices (of type [[ShapeT]])

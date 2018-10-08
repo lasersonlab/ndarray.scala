@@ -5,7 +5,7 @@ import cats.{ Eval, Foldable, Traverse }
 import hammerlab.option._
 import hammerlab.path._
 import org.lasersonlab.circe.{ CodecK, EncoderK }
-import org.lasersonlab.ndarray.ArrayLike
+import org.lasersonlab.ndarray.{ ArrayLike, Indices }
 import org.lasersonlab.shapeless.{ Scannable, Zip }
 import org.lasersonlab.zarr.array.metadata
 import org.lasersonlab.zarr.dtype.DataType

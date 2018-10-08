@@ -5,12 +5,11 @@ import cats.{ Eval, Foldable, Traverse }
 import hammerlab.option._
 import hammerlab.path._
 import org.lasersonlab.circe.{ CodecK, EncoderK }
-import org.lasersonlab.ndarray.{ ArrayLike, Indices }
+import org.lasersonlab.ndarray.{ ArrayLike, FlatArray, Indices }
 import org.lasersonlab.shapeless.{ Scannable, Zip }
 import org.lasersonlab.zarr.array.metadata
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.{ Load, Save }
-import org.lasersonlab.zarr.untyped.FlatArray
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.utils.Idx.Long.CastException
 import org.lasersonlab.{ zarr ⇒ z }

@@ -1,12 +1,11 @@
-package org.lasersonlab.zarr.untyped
+package org.lasersonlab.ndarray
 
 import cats.implicits._
 import cats.{ Applicative, Eval, Foldable, Traverse }
-import org.lasersonlab.ndarray.{ ArrayLike, Indices, UnfoldRange }
+import org.lasersonlab.ndarray.FlatArray.Idx
+import org.lasersonlab.shapeless.Scannable.syntax._
+import org.lasersonlab.shapeless.Zip.syntax._
 import org.lasersonlab.shapeless.{ Scannable, Size, Zip }
-import org.lasersonlab.zarr.untyped.FlatArray.Idx
-import Scannable.syntax._
-import Zip.syntax._
 
 case class FlatArray[
   ShapeT[_]

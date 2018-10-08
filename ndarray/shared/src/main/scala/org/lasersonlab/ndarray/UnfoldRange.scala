@@ -20,8 +20,8 @@ object UnfoldRange {
 
   import lasersonlab.shapeless.slist._
 
-  implicit val _0: UnfoldRange[`0`] = new UnfoldRange[`0`] {
-    def apply(s: `0`[Int]): Vector[`0`[Int]] = Vector()
+  implicit val unfold0: UnfoldRange[`0`] = new UnfoldRange[`0`] {
+    def apply(s: `0`[Int]): Vector[`0`[Int]] = Vector(⊥)
   }
   implicit def cons[Tail[_]](
     implicit
@@ -40,4 +40,11 @@ object UnfoldRange {
       }
     }
   }
+
+  implicit val unfold1 = cons[`0`]
+  implicit val unfold2 = cons[`1`]
+  implicit val unfold3 = cons[`2`]
+  implicit val unfold4 = cons[`3`]
+  implicit val unfold5 = cons[`4`]
+  implicit val unfold6 = cons[`5`]
 }

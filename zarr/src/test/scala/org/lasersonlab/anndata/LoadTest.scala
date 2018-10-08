@@ -8,6 +8,7 @@ import org.lasersonlab.anndata.loom.{ Obs, Var }
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.dtype.DataType.string
 import org.lasersonlab.zarr.{ Dimension, Suite }
+import org.lasersonlab.zarr.VectorEvidence.flat._
 
 class LoadTest
   extends Suite {

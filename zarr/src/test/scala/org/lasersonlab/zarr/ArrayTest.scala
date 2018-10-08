@@ -31,13 +31,6 @@ class ArrayTest
     val chunks = arr.chunks
     ==(chunks.size, 10)
 
-    val rows = chunks.rows
-    ==(rows.length, 10)
-    rows foreach {
-      row ⇒
-        ==(row.size, 1)
-    }
-
     val blosc = Blosc()
 
     val expected =
@@ -75,14 +68,14 @@ class ArrayTest
       List(
         287412,
         444234,
-        17227,
-        58283,
+         17227,
+         58283,
         876917,
         796162,
         582618,
         505650,
         615567,
-        36142
+         36142
       )
     )
 
@@ -117,7 +110,7 @@ class ArrayTest
     ==(attrs, None)
     ==(chunks.size, 1)
 
-    val chunk = chunks(0)
+    val chunk = chunks(0 :: ⊥)
     ==(chunk.size, 27998)
 
     val bytes = chunk.bytes
@@ -153,7 +146,7 @@ class ArrayTest
 
     ==(chunks.size, 1)
 
-    val chunk = chunks(0)
+    val chunk = chunks(0 :: ⊥)
     ==(chunk.size, 5425)
 
     val bytes = chunk.bytes
@@ -203,7 +196,7 @@ class ArrayTest
 
     ==(chunks.size, 1)
 
-    val chunk = chunks(0)
+    val chunk = chunks(0 :: ⊥)
     ==(chunk.size, 27998)
 
     val bytes = chunk.bytes

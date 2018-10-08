@@ -4,7 +4,7 @@ import cats.Traverse
 import cats.implicits._
 import lasersonlab.shapeless.slist._
 import org.lasersonlab.circe.CodecK
-import org.lasersonlab.ndarray.{ ArrayLike, Indices }
+import org.lasersonlab.ndarray.{ ArrayLike, FlatArray, Indices }
 import org.lasersonlab.ndarray.Vectors._
 import org.lasersonlab.shapeless.{ Scannable, Zip }
 import org.lasersonlab.zarr.utils.Idx
@@ -61,10 +61,23 @@ object VectorEvidence {
 
   import lasersonlab.shapeless.slist._
 
-  implicit val `1` = make[`1`, Vector1]
-  implicit val `2` = make[`2`, Vector2]
-  implicit val `3` = make[`3`, Vector3]
-  implicit val `4` = make[`4`, Vector4]
-  implicit val `5` = make[`5`, Vector5]
-  implicit val `6` = make[`6`, Vector6]
+  trait vector {
+    implicit val `1` = make[`1`, Vector1]
+    implicit val `2` = make[`2`, Vector2]
+    implicit val `3` = make[`3`, Vector3]
+    implicit val `4` = make[`4`, Vector4]
+    implicit val `5` = make[`5`, Vector5]
+    implicit val `6` = make[`6`, Vector6]
+  }
+  object vector extends vector
+
+  trait flat {
+    implicit val flat1 = make[`1`, FlatArray.`1`]
+    implicit val flat2 = make[`2`, FlatArray.`2`]
+    implicit val flat3 = make[`3`, FlatArray.`3`]
+    implicit val flat4 = make[`4`, FlatArray.`4`]
+    implicit val flat5 = make[`5`, FlatArray.`5`]
+    implicit val flat6 = make[`6`, FlatArray.`6`]
+  }
+  object flat extends flat
 }

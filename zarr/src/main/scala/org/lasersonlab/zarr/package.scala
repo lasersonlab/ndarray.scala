@@ -39,6 +39,7 @@ package object zarr
      with Scannable.syntax
      with Zip.syntax
      with xscala.shims
+     with VectorEvidence.flat
      with _root_.cats.   syntax.AllSyntax
      with _root_.cats.instances.AllInstances
 {

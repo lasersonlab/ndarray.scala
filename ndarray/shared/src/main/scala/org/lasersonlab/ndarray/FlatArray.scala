@@ -100,4 +100,14 @@ object FlatArray {
       @inline def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.elems.foldRight(lb)(f)
     }
   }
+
+  import lasersonlab.shapeless.{ slist ⇒ s }
+  import lasersonlab.shapeless.slist._
+
+  type `1`[T] = FlatArray[s.`1`, T]
+  type `2`[T] = FlatArray[s.`2`, T]
+  type `3`[T] = FlatArray[s.`3`, T]
+  type `4`[T] = FlatArray[s.`4`, T]
+  type `5`[T] = FlatArray[s.`5`, T]
+  type `6`[T] = FlatArray[s.`6`, T]
 }

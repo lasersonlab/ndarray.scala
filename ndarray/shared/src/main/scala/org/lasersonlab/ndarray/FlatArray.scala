@@ -34,7 +34,10 @@ case class FlatArray[
 object FlatArray {
   type Idx = Int
 
-  /** [[FlatArray]] with an unknown (at compile-time) number of dimensions */
+  /**
+   * [[FlatArray]] with an unknown (at compile-time) number of dimensions, where "shape" and indices are represented as
+   * [[List]]s
+   */
   type *[T] = FlatArray[List, T]
 
   implicit def arrayLike[ShapeT[_]]: ArrayLike.Aux[FlatArray[ShapeT, ?], ShapeT] = {
@@ -102,7 +105,6 @@ object FlatArray {
   }
 
   import lasersonlab.shapeless.{ slist ⇒ s }
-  import lasersonlab.shapeless.slist._
 
   type `1`[T] = FlatArray[s.`1`, T]
   type `2`[T] = FlatArray[s.`2`, T]

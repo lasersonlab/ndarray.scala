@@ -272,13 +272,13 @@ object Array {
     import v._
     apply[ShapeT, A, T](dir)(
       // shouldn't have to list all these explicitly: https://github.com/scala/bug/issues/11086
-                  d = d,
-                 ti = ti,
-           traverse = traverse,
-          arrayLike = arrayLike,
-                 dt = dt,
-         shapeCodec = shapeCodec,
                 idx = idx,
+                  d = d,
+                 dt = dt,
+           traverse = traverse,
+                 ti = ti,
+          arrayLike = arrayLike,
+         shapeCodec = shapeCodec,
       traverseShape = traverseShape,
            zipShape = zipShape,
           scannable = scannable
@@ -293,26 +293,23 @@ object Array {
     dir: Path
   )(
     implicit
-                d: DataType.Decoder[T],
-               ti: Indices.Aux[A, Shape],
-         traverse: Traverse[A],
-        arrayLike: ArrayLike.Aux[A, Shape],
-               dt: FillValue.Decoder[T],
-       shapeCodec: CodecK[Shape],
-              idx: Idx,
-    traverseShape: Traverse[Shape],
-         zipShape: Zip[Shape],
-        scannable: Scannable[Shape]
+              idx:               Idx          ,
+                d:  DataType.Decoder[       T],
+               dt: FillValue.Decoder[       T],
+         traverse:          Traverse[A       ],
+               ti:       Indices.Aux[A, Shape],
+        arrayLike:     ArrayLike.Aux[A, Shape],
+       shapeCodec:            CodecK[   Shape],
+    traverseShape:          Traverse[   Shape],
+         zipShape:               Zip[   Shape],
+        scannable:         Scannable[   Shape]
   ):
     Exception |
     Aux[
       Shape,
       idx.T,
       A,
-      Chunk[
-        Shape,
-        ?
-      ],
+      Chunk[Shape, ?],
       T
     ]
   = {
@@ -334,7 +331,7 @@ object Array {
   /**
    * Load an [[Array]] whose element-type and number of dimensions are unknown
    *
-   * Dimensions are loaded as a [[??]], and the element-type is loaded as a type-member `T`
+   * Dimensions are loaded as a [[List]], and the element-type is loaded as a type-member ("T")
    */
   def ?(
     dir: Path
@@ -351,7 +348,7 @@ object Array {
           import Idx.helpers.specify
           apply[
             metadata.T,
-            scala.List,
+            List,
             idx.T,
             FlatArray
           ](
@@ -359,19 +356,17 @@ object Array {
             metadata.t
           )
           .map {
-            arr ⇒ arr: ??[idx.T]
+            arr ⇒ arr: Array.??[idx.T]
           }
       }
 
   def apply[
-        _T
-    ,
+        _T,
     _Shape[_]
-          : Scannable
-          : Zip
-          : Traverse
-          : EncoderK
-    ,
+            : Scannable
+            : Zip
+            : Traverse
+            : EncoderK,
       _Idx,
         _A[_]
   ](
@@ -379,10 +374,10 @@ object Array {
     _metadata: Metadata[_Shape, _Idx, _T]
   )(
     implicit
-    ti: Indices.Aux[_A, _Shape],
-    traverse: Traverse[_A],
+           ti:   Indices.Aux[_A, _Shape],
     arrayLike: ArrayLike.Aux[_A, _Shape],
-    idx: Idx.T[_Idx]
+     traverse:      Traverse[_A],
+          idx:       Idx.  T[_Idx]
   ):
     Exception |
     Aux[

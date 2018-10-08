@@ -30,8 +30,8 @@ object SList {
     def ::[T](h: T) = `1`(h)
     val size = 0
   }
-  val   ⊥      = `0`
-  type  ⊥      = `0`.type
+  val   ⊥     = `0`
+  type  ⊥     = `0`.type
   type `0`[T] = `0`.type
   case class `1`[T](head: T              ) extends SList { type Head = T; type Tail[U] = `0`[U]; def tail: `0`[T] = `0` }
   case class `2`[T](head: T, tail: `1`[T]) extends SList { type Head = T; type Tail[U] = `1`[U] }

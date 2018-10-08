@@ -1,10 +1,10 @@
 package org.lasersonlab.shapeless
 
 trait Scannable[F[_]] {
-  def scanLeft   [A, B](fa: F[A], b: B, f: (B, A) ⇒ B): (F[B], B)
+  def scanLeft   [A, B](fa: F[A], b: B, f: (B, A) ⇒ B): (F[B],  B )
   def scanLeft_→ [A, B](fa: F[A], b: B, f: (B, A) ⇒ B):  F[B]
-  def scanRight  [A, B](fa: F[A], b: B, f: (A, B) ⇒ B): (B, F[B])
-  def scanRight_←[A, B](fa: F[A], b: B, f: (A, B) ⇒ B):     F[B]
+  def scanRight  [A, B](fa: F[A], b: B, f: (A, B) ⇒ B): (  B, F[B])
+  def scanRight_←[A, B](fa: F[A], b: B, f: (A, B) ⇒ B):       F[B]
 }
 object Scannable {
   implicit class Ops[F[_], A](val fa: F[A]) extends AnyVal {
@@ -17,6 +17,7 @@ object Scannable {
   trait syntax {
     @inline implicit def scannableOps[F[_], A](fa: F[A]): Ops[F, A] = Ops(fa)
   }
+  object syntax extends syntax
 
   implicit val list: Scannable[List] =
     new Scannable[List] {

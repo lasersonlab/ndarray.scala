@@ -110,4 +110,7 @@ object FlatArray {
   type `4`[T] = FlatArray[s.`4`, T]
   type `5`[T] = FlatArray[s.`5`, T]
   type `6`[T] = FlatArray[s.`6`, T]
+  type `7`[T] = FlatArray[s.`7`, T]
+  type `8`[T] = FlatArray[s.`8`, T]
+  type `9`[T] = FlatArray[s.`9`, T]
 }

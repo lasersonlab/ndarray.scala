@@ -47,4 +47,7 @@ object UnfoldRange {
   implicit val unfold4 = cons[`3`]
   implicit val unfold5 = cons[`4`]
   implicit val unfold6 = cons[`5`]
+  implicit val unfold7 = cons[`6`]
+  implicit val unfold8 = cons[`7`]
+  implicit val unfold9 = cons[`8`]
 }

@@ -55,6 +55,9 @@ object SList {
   case class `4`[T](head: T, tail: `3`[T]) extends SList { type Head = T; type Tail[U] = `3`[U]; def size = 4 }
   case class `5`[T](head: T, tail: `4`[T]) extends SList { type Head = T; type Tail[U] = `4`[U]; def size = 5 }
   case class `6`[T](head: T, tail: `5`[T]) extends SList { type Head = T; type Tail[U] = `5`[U]; def size = 6 }
+  case class `7`[T](head: T, tail: `6`[T]) extends SList { type Head = T; type Tail[U] = `6`[U]; def size = 7 }
+  case class `8`[T](head: T, tail: `7`[T]) extends SList { type Head = T; type Tail[U] = `7`[U]; def size = 8 }
+  case class `9`[T](head: T, tail: `8`[T]) extends SList { type Head = T; type Tail[U] = `8`[U]; def size = 9 }
 
   /**
    * Type-class for prepending an element to an [[SList]]
@@ -74,6 +77,9 @@ object SList {
     implicit val cons_3 = new Aux[`3`, `4`] { def apply[T](h: T, t: `3`[T]) = `4`(h, t) }
     implicit val cons_4 = new Aux[`4`, `5`] { def apply[T](h: T, t: `4`[T]) = `5`(h, t) }
     implicit val cons_5 = new Aux[`5`, `6`] { def apply[T](h: T, t: `5`[T]) = `6`(h, t) }
+    implicit val cons_6 = new Aux[`6`, `7`] { def apply[T](h: T, t: `6`[T]) = `7`(h, t) }
+    implicit val cons_7 = new Aux[`7`, `8`] { def apply[T](h: T, t: `7`[T]) = `8`(h, t) }
+    implicit val cons_8 = new Aux[`8`, `9`] { def apply[T](h: T, t: `8`[T]) = `9`(h, t) }
   }
 
   implicit class Ops[T, Tail[_]](val tail: Tail[T]) extends AnyVal {
@@ -151,6 +157,9 @@ object SList {
     implicit val utils_4 = cons[`3`]
     implicit val utils_5 = cons[`4`]
     implicit val utils_6 = cons[`5`]
+    implicit val utils_7 = cons[`6`]
+    implicit val utils_8 = cons[`7`]
+    implicit val utils_9 = cons[`8`]
 
     def cons[Tail[_]](
       implicit

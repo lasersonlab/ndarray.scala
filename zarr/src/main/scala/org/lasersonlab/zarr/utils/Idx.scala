@@ -1,39 +1,51 @@
 package org.lasersonlab.zarr.utils
 
+import hammerlab.either._
 import io.circe.{ Decoder, Encoder }
 import org.lasersonlab.ndarray.Arithmetic
 import org.lasersonlab.ndarray.Arithmetic.Id
-import org.lasersonlab.zarr.untyped.|
 import org.lasersonlab.zarr.utils.Idx.Long.CastException
 
 sealed trait Idx {
   type T
-  implicit val arithmeticId: Arithmetic.Id[T]
+
+  implicit val arithmeticId : Arithmetic[T,   T]
   implicit val arithmeticInt: Arithmetic[T, Int]
+
   def int(t: T): CastException | Int
+
   implicit val encoder: Encoder[T]
   implicit val decoder: Decoder[T]
 }
 object Idx {
   type T[_T] = Idx { type T = _T }
+
   object Int
     extends Idx {
     type T = scala.Int
-    val arithmeticId: Id[Int] = Arithmetic.intint
-    val arithmeticInt: Arithmetic[Int, Int] = Arithmetic.intint
+
+    val arithmeticId : Id[Int] = Arithmetic.intint
+    val arithmeticInt: Id[Int] = Arithmetic.intint
+
     def int(t: Int): CastException | Int = Right(t)
+
     val encoder = io.circe.Encoder.encodeInt
     val decoder = io.circe.Decoder.decodeInt
   }
+
   object Long
     extends Idx {
+
     case class CastException(value: Long)
       extends RuntimeException(
         s"Attempting to case $value to an integer"
       )
+
     type T = scala.Long
-    val arithmeticId: Id[Long] = Arithmetic.longlong
-    val arithmeticInt: Arithmetic[Long, Int] = Arithmetic.longint
+
+    val arithmeticId : Arithmetic[Long, Long] = Arithmetic.longlong
+    val arithmeticInt: Arithmetic[Long,  Int] = Arithmetic.longint
+
     def int(t: Long): CastException | Int =
       if (t > Integer.MAX_VALUE)
         Left(
@@ -43,12 +55,15 @@ object Idx {
         Right(
           t.toInt
         )
+
     val encoder = io.circe.Encoder.encodeLong
     val decoder = io.circe.Decoder.decodeLong
   }
 
   object helpers {
     // TODO: remove explicit imports of this, mix it in instead
+    // NOTE: this can cause implicit-resolution ambiguity if an implicit `Idx.T` is already in scope and an `Idx` (or
+    // maybe `Idx.T`) is needed
     implicit def specify(implicit idx: Idx): Idx.T[idx.T] = idx
   }
 

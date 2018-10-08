@@ -6,14 +6,13 @@ import lasersonlab.shapeless.slist._
 import org.lasersonlab.circe.CodecK
 import org.lasersonlab.ndarray.{ ArrayLike, FlatArray, Indices }
 import org.lasersonlab.shapeless.{ Scannable, Zip }
-import org.lasersonlab.zarr.utils.Idx
 
 /**
  * Type- and value-level function from [[ShapeT a shape type]] to corresponding types and implicit values for an
  * N-dimensional [[Array]].
  *
- * @tparam ShapeT Type-constructor for the "shape" of the array (and its indices); apply an [[Idx "index"]] type (e.g.
- *                [[Int]] or [[Long]]) to get the actual shape/index type. Examples: [[List]], [[`2`]]/[[`3`]]/etc.
+ * @tparam ShapeT Type-constructor for the "shape" of the array (and its indices); apply an "index" type (e.g. [[Int]]
+ *                or [[Long]]) to get the actual shape/index type. Examples: [[List]], [[`2`]]/[[`3`]]/etc.
  */
 trait VectorEvidence[ShapeT[_]] {
   /**
@@ -22,41 +21,31 @@ trait VectorEvidence[ShapeT[_]] {
    */
   type A[_]
 
-  implicit def        ti:   Indices    [A, ShapeT]
-  implicit def arrayLike: ArrayLike.Aux[A, ShapeT]
-
-  implicit def traverse     :  Traverse[     A]
-  implicit def traverseShape:  Traverse[ShapeT]
-  implicit def     zipShape :       Zip[ShapeT]
-  implicit def     scannable: Scannable[ShapeT]
-  implicit def    shapeCodec:    CodecK[ShapeT]
+  implicit val      traverse:  Traverse    [A        ]
+  implicit val            ti:   Indices    [A, ShapeT]
+  implicit val     arrayLike: ArrayLike.Aux[A, ShapeT]
+  implicit val      zipShape:       Zip    [   ShapeT]
+  implicit val     scannable: Scannable    [   ShapeT]
+  implicit val    shapeCodec:    CodecK    [   ShapeT]
+  implicit val traverseShape:  Traverse    [   ShapeT]
 }
 object VectorEvidence {
 
   type Aux[S[_], _A[_]] = VectorEvidence[S] { type A[U] = _A[U] }
 
-  def make[S[_], _A[_]](
+  case class make[ShapeT[_], _A[_]](
     implicit
-    _shapeCodec: CodecK[S],
-    _ti: Indices[_A, S],
-    _traverse: Traverse[_A],
-    _traverseShape: Traverse[S],
-    _zipShape: Zip[S],
-    _scannable: Scannable[S],
-    _arrayLike: ArrayLike.Aux[_A, S]
-  ):
-    Aux[S, _A] =
-    new VectorEvidence[S] {
-      type A[U] = _A[U]
-
-      override implicit val    shapeCodec = _shapeCodec
-      override implicit val            ti = _ti
-      override implicit val      traverse = _traverse
-      override implicit val traverseShape = _traverseShape
-      override implicit val      zipShape = _zipShape
-      override implicit val     scannable = _scannable
-      override implicit val     arrayLike = _arrayLike
-    }
+    val      traverse:  Traverse    [_A        ],
+    val            ti:   Indices    [_A, ShapeT],
+    val     arrayLike: ArrayLike.Aux[_A, ShapeT],
+    val      zipShape:       Zip    [    ShapeT],
+    val     scannable: Scannable    [    ShapeT],
+    val    shapeCodec:    CodecK    [    ShapeT],
+    val traverseShape:  Traverse    [    ShapeT],
+  )
+  extends VectorEvidence[ShapeT] {
+    type A[U] = _A[U]
+  }
 
   import lasersonlab.shapeless.slist._
 

@@ -1,5 +1,11 @@
 package org.lasersonlab.ndarray
 
+/**
+ * Type-class evidence that [[A]] is an N-dimensional array
+ *
+ * The `Shape` is a type-member, and methods for obtaining the shape, and randomly-accessing a specific element, are
+ * provided
+ */
 trait ArrayLike[A[_]] {
   type Shape[_]
   def shape(a: A[_]): Shape[Int]

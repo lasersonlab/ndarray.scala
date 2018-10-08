@@ -40,11 +40,16 @@ object FlatArray {
    */
   type *[T] = FlatArray[List, T]
 
-  implicit def arrayLike[ShapeT[_]]: ArrayLike.Aux[FlatArray[ShapeT, ?], ShapeT] = {
+  implicit def arrayLike[ShapeT[_]]
+    : ArrayLike.Aux[
+      FlatArray[ShapeT, ?],
+      ShapeT
+    ]
+  = {
     type F[T] = FlatArray[ShapeT, T]
     new ArrayLike[F] {
       type Shape[T] = ShapeT[T]
-      @inline def shape(a: F[_]): Shape[Idx] = a.shape
+      @inline def shape   (a: F[_]):     Shape[Idx]     = a.shape
       @inline def apply[T](a: F[T], idx: Shape[Idx]): T = a(idx)
     }
   }

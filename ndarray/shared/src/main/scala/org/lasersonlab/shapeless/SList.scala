@@ -1,9 +1,11 @@
 package org.lasersonlab.shapeless
 
-import cats.{ Applicative, Eval, Reducible, Semigroupal, Traverse }
 import cats.implicits._
+import cats.{ Applicative, Eval, Reducible, Traverse }
 import hammerlab.either._
 import org.lasersonlab.shapeless.SList.FromList.{ Err, TooFew, TooMany }
+import org.lasersonlab.shapeless.Scannable.syntax._
+import org.lasersonlab.shapeless.Zip.syntax._
 
 trait SList {
   type Head
@@ -18,7 +20,19 @@ object SList {
   type Aux[T, _Tail[_]] = SList { type Head = T; type Tail[U] = _Tail[U] }
 
   object :: {
-    def unapply[L <: SList](l: L): Option[(l.Head, l.Tail[l.Head])] =
+    def unapply[
+      L <: SList
+    ](
+      l: L
+    ):
+      Option[
+        (
+          l.Head,
+          l.Tail[
+            l.Head
+          ]
+        )
+      ] =
       Some(
         (
           l.head,
@@ -29,11 +43,12 @@ object SList {
 
   case object `0` {
     def ::[T](h: T) = `1`(h)
-    val size = 0
+    def size = 0
   }
   val   ⊥     = `0`
   type  ⊥     = `0`.type
   type `0`[T] = `0`.type
+
   case class `1`[T](head: T              ) extends SList { type Head = T; type Tail[U] = `0`[U]; def size = 1 ; def tail: `0`[T] = `0` }
   case class `2`[T](head: T, tail: `1`[T]) extends SList { type Head = T; type Tail[U] = `1`[U]; def size = 2 }
   case class `3`[T](head: T, tail: `2`[T]) extends SList { type Head = T; type Tail[U] = `2`[U]; def size = 3 }
@@ -41,6 +56,9 @@ object SList {
   case class `5`[T](head: T, tail: `4`[T]) extends SList { type Head = T; type Tail[U] = `4`[U]; def size = 5 }
   case class `6`[T](head: T, tail: `5`[T]) extends SList { type Head = T; type Tail[U] = `5`[U]; def size = 6 }
 
+  /**
+   * Type-class for prepending an element to an [[SList]]
+   */
   trait Cons[In[_]] {
     type Out[U] <: Aux[U, In]
     def apply[T](h: T, t: In[T]): Out[T]
@@ -63,6 +81,10 @@ object SList {
     def size(implicit base: Base[Tail]): Int = base.size
   }
 
+  /**
+   * Attempt to convert a [[List]] to an [[F]], raising an [[FromList.Err error]] is there are too few or too many
+   * elements
+   */
   trait FromList[F[_]] {
     val size: Int
     def apply[T](l: List[T]): Err | F[T]
@@ -73,6 +95,9 @@ object SList {
     case class TooMany[T](extra: List[T]) extends Err
   }
 
+  /**
+   * Bundle of useful implementations for all [[SList]] types, including [[`0`]]
+   */
   trait Base[F[_]]
     extends    Traverse[F]
        with         Zip[F]
@@ -80,32 +105,38 @@ object SList {
        with    FromList[F]
        with Applicative[F]
 
+  /**
+   * Extend [[Base]] implementation bundle for non-empty [[SList]]s (from [[`1`]] up)
+   */
   trait Utils[F[_]]
     extends      Base[F]
        with Reducible[F]
 
+  /**
+   * Default [[Base]] or [[Utils]] implementations for all [[SList]]s
+   */
   trait instances {
-    implicit val utils0 =
+    implicit val base_0 =
       new Base[`0`] {
         type F[T] = `0`[T]
         val size = 0
 
-        def traverse[G[_], A, B](fa: F[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[F[B]] = ev.pure(`0`)
+        def traverse[G[_], A, B](fa: F[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[F[B]] = ev.pure(⊥)
 
         def foldLeft [A, B](fa: F[A],  b:      B )(f: (B,      A ) ⇒      B ):      B  =  b
         def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = lb
 
-        def scanLeft   [A, B](fa: F[A], b: B, f: (B, A) ⇒ B): (F[B],  B ) = (`0`, b)
-        def scanLeft_→ [A, B](fa: F[A], b: B, f: (B, A) ⇒ B):  F[B]       =  `0`
-        def scanRight  [A, B](fa: F[A], b: B, f: (A, B) ⇒ B): (  B, F[B]) = (b, `0`)
-        def scanRight_←[A, B](fa: F[A], b: B, f: (A, B) ⇒ B):       F[B]  =     `0`
+        def scanLeft   [A, B](fa: F[A], b: B, f: (B, A) ⇒ B): (F[B],  B ) = (⊥, b)
+        def scanLeft_→ [A, B](fa: F[A], b: B, f: (B, A) ⇒ B):  F[B]       =  ⊥
+        def scanRight  [A, B](fa: F[A], b: B, f: (A, B) ⇒ B): (  B, F[B]) = (b, ⊥)
+        def scanRight_←[A, B](fa: F[A], b: B, f: (A, B) ⇒ B):       F[B]  =     ⊥
 
-        def apply[A, B](fa: F[A], fb: F[B]): F[(A, B)] = `0`
+        def apply[A, B](fa: F[A], fb: F[B]): F[(A, B)] = ⊥
 
         def apply[T](f: `0`[T]): List[T] = Nil
         def apply[T](l: List[T]): Err | F[T] =
           l match {
-            case   Nil ⇒ R(`0`)
+            case   Nil ⇒ R(⊥)
             case extra ⇒ L(TooMany(extra))
           }
 
@@ -114,23 +145,28 @@ object SList {
         override def ap[A, B](ff: `0`[A ⇒ B])(fa: `0`[A]): `0`[B] = ⊥
       }
 
-    implicit val utils1 = cons[`0`]
-    implicit val utils2 = cons[`1`]
-    implicit val utils3 = cons[`2`]
-    implicit val utils4 = cons[`3`]
-    implicit val utils5 = cons[`4`]
-    implicit val utils6 = cons[`5`]
+    implicit val utils_1 = cons[`0`]
+    implicit val utils_2 = cons[`1`]
+    implicit val utils_3 = cons[`2`]
+    implicit val utils_4 = cons[`3`]
+    implicit val utils_5 = cons[`4`]
+    implicit val utils_6 = cons[`5`]
 
-    def cons[Tail[_]](implicit tail: Base[Tail], ev: Cons[Tail]): Utils[ev.Out] = {
+    def cons[Tail[_]](
+      implicit
+      tail: Base[Tail],
+        ev: Cons[Tail]
+    ):
+      Utils[ev.Out]
+    = {
       type F[T] = ev.Out[T]
-      val tl = tail
       new Utils[F] {
         override def traverse[G[_]: Applicative, A, B](fa: F[A])(f: A ⇒ G[B]): G[F[B]] =
           fa match {
             case h :: t ⇒
               f(h)
                 .map2(
-                  tl.traverse(t)(f)
+                  t.traverse(f)
                 ) {
                   _ :: _
                 }
@@ -143,16 +179,16 @@ object SList {
               f(
                 fa.head
               )
-            )(
+            ) {
               g
-            )
+            }
 
         import Eval.always
         override def reduceRightTo[A, B](fa: F[A])(f: A ⇒ B)(g: (A, Eval[B]) ⇒ Eval[B]): Eval[B] =
           fa
             .tail
             .foldRight(
-              Eval.always[Option[B]](None)
+              always[Option[B]](None)
             ) {
               (a, lb) ⇒
                 lb
@@ -162,7 +198,7 @@ object SList {
                   }
             }
             .flatMap {
-              case None ⇒ always(f(fa.head))
+              case None    ⇒ always(f(fa.head))
               case Some(b) ⇒ g(fa.head, always(b))
             }
 
@@ -174,9 +210,9 @@ object SList {
                 b,
                 fa.head
               )
-            )(
+            ) {
               f
-            )
+            }
 
         override def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] =
           f(
@@ -193,12 +229,12 @@ object SList {
               hb :: tb
             ) ⇒
               (ha, hb) ::
-              tail(ta, tb)
+              ta.zip(tb)
           }
 
         override def scanLeft[A, B](fa: F[A], b: B, f: (B, A) ⇒ B): (F[B], B) = {
           val next = f(b, fa.head)
-          val (scanned, total) = tl.scanLeft(fa.tail, next, f)
+          val (scanned, total) = fa.tail.scanLeft(next)(f)
           (
             b :: scanned,
             total
@@ -206,23 +242,23 @@ object SList {
         }
 
         override def scanRight[A, B](fa: F[A], b: B, f: (A, B) ⇒ B): (B, F[B]) = {
-          val (subtotal, tail) = tl.scanRight(fa.tail, b, f)
+          val (subtotal, _tail) = fa.tail.scanRight[B](b)(f)
           (
             f(
               fa.head,
               subtotal
             ),
-            subtotal :: tail
+            subtotal :: _tail
           )
         }
 
         override def scanLeft_→[A, B](fa: F[A], b: B, f: (B, A) ⇒ B): F[B] = {
           val next = f(b, fa.head)
-          next :: tl.scanLeft_→(fa.tail, next, f)
+          next :: fa.tail.scanLeft_→(next)(f)
         }
 
         override def scanRight_←[A, B](fa: F[A], b: B, f: (A, B) ⇒ B): F[B] =
-          f(fa.head, b) :: tl.scanRight_←(fa.tail, b, f)
+          f(fa.head, b) :: fa.tail.scanRight_←(b)(f)
 
         val size = tail.size + 1
 
@@ -230,14 +266,10 @@ object SList {
           l match {
             case Nil ⇒ L(TooFew(size))
             case scala.::(h, t) ⇒
-              tail(t)
-                .map {
-                  t ⇒
-                    h :: t
-                }
+              tail(t).map { h :: _ }
           }
 
-        override def pure[A](x: A): F[A] = x :: tail.pure(x)
+        override def pure[A](x: A): F[A] = x :: x.pure[Tail]
 
         override def ap[A, B](ff: F[A ⇒ B])(fa: F[A]): F[B] =
           (ff, fa) match {
@@ -245,7 +277,7 @@ object SList {
               hf :: tf,
               ha :: ta
             ) ⇒
-              hf(ha) :: tail.ap(tf)(ta)
+              hf(ha) :: tf.ap(ta)
           }
       }
     }

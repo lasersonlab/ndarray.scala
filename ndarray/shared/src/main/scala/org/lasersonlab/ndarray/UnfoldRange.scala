@@ -1,4 +1,4 @@
-package org.lasersonlab.zarr
+package org.lasersonlab.ndarray
 
 trait UnfoldRange[Shape[_]] {
   def apply(s: Shape[Int]): Vector[Shape[Int]]

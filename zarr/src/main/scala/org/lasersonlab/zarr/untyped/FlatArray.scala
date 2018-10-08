@@ -2,9 +2,8 @@ package org.lasersonlab.zarr.untyped
 
 import cats.implicits._
 import cats.{ Applicative, Eval, Foldable, Traverse }
-import org.lasersonlab.ndarray.{ ArrayLike, Indices }
+import org.lasersonlab.ndarray.{ ArrayLike, Indices, UnfoldRange }
 import org.lasersonlab.shapeless.{ Scannable, Size, Zip }
-import org.lasersonlab.zarr.UnfoldRange
 import org.lasersonlab.zarr.untyped.FlatArray.Idx
 import Scannable.syntax._
 import Zip.syntax._

@@ -1,8 +1,26 @@
 package org.lasersonlab.ndarray
 
+/**
+ * Given a [[Shape]] of [[Int]]s, "unfold" into all [[Shape]]s of [[Int]]s whose members are all less than their
+ * counterparts in the input [[Shape]]
+ *
+ * Example:
+ *
+ * -  in: (2, 3)
+ * - out: (0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2)
+ *
+ * This would correspond to a [[Shape]] of the form:
+ *
+ * {{{
+ * type Shape[T] = (T, T)
+ * }}}
+ *
+ * Default instances are provided for [[List]] as well as [[org.lasersonlab.shapeless.SList]]s
+ */
 trait UnfoldRange[Shape[_]] {
   def apply(s: Shape[Int]): Vector[Shape[Int]]
 }
+
 object UnfoldRange {
   implicit val list: UnfoldRange[List] =
     new UnfoldRange[List] {
@@ -25,13 +43,13 @@ object UnfoldRange {
   }
   implicit def cons[Tail[_]](
     implicit
-    cons: Cons[Tail],
+    cons:        Cons[Tail],
     tail: UnfoldRange[Tail]
   ):
     UnfoldRange[cons.Out] = {
-    type Out = cons.Out[Int]
+    type Shape = cons.Out[Int]
     new UnfoldRange[cons.Out] {
-      override def apply(s: Out): Vector[Out] = {
+      override def apply(s: Shape): Vector[Shape] = {
         for {
           h ← (0 until s.head).toVector
           t ← tail(s.tail)

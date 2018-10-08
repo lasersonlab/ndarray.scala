@@ -2,12 +2,12 @@ package org.lasersonlab.ndarray
 
 import cats.implicits._
 import cats.{ Applicative, Eval, Foldable, Traverse }
-import org.lasersonlab.ndarray.FlatArray.Idx
+import org.lasersonlab.ndarray.Vector.Idx
 import org.lasersonlab.shapeless.Scannable.syntax._
 import org.lasersonlab.shapeless.Zip.syntax._
 import org.lasersonlab.shapeless.{ Scannable, Size, Zip }
 
-case class FlatArray[
+case class Vector[
   ShapeT[_]
   : Foldable
   : Scannable
@@ -16,7 +16,7 @@ case class FlatArray[
   T
 ](
   shape: ShapeT[Idx],
-  elems: Vector[T]
+  elems: scala.Vector[T]
 ) {
   val (size, strides) = shape.scanRight(1)(_ * _)
   val rank = Size(shape)
@@ -31,22 +31,22 @@ case class FlatArray[
     )
 }
 
-object FlatArray {
+object Vector {
   type Idx = Int
 
   /**
-   * [[FlatArray]] with an unknown (at compile-time) number of dimensions, where "shape" and indices are represented as
+   * [[Vector]] with an unknown (at compile-time) number of dimensions, where "shape" and indices are represented as
    * [[List]]s
    */
-  type *[T] = FlatArray[List, T]
+  type *[T] = Vector[List, T]
 
   implicit def arrayLike[ShapeT[_]]
     : ArrayLike.Aux[
-      FlatArray[ShapeT, ?],
+      Vector[ShapeT, ?],
       ShapeT
     ]
   = {
-    type F[T] = FlatArray[ShapeT, T]
+    type F[T] = Vector[ShapeT, T]
     new ArrayLike[F] {
       type Shape[T] = ShapeT[T]
       @inline def shape   (a: F[_]):     Shape[Idx]     = a.shape
@@ -64,12 +64,12 @@ object FlatArray {
     implicit u: UnfoldRange[ShapeT]
   ):
     Indices[
-      FlatArray[ShapeT, ?],
+      Vector[ShapeT, ?],
       ShapeT
     ] =
-    new Indices[FlatArray[ShapeT, ?], ShapeT] {
-      @inline override def apply(shape: Shape): FlatArray[ShapeT, Index] =
-        FlatArray[ShapeT, Index](
+    new Indices[Vector[ShapeT, ?], ShapeT] {
+      @inline override def apply(shape: Shape): Vector[ShapeT, Index] =
+        Vector[ShapeT, Index](
           shape,
           u(shape)
         )
@@ -83,22 +83,22 @@ object FlatArray {
     : Zip
   ]:
     Traverse[
-      FlatArray[ShapeT, ?]
+      Vector[ShapeT, ?]
     ]
   = {
-    type F[A] = FlatArray[ShapeT, A]
+    type F[A] = Vector[ShapeT, A]
     new Traverse[F] {
-      override def traverse[G[_], A, B](fa: F[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[F[B]] = {
+      override def traverse[G[_]: Applicative, A, B](fa: F[A])(f: A ⇒ G[B]): G[F[B]] = {
         foldLeft(
           fa,
-          ev.pure { Vector.newBuilder[B] }
+          scala.Vector.newBuilder[B].pure[G]
         ) {
           (builder, elem) ⇒
             builder.map2(f(elem)) { _ += _ }
         }
         .map {
           builder ⇒
-            FlatArray(
+            Vector(
               fa.shape,
               builder.result
             )
@@ -111,13 +111,13 @@ object FlatArray {
 
   import lasersonlab.shapeless.{ slist ⇒ s }
 
-  type `1`[T] = FlatArray[s.`1`, T]
-  type `2`[T] = FlatArray[s.`2`, T]
-  type `3`[T] = FlatArray[s.`3`, T]
-  type `4`[T] = FlatArray[s.`4`, T]
-  type `5`[T] = FlatArray[s.`5`, T]
-  type `6`[T] = FlatArray[s.`6`, T]
-  type `7`[T] = FlatArray[s.`7`, T]
-  type `8`[T] = FlatArray[s.`8`, T]
-  type `9`[T] = FlatArray[s.`9`, T]
+  type `1`[T] = Vector[s.`1`, T]
+  type `2`[T] = Vector[s.`2`, T]
+  type `3`[T] = Vector[s.`3`, T]
+  type `4`[T] = Vector[s.`4`, T]
+  type `5`[T] = Vector[s.`5`, T]
+  type `6`[T] = Vector[s.`6`, T]
+  type `7`[T] = Vector[s.`7`, T]
+  type `8`[T] = Vector[s.`8`, T]
+  type `9`[T] = Vector[s.`9`, T]
 }

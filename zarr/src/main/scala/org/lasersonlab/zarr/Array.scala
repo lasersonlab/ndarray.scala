@@ -4,8 +4,8 @@ import cats.data.Nested
 import cats.{ Eval, Foldable, Traverse }
 import hammerlab.option._
 import hammerlab.path._
-import org.lasersonlab.circe.{ CodecK, EncoderK }
-import org.lasersonlab.ndarray.{ ArrayLike, FlatArray, Indices }
+import org.lasersonlab.circe.EncoderK
+import org.lasersonlab.ndarray.{ ArrayLike, Indices, Vector }
 import org.lasersonlab.shapeless.{ Scannable, Zip }
 import org.lasersonlab.zarr.array.metadata
 import org.lasersonlab.zarr.dtype.DataType
@@ -231,20 +231,15 @@ object Array {
   }
 
   /**
-   * Convenience-constructor: given [[ShapeT shape]]- and [[T data]]-types, load an [[Array]] from a [[Path directory]]
-   *
-   * Uses a [[VectorEvidence]] as evidence for mapping from the [[Nat]] to a concrete shape
-   *
-   * Differs from [[apply]] above in that it returns full-resolved [[Array.A]] and [[Array.Chunk]] type-members, for
-   * situations where that is important (in general, it shouldn't be; tests may wish to verify / operate on chunks, but
-   * users shouldn't ever need to).
+   * Main constructor: given [[ShapeT shape]]- and [[T data]]-types, load an [[Array]] from a [[Path directory]]
    *
    * @param dir path to load as a Zarr [[Array]]
-   * @param v implementation of [[ShapeT]]-type
+   * @param v provides an "N-D array"-type to store chunks in, as well as relevant evidence for using [[ShapeT]]s with
+   *          it
    * @param idx "index" type to use (e.g. [[Int]] or [[Long]])
    * @param d datatype-decoder
    * @param dt fill-value-decoder
-   * @tparam ShapeT "shape" of the [[Array]]; also the type of elements' indices
+   * @tparam ShapeT "shape" of the [[Array]]; also of elements' indices
    * @tparam T element-type of this [[Array]]
    */
   def apply[
@@ -254,7 +249,7 @@ object Array {
     dir: Path
   )(
     implicit
-      v:    VectorEvidence[ShapeT],
+     _v:    VectorEvidence[ShapeT],
       d:  DataType.Decoder[     T],
      dt: FillValue.Decoder[     T],
     idx:               Idx
@@ -263,61 +258,58 @@ object Array {
     Aux[
       ShapeT,
       idx.T,
-      v.A,
+      _v.A,
       Chunk[ShapeT, ?],
       T
     ]
   = {
+    // HKT-members in method parameters are considered "unstable", so we have to work around it this way (or e.g. pass
+    // all implicit params explicitly / by name); see https://github.com/scala/bug/issues/11086
+    val v = _v
     import v._
-    apply[ShapeT, A, T](dir)(
-      // shouldn't have to list all these explicitly: https://github.com/scala/bug/issues/11086
-                idx = idx,
-                  d = d,
-                 dt = dt,
-           traverse = traverse,
-                 ti = ti,
-          arrayLike = arrayLike,
-         shapeCodec = shapeCodec,
-      traverseShape = traverseShape,
-           zipShape = zipShape,
-          scannable = scannable
-    )
+    implicit val ev = v.t
+    apply[ShapeT, A, T](dir)
+      .asInstanceOf[
+        Exception |
+        Aux[
+          ShapeT,
+          idx.T,
+          _v.A,  // _v.A isn't recognized as being equal to v.A, due to https://github.com/scala/bug/issues/11086
+          Chunk[ShapeT, ?],
+          T
+        ]
+      ]
   }
 
   def apply[
-    Shape[_],
-        A[_],
-        T
+    ShapeT[_],
+         A[_],
+         T
+         :  DataType.Decoder
+         : FillValue.Decoder
   ](
     dir: Path
   )(
     implicit
-              idx:               Idx          ,
-                d:  DataType.Decoder[       T],
-               dt: FillValue.Decoder[       T],
-         traverse:          Traverse[A       ],
-               ti:       Indices    [A, Shape],
-        arrayLike:     ArrayLike.Aux[A, Shape],
-       shapeCodec:            CodecK[   Shape],
-    traverseShape:          Traverse[   Shape],
-         zipShape:               Zip[   Shape],
-        scannable:         Scannable[   Shape]
+    idx: Idx,
+     ev: VectorEvidence.make[ShapeT, A]
   ):
     Exception |
     Aux[
-      Shape,
+      ShapeT,
       idx.T,
       A,
-      Chunk[Shape, ?],
+      Chunk[ShapeT, ?],
       T
     ]
   = {
     import Idx.helpers.specify
+    import ev.{ A ⇒ _, _ }
     for {
       _metadata ←
         dir.load[
           Metadata[
-            Shape,
+            ShapeT,
             idx.T,
             T
           ]
@@ -346,10 +338,10 @@ object Array {
         metadata ⇒
           import Idx.helpers.specify
           apply[
-            metadata.T,
             List,
             idx.T,
-            FlatArray.*
+            Vector.*,
+            metadata.T
           ](
             dir,
             metadata.t
@@ -360,23 +352,23 @@ object Array {
       }
 
   def apply[
-        _T,
     _Shape[_]
             : Scannable
             : Zip
             : Traverse
             : EncoderK,
       _Idx,
-        _A[_]
+        _A[_],
+        _T
   ](
     dir: Path,
     _metadata: Metadata[_Shape, _Idx, _T]
   )(
     implicit
-           ti:   Indices[_A, _Shape],
+      indices:   Indices    [_A, _Shape],
     arrayLike: ArrayLike.Aux[_A, _Shape],
-     traverse:      Traverse[_A],
-          idx:       Idx.  T[_Idx]
+     traverse:  Traverse    [_A        ],
+          idx:       Idx.  T[      _Idx]
   ):
     Exception |
     Aux[

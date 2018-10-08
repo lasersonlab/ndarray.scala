@@ -7,13 +7,13 @@ import hammerlab.path._
 import org.lasersonlab.circe.{ CodecK, EncoderK }
 import org.lasersonlab.ndarray.ArrayLike
 import org.lasersonlab.shapeless.{ Scannable, Zip }
-import org.lasersonlab.{ zarr ⇒ z }
 import org.lasersonlab.zarr.array.metadata
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.untyped.FlatArray
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.utils.Idx.Long.CastException
+import org.lasersonlab.{ zarr ⇒ z }
 import shapeless.Nat
 
 import scala.util.Try
@@ -350,7 +350,7 @@ object Array {
             metadata.T,
             List,
             idx.T,
-            FlatArray
+            FlatArray.*
           ](
             dir,
             metadata.t

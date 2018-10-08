@@ -10,6 +10,7 @@ trait SList {
   def head: Head
   type Tail[_]
   def tail: Tail[Head]
+  def size: Int
 }
 
 object SList {
@@ -33,12 +34,12 @@ object SList {
   val   ⊥     = `0`
   type  ⊥     = `0`.type
   type `0`[T] = `0`.type
-  case class `1`[T](head: T              ) extends SList { type Head = T; type Tail[U] = `0`[U]; def tail: `0`[T] = `0` }
-  case class `2`[T](head: T, tail: `1`[T]) extends SList { type Head = T; type Tail[U] = `1`[U] }
-  case class `3`[T](head: T, tail: `2`[T]) extends SList { type Head = T; type Tail[U] = `2`[U] }
-  case class `4`[T](head: T, tail: `3`[T]) extends SList { type Head = T; type Tail[U] = `3`[U] }
-  case class `5`[T](head: T, tail: `4`[T]) extends SList { type Head = T; type Tail[U] = `4`[U] }
-  case class `6`[T](head: T, tail: `5`[T]) extends SList { type Head = T; type Tail[U] = `5`[U] }
+  case class `1`[T](head: T              ) extends SList { type Head = T; type Tail[U] = `0`[U]; def size = 1 ; def tail: `0`[T] = `0` }
+  case class `2`[T](head: T, tail: `1`[T]) extends SList { type Head = T; type Tail[U] = `1`[U]; def size = 2 }
+  case class `3`[T](head: T, tail: `2`[T]) extends SList { type Head = T; type Tail[U] = `2`[U]; def size = 3 }
+  case class `4`[T](head: T, tail: `3`[T]) extends SList { type Head = T; type Tail[U] = `3`[U]; def size = 4 }
+  case class `5`[T](head: T, tail: `4`[T]) extends SList { type Head = T; type Tail[U] = `4`[U]; def size = 5 }
+  case class `6`[T](head: T, tail: `5`[T]) extends SList { type Head = T; type Tail[U] = `5`[U]; def size = 6 }
 
   trait Cons[In[_]] {
     type Out[U] <: Aux[U, In]

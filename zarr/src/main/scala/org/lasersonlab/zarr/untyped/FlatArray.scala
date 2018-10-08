@@ -1,69 +1,95 @@
 package org.lasersonlab.zarr.untyped
 
 import cats.implicits._
-import cats.{ Applicative, Eval, Traverse }
+import cats.{ Applicative, Eval, Foldable, Traverse }
 import org.lasersonlab.ndarray.ArrayLike
-import org.lasersonlab.zarr.Indices
+import org.lasersonlab.shapeless.{ Scannable, Size, Zip }
+import org.lasersonlab.zarr.{ Indices, UnfoldRange }
+import org.lasersonlab.zarr.untyped.FlatArray.Idx
+import Scannable.syntax._
+import Zip.syntax._
 
-case class FlatArray[T](shape: List[Int], elems: Vector[T]) {
-  val size :: strides = shape.scanRight(1)(_ * _)
-  val rank = shape.size
-  def apply(idx: Seq[Int]): T = {
-    var sum = 0
-    val idxs = idx.iterator
-    var stride = strides
-    while (stride != Nil) {
-      sum += idxs.next * stride.head
-      stride = stride.tail
-    }
-    if (idxs.hasNext)
-      throw new IllegalArgumentException(
-        s"Got index of rank ${idx.size} (${idx.mkString(",")}) in array of rank $rank"
-      )
-    elems(sum)
-  }
+case class FlatArray[
+  ShapeT[_]
+  : Foldable
+  : Scannable
+  : Size
+  : Zip,
+  T
+](
+  shape: ShapeT[Idx],
+  elems: Vector[T]
+) {
+  val (size, strides) = shape.scanRight(1)(_ * _)
+  val rank = Size(shape)
+  def apply(idx: ShapeT[Idx]): T =
+    elems(
+      idx
+        .zip(strides)
+        .foldLeft(0) {
+          case (sum, (idx,  stride)) ⇒
+                sum + idx * stride
+        }
+    )
 }
 
 object FlatArray {
-  implicit val arrayLike: ArrayLike.Aux[FlatArray, List] =
-    new ArrayLike[FlatArray] {
-      type Shape[T] = List[T]
-      @inline def shape(a: FlatArray[_]): Shape[Int] = a.shape
-      @inline def apply[T](a: FlatArray[T], idx: Shape[Int]): T = a(idx)
-    }
+  type Idx = Int
 
-  implicit val list: Indices.Aux[FlatArray, List] =
-    new Indices[FlatArray] {
-      type Shape[T] = List[T]
-      @inline override def apply(shape: Shape[Int]): FlatArray[Shape[Int]] =
-        FlatArray(
+  /** [[FlatArray]] with an unknown (at compile-time) number of dimensions */
+  type *[T] = FlatArray[List, T]
+
+  implicit def arrayLike[ShapeT[_]]: ArrayLike.Aux[FlatArray[ShapeT, ?], ShapeT] = {
+    type F[T] = FlatArray[ShapeT, T]
+    new ArrayLike[F] {
+      type Shape[T] = ShapeT[T]
+      @inline def shape(a: F[_]): Shape[Idx] = a.shape
+      @inline def apply[T](a: F[T], idx: Shape[Idx]): T = a(idx)
+    }
+  }
+
+  implicit def indices[
+    ShapeT[_]
+    : Foldable
+    : Scannable
+    : Size
+    : Zip
+  ](
+    implicit u: UnfoldRange[ShapeT]
+  ):
+    Indices.Aux[
+      FlatArray[ShapeT, ?],
+      ShapeT
+    ] =
+    new Indices[FlatArray[ShapeT, ?]] {
+      type Shape[T] = ShapeT[T]
+      @inline override def apply(shape: Shape[Idx]): FlatArray[Shape, Shape[Idx]] =
+        FlatArray[Shape, Shape[Idx]](
           shape,
-          rec(shape)
+          u(shape)
         )
-      private def rec(shape: List[Int]): Vector[List[Int]] =
-        shape match {
-          case Nil ⇒ Vector()
-          case scala.::(h, t) ⇒
-            for {
-              h ← (0 until h).toVector
-              t ← rec(t)
-            } yield
-              scala.::(h, t)
-        }
     }
 
-  implicit val traverse: Traverse[FlatArray] =
-    new Traverse[FlatArray] {
-      type F[A] = FlatArray[A]
+  implicit def traverse[
+    ShapeT[_]
+    : Foldable
+    : Scannable
+    : Size
+    : Zip
+  ]:
+    Traverse[
+      FlatArray[ShapeT, ?]
+    ]
+  = {
+    type F[A] = FlatArray[ShapeT, A]
+    new Traverse[F] {
       override def traverse[G[_], A, B](fa: F[A])(f: A ⇒ G[B])(implicit ev: Applicative[G]): G[F[B]] = {
         foldLeft(
           fa,
-          ev.pure {
-            Vector.newBuilder[B]
-          }
+          ev.pure { Vector.newBuilder[B] }
         ) {
           (builder, elem) ⇒
-            ev.map2(builder, f(elem)) { _ += _ }
+            builder.map2(f(elem)) { _ += _ }
         }
         .map {
           builder ⇒
@@ -76,4 +102,5 @@ object FlatArray {
       @inline def foldLeft [A, B](fa: F[A],  b:      B )(f: (B,      A ) ⇒      B ):      B  = fa.elems.foldLeft ( b)(f)
       @inline def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.elems.foldRight(lb)(f)
     }
+  }
 }

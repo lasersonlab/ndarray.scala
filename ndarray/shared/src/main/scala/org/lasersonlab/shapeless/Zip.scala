@@ -10,6 +10,7 @@ object Zip {
   trait syntax {
     @inline implicit def zipOps[F[_], A](fa: F[A]): Ops[F, A] = Ops(fa)
   }
+  object syntax extends syntax
 
   implicit val list: Zip[List] =
     new Zip[List] {

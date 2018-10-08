@@ -176,7 +176,7 @@ object Array {
     shape: Shape[Dimension[Idx]]
   )(
    implicit
-      indices:    Indices.Aux[A, Shape],
+      indices:    Indices    [A, Shape],
           idx:        Idx.  T[     Idx],
      datatype:   DataType.Aux[      _T],
    compressor: Compressor
@@ -297,7 +297,7 @@ object Array {
                 d:  DataType.Decoder[       T],
                dt: FillValue.Decoder[       T],
          traverse:          Traverse[A       ],
-               ti:       Indices.Aux[A, Shape],
+               ti:       Indices    [A, Shape],
         arrayLike:     ArrayLike.Aux[A, Shape],
        shapeCodec:            CodecK[   Shape],
     traverseShape:          Traverse[   Shape],
@@ -374,7 +374,7 @@ object Array {
     _metadata: Metadata[_Shape, _Idx, _T]
   )(
     implicit
-           ti:   Indices.Aux[_A, _Shape],
+           ti:   Indices[_A, _Shape],
     arrayLike: ArrayLike.Aux[_A, _Shape],
      traverse:      Traverse[_A],
           idx:       Idx.  T[_Idx]

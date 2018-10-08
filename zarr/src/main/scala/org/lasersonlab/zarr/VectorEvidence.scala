@@ -23,7 +23,7 @@ trait VectorEvidence[ShapeT[_]] {
    */
   type A[_]
 
-  implicit def        ti:   Indices.Aux[A, ShapeT]
+  implicit def        ti:   Indices    [A, ShapeT]
   implicit def arrayLike: ArrayLike.Aux[A, ShapeT]
 
   implicit def traverse     :  Traverse[     A]
@@ -39,7 +39,7 @@ object VectorEvidence {
   def make[S[_], _A[_]](
     implicit
     _shapeCodec: CodecK[S],
-    _ti: Indices.Aux[_A, S],
+    _ti: Indices[_A, S],
     _traverse: Traverse[_A],
     _traverseShape: Traverse[S],
     _zipShape: Zip[S],

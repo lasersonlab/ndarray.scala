@@ -57,14 +57,13 @@ object FlatArray {
   ](
     implicit u: UnfoldRange[ShapeT]
   ):
-    Indices.Aux[
+    Indices[
       FlatArray[ShapeT, ?],
       ShapeT
     ] =
-    new Indices[FlatArray[ShapeT, ?]] {
-      type Shape[T] = ShapeT[T]
-      @inline override def apply(shape: Shape[Idx]): FlatArray[Shape, Shape[Idx]] =
-        FlatArray[Shape, Shape[Idx]](
+    new Indices[FlatArray[ShapeT, ?], ShapeT] {
+      @inline override def apply(shape: Shape): FlatArray[ShapeT, Index] =
+        FlatArray[ShapeT, Index](
           shape,
           u(shape)
         )

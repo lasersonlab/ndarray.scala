@@ -7,7 +7,6 @@ import org.lasersonlab.ndarray.Arithmetic
 import org.lasersonlab.shapeless.{ Scannable, Zip }
 import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.utils.Idx
-import org.lasersonlab.zarr.utils.opt.OptCodec
 
 import scala.util.{ Failure, Success, Try }
 
@@ -27,7 +26,7 @@ import scala.util.{ Failure, Success, Try }
  * of full-sized/interior chunks? Seems like the latter… some edges to check here around handling that as well.
  */
 package object zarr
-  extends OptCodec
+  extends utils.opt.OptCodec
      with utils.slist.Codecs
      with HasPathOps
      with hammerlab.either
@@ -70,6 +69,9 @@ package object zarr
     type         HCursor    = c.        HCursor
   }
 
+  /**
+   * Aliases that partially-apply an "index" type ([[Int]] or [[Long]]; see [[Idx]])
+   */
   trait api {
     type Idx
     import org.lasersonlab.{ zarr ⇒ z }
@@ -82,14 +84,8 @@ package object zarr
       type Metadata[Shape[_], T] = z.Metadata[Shape, Idx, T]
     }
   }
-  trait int
-    extends api {
-    type Idx = Int
-  }
-  trait long
-    extends api {
-    type Idx = Long
-  }
+  trait  int extends api { type Idx =  Int }
+  trait long extends api { type Idx = Long }
 
   type Metadata[Shape[_], Idx, T] = array.metadata.Metadata[Shape, Idx, T]
   val Metadata = array.metadata.Metadata

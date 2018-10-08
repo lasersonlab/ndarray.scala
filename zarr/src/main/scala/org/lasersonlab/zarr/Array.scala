@@ -637,7 +637,7 @@ object Array {
                 }
                 .toEither
             }
-            .sequence//[Throwable | ?, Unit]
+            .sequence
             .map { _ ⇒ () }
         }
 

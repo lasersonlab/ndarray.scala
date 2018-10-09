@@ -63,7 +63,7 @@ object SList {
    * Type-class for prepending an element to an [[SList]]
    */
   trait Cons[In[_]] {
-    type Out[U] <: Aux[U, In]
+    type Out[T] <: Aux[T, In]
     def apply[T](h: T, t: In[T]): Out[T]
   }
   object Cons {

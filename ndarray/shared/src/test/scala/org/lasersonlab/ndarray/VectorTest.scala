@@ -4,6 +4,8 @@ import cats.implicits._
 import lasersonlab.shapeless.slist._
 import org.lasersonlab.ndarray.Vector.{ Arg, IsArg }
 
+import scala.reflect.ClassTag
+
 class VectorTest
   extends hammerlab.Suite {
 
@@ -274,19 +276,105 @@ class VectorTest
   }
 
   test("convenience constructor") {
+    val Vec = scala.Vector
+    def Arr[T: ClassTag](ts: T*) = scala.Array[T](ts: _*)
+
+    Vector.conv(
+      Vec("0,0", "0,1"),
+      Seq("1,0", "1,1")
+    )
+
+    Vector.conv(
+      Vec("0,0", "0,1"),
+      Arr("1,0", "1,1")
+    )
+
+    Vector.conv(
+      Arr("0,0", "0,1"),
+      Seq("1,0", "1,1")
+    )
+
+    Vector.conv(
+      Arr("0,0", "0,1"),
+      Arr("1,0", "1,1")
+    )
+
+    Vector.conv(
+      Vec("0,0", "0,1"),
+      Seq("1,0", "1,1"),
+      Arr("2,0", "2,1")
+    )
+
+    Vector.conv(
+      Vec("0,0", "0,1"),
+      Vec("1,0", "1,1"),
+      Vec("2,0", "2,1")
+    )
+
     Vector.conv(
       Seq("0,0", "0,1"),
       Seq("1,0", "1,1"),
       Seq("2,0", "2,1")
     )
 
-    Vector.conv(
+    val seq1 =
       Seq(
         Seq("0,0,0", "0,0,1"),
         Seq("0,1,0", "0,1,1"),
         Seq("0,2,0", "0,2,1")
+      )
+
+    val seq2 =
+      Seq(
+        Seq("1,0,0", "1,0,1"),
+        Seq("1,1,0", "1,1,1"),
+        Seq("1,2,0", "1,2,1")
+      )
+
+    val vec1 = seq1.toVector
+    val vec2 = seq2.toVector
+
+    val arr1 = seq1.toArray
+    val arr2 = seq2.toArray
+
+    // Mixed Seq/Array types work
+    Vector.conv(seq1, seq2) ; Vector.conv(seq1, vec2) ; Vector.conv(seq1, arr2)
+    Vector.conv(vec1, seq2) ; Vector.conv(vec1, vec2) ; Vector.conv(vec1, arr2)
+    Vector.conv(arr1, seq2) ; Vector.conv(arr1, vec2) ; Vector.conv(arr1, arr2)
+
+    Vector.conv(
+      Vec(
+        Vec("0,0,0", "0,0,1"),
+        Vec("0,1,0", "0,1,1"),
+        Vec("0,2,0", "0,2,1")
+      ),
+      Vec(
+        Vec("1,0,0", "1,0,1"),
+        Vec("1,1,0", "1,1,1"),
+        Vec("1,2,0", "1,2,1")
+      )
+    )
+
+    Vector.conv(
+      Seq(
+        Vec("0,0,0", "0,0,1"),
+        Vec("0,1,0", "0,1,1"),
+        Vec("0,2,0", "0,2,1")
       ),
       Seq(
+        Vec("1,0,0", "1,0,1"),
+        Vec("1,1,0", "1,1,1"),
+        Vec("1,2,0", "1,2,1")
+      )
+    )
+
+    Vector.conv(
+      Vec(
+        Seq("0,0,0", "0,0,1"),
+        Seq("0,1,0", "0,1,1"),
+        Seq("0,2,0", "0,2,1")
+      ),
+      Vec(
         Seq("1,0,0", "1,0,1"),
         Seq("1,1,0", "1,1,1"),
         Seq("1,2,0", "1,2,1")

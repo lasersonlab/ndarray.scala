@@ -16,7 +16,6 @@ class SListTest
   val s6 = 111 :: 222 :: 333 :: 444 :: 555 :: 666 :: ⊥
 
   test("reduce") {
-    import cats.instances.int.catsKernelStdGroupForInt
     ==( s1 reduce,  111 )
     ==( s2 reduce,  333 )
     ==( s3 reduce,  666 )

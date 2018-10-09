@@ -1,7 +1,6 @@
 package org.lasersonlab
 
 import _root_.cats.implicits._
-import _root_.cats.instances.list.catsStdInstancesForList
 import _root_.cats.{ Foldable, Traverse }
 import _root_.shapeless.the
 import com.tom_e_white.hdf5_java_cloud.NioReadOnlyRandomAccessFile

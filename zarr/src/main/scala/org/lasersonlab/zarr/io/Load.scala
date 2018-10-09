@@ -1,6 +1,5 @@
 package org.lasersonlab.zarr.io
 
-import cats.instances.either.catsStdInstancesForEither
 import cats.implicits._
 
 import hammerlab.either._

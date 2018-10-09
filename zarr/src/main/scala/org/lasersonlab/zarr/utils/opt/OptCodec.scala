@@ -1,6 +1,5 @@
 package org.lasersonlab.zarr.utils.opt
 
-import cats.instances.either.catsStdInstancesForEither
 import cats.implicits._
 
 import hammerlab.option._

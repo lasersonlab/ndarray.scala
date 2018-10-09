@@ -3,13 +3,14 @@ package org.lasersonlab.ndarray
 import cats.implicits._
 import cats.{ Applicative, Eval, Foldable, Traverse }
 import org.lasersonlab.ndarray.Vector.Idx
+import org.lasersonlab.shapeless.SList.Cons
 import org.lasersonlab.shapeless.Scannable.syntax._
 import org.lasersonlab.shapeless.Zip.syntax._
 import org.lasersonlab.shapeless.{ Scannable, Size, Zip }
 
 case class Vector[
   ShapeT[_]
-  : Foldable
+  : Traverse
   : Scannable
   : Size
   : Zip,
@@ -18,15 +19,31 @@ case class Vector[
   shape: ShapeT[Idx],
   elems: scala.Vector[T]
 ) {
-  val (size, strides) = shape.scanRight(1)(_ * _)
+  val (size, strides) = {
+    val (size, strides) = shape.scanRight(1)(_ * _)
+    (
+      size,
+      strides.zipAndIndex(shape)
+    )
+  }
   val rank = Size(shape)
   def apply(idx: ShapeT[Idx]): T =
     elems(
       idx
         .zip(strides)
         .foldLeft(0) {
-          case (sum, (idx,  stride)) ⇒
-                sum + idx * stride
+          case (
+            sum,
+            (
+              idx,
+              (stride, max, i)
+            )
+          ) ⇒
+            if (idx >= max || idx < 0)
+              throw new IndexOutOfBoundsException(
+                s"Index $idx >= maximum $max on dimension $i"
+              )
+            sum + idx * stride
         }
     )
 }
@@ -39,6 +56,72 @@ object Vector {
    * [[List]]s
    */
   type *[T] = Vector[List, T]
+
+  def apply[
+    Shape[_]
+    : Traverse
+    : Scannable
+    : Size
+    : Zip,
+    T
+  ](
+    shape: Shape[Idx],
+    elems: T*
+  ):
+    Vector[Shape, T] = {
+    val size = shape.foldLeft(1)(_ * _ )
+    if (elems.size != size)
+      throw new IllegalArgumentException(
+        s"Expected $size elems (shape: $shape) but found ${elems.size}: ${elems.mkString(",")}"
+      )
+
+    Vector(
+      shape,
+      elems.toVector
+    )
+  }
+
+  sealed abstract class Arg[Shape[_], T](val value: Vector[Shape, T])
+  object Arg {
+    implicit def fromEv[In, Shape[_], T](in: In)(implicit isarg: IsArg.Aux[In, Shape, T]): Arg[Shape, T] = new Arg[Shape, T](isarg(in)) {}
+//    implicit def fromEv[In](in: In)(implicit i: IsArg[In]): Arg[i.ShapeT, i.T] = new Arg[i.ShapeT, i.T](i(in)) {}
+    //implicit def seq[T](s: Seq[T]): Arg[`1`, T]
+  }
+
+  import lasersonlab.shapeless.{ slist ⇒ s }
+
+  sealed trait IsArg[In] {
+    type ShapeT[_]
+    type T
+    def apply(in: In): Vector[ShapeT, T]
+  }
+  trait LowPriIsArg {
+    type Aux[In, _ShapeT[_], _T] = IsArg[In] { type ShapeT[U] = _ShapeT[U]; type T = _T }
+    implicit def seq[T]: Aux[  Seq[T], s.`1`, T] = ???
+    implicit def arr[T]: Aux[Array[T], s.`1`, T] = ???
+  }
+  object IsArg
+    extends LowPriIsArg {
+    implicit def cons[In, Tail[_], T](implicit arg: IsArg.Aux[In, Tail, T], cons: Cons[Tail]): Aux[Seq[In], cons.Out, T] = ???
+  }
+
+  implicit def wrap[Tail[_], T](rows: Seq[Vector[Tail, T]])(implicit cons: Cons[Tail]): Vector[cons.Out, T] = ???
+
+  def conv[
+    Tail[_]
+    : Traverse
+    : Scannable
+    : Size
+    : Zip,
+    T
+  ](
+    rows: Arg[Tail, T]*
+  )(
+    implicit
+    cons: Cons[Tail]
+  ):
+    Vector[cons.Out, T] =
+    wrap(rows.map(_.value))
 
   implicit def arrayLike[ShapeT[_]]
     : ArrayLike.Aux[
@@ -56,7 +139,7 @@ object Vector {
 
   implicit def indices[
     ShapeT[_]
-    : Foldable
+    : Traverse
     : Scannable
     : Size
     : Zip
@@ -77,7 +160,7 @@ object Vector {
 
   implicit def traverse[
     ShapeT[_]
-    : Foldable
+    : Traverse
     : Scannable
     : Size
     : Zip
@@ -108,8 +191,6 @@ object Vector {
       @inline def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.elems.foldRight(lb)(f)
     }
   }
-
-  import lasersonlab.shapeless.{ slist ⇒ s }
 
   type `1`[T] = Vector[s.`1`, T]
   type `2`[T] = Vector[s.`2`, T]

@@ -81,145 +81,6 @@ object Vector {
     )
   }
 
-  sealed abstract class Arg[Shape[_], T](val value: Vector[Shape, T])
-  object Arg {
-    implicit def fromEv[In, Shape[_], T](in: In)(implicit isarg: IsArg.Aux[In, Shape, T]): Arg[Shape, T] = new Arg[Shape, T](isarg(in)) {}
-  }
-
-  import lasersonlab.shapeless.{ slist ⇒ s }
-
-  sealed trait IsArg[In] {
-    type ShapeT[_]
-    type T
-    def apply(in: In): Vector[ShapeT, T]
-  }
-  trait LowPriIsArg {
-    type Aux[In, _ShapeT[_], _T] = IsArg[In] { type ShapeT[U] = _ShapeT[U]; type T = _T }
-    type Ax [In, _ShapeT[_]    ] = IsArg[In] { type ShapeT[U] = _ShapeT[U] }
-
-    def make[In, S[_], _T](f: In ⇒ Vector[S, _T]): Aux[In, S, _T] =
-      new IsArg[In] {
-        type ShapeT[U] = S[U]
-        type T = _T
-        def apply(in: In): Vector[S, T] = f(in)
-      }
-
-    implicit def seq[S[U] <: Seq[U], T]: Aux[    S[T], s.`1`, T] = make { s ⇒ Vector(s.  size :: ⊥, s.toVector) }
-    implicit def arr[                T]: Aux[Array[T], s.`1`, T] = make { s ⇒ Vector(s.length :: ⊥, s.toVector) }
-  }
-
-  case class RaggedInput[T](l: T, r: T) extends RuntimeException
-
-  object IsArg
-    extends LowPriIsArg {
-    implicit def consseq[
-      In,
-      Tail[_],
-      Out[U]
-          <: SList.Aux[U, Tail]
-           : Traverse
-           : Scannable
-           : Zip
-           : Size
-    ](
-      implicit
-      arg: IsArg.Ax[In, Tail],
-      cons: Cons.Aux[Tail, Out]
-    ):
-      Aux[
-        Seq[In],
-        Out,
-        arg.T
-      ] =
-      make[Seq[In], cons.Out, arg.T] {
-        seq ⇒
-          wrap(
-            seq
-              .map(arg(_))
-              .toVector
-          )
-      }
-
-    implicit def consarr[
-      In,
-      Tail[_],
-      Out[U]
-          <: SList.Aux[U, Tail]
-           : Traverse
-           : Scannable
-           : Zip
-           : Size
-    ](
-      implicit
-      arg: IsArg.Ax[In, Tail],
-      cons: Cons.Aux[Tail, Out]
-    ):
-      Aux[
-        Array[In],
-        Out,
-        arg.T
-      ] =
-      make[Array[In], cons.Out, arg.T] {
-        arr ⇒
-          wrap(
-            arr
-              .map(arg(_))
-              .toVector
-          )
-      }
-  }
-
-  implicit def wrap[
-    Tail[_],
-    T,
-    Out[U]
-        <: SList.Aux[U, Tail]
-         : Traverse
-         : Scannable
-         : Zip
-         : Size
-  ](
-    rows: scala.Vector[Vector[Tail, T]]
-  )(
-    implicit
-    cons: Cons.Aux[Tail, Out]
-  ):
-    Vector[Out, T] = {
-    val shape =
-      rows
-        .map(_.shape)
-        .reduce {
-          (l, r) ⇒
-            if (l != r)
-              throw RaggedInput(l, r)
-
-            l
-        }
-
-    Vector(
-      rows.length :: shape,
-      rows.flatMap(_.elems)
-    )
-  }
-
-  def conv[
-    Tail[_],
-    T,
-    Out[U]
-        <: SList.Aux[U, Tail]
-         : Traverse
-         : Scannable
-         : Zip
-         : Size
-  ](
-    rows: Arg[Tail, T]*
-  )(
-    implicit
-    cons: Cons.Aux[Tail, Out]
-  ):
-    Vector[Out, T] =
-    wrap(rows.map(_.value).toVector)
-
   implicit def arrayLike[ShapeT[_]]
     : ArrayLike.Aux[
       Vector[ShapeT, ?],
@@ -288,6 +149,8 @@ object Vector {
       @inline def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.elems.foldRight(lb)(f)
     }
   }
+
+  import lasersonlab.shapeless.{ slist ⇒ s }
 
   type `1`[T] = Vector[s.`1`, T]
   type `2`[T] = Vector[s.`2`, T]

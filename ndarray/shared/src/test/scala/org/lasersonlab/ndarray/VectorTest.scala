@@ -279,39 +279,41 @@ class VectorTest
     val Vec = scala.Vector
     def Arr[T: ClassTag](ts: T*) = scala.Array[T](ts: _*)
 
-    Vector.conv(
+    import Vector.{ conv ⇒ v }
+
+    v(
       Vec("0,0", "0,1"),
       Seq("1,0", "1,1")
     )
 
-    Vector.conv(
+    v(
       Vec("0,0", "0,1"),
       Arr("1,0", "1,1")
     )
 
-    Vector.conv(
+    v(
       Arr("0,0", "0,1"),
       Seq("1,0", "1,1")
     )
 
-    Vector.conv(
+    v(
       Arr("0,0", "0,1"),
       Arr("1,0", "1,1")
     )
 
-    Vector.conv(
+    v(
       Vec("0,0", "0,1"),
       Seq("1,0", "1,1"),
       Arr("2,0", "2,1")
     )
 
-    Vector.conv(
+    v(
       Vec("0,0", "0,1"),
       Vec("1,0", "1,1"),
       Vec("2,0", "2,1")
     )
 
-    Vector.conv(
+    v(
       Seq("0,0", "0,1"),
       Seq("1,0", "1,1"),
       Seq("2,0", "2,1")
@@ -338,11 +340,11 @@ class VectorTest
     val arr2 = seq2.toArray
 
     // Mixed Seq/Array types work
-    Vector.conv(seq1, seq2) ; Vector.conv(seq1, vec2) ; Vector.conv(seq1, arr2)
-    Vector.conv(vec1, seq2) ; Vector.conv(vec1, vec2) ; Vector.conv(vec1, arr2)
-    Vector.conv(arr1, seq2) ; Vector.conv(arr1, vec2) ; Vector.conv(arr1, arr2)
+    v(seq1, seq2) ; v(seq1, vec2) ; v(seq1, arr2)
+    v(vec1, seq2) ; v(vec1, vec2) ; v(vec1, arr2)
+    v(arr1, seq2) ; v(arr1, vec2) ; v(arr1, arr2)
 
-    Vector.conv(
+    v(
       Vec(
         Vec("0,0,0", "0,0,1"),
         Vec("0,1,0", "0,1,1"),
@@ -355,7 +357,7 @@ class VectorTest
       )
     )
 
-    Vector.conv(
+    v(
       Seq(
         Vec("0,0,0", "0,0,1"),
         Vec("0,1,0", "0,1,1"),
@@ -368,7 +370,7 @@ class VectorTest
       )
     )
 
-    Vector.conv(
+    v(
       Vec(
         Seq("0,0,0", "0,0,1"),
         Seq("0,1,0", "0,1,1"),
@@ -381,7 +383,7 @@ class VectorTest
       )
     )
 
-    Vector.conv(
+    v(
       Seq(
         Seq(
           Seq("0,0,0,0", "0,0,0,1"),

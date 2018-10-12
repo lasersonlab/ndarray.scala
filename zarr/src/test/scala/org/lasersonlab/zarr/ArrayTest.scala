@@ -15,12 +15,12 @@ class ArrayTest
     // TODO: remove local paths!
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/matrix")
 
-    implicit val arr = Array[`2`, Float](path).get
+    implicit val arr = Array[`2`, Float](path) !
 
     ==(
       arr.metadata,
       Metadata(
-             shape = Dimension(27998, 3092).get :: Dimension(5425) :: ⊥,
+             shape = Dimension.int(27998, 3092) :: Dimension(5425) :: ⊥,
              dtype = float,
         fill_value = 0.0f
       )
@@ -96,7 +96,7 @@ class ArrayTest
   test("1-D longs") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/row_attrs/_Valid")
 
-    val Array(metadata, attrs, chunks) = Array[`1`, Long](path).get
+    val Array(metadata, attrs, chunks) = Array[`1`, Long](path) !
 
     ==(
       metadata,
@@ -131,7 +131,7 @@ class ArrayTest
   test("1-D strings") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.loom.64m.zarr/col_attrs/Sex")
 
-    val a @ Array(metadata, attrs, chunks) = Array[`1`, String](path).get
+    val a @ Array(metadata, attrs, chunks) = Array[`1`, String](path) !
 
     ==(
       metadata,
@@ -178,7 +178,7 @@ class ArrayTest
 
     import shapeless._
 
-    val a @ Array(metadata, attrs, chunks) = Array[`1`, Var](path).get
+    val a @ Array(metadata, attrs, chunks) = Array[`1`, Var](path) !
 
     implicit val stringDataType = string(18)
     val dtype = !![DataType.Aux[Var]]
@@ -226,7 +226,7 @@ class ArrayTest
   test("1-D untyped structs") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr/obs")
 
-    val Array(metadata, attrs, chunks) = Array[`1`, Obs](path).get
+    val Array(metadata, attrs, chunks) = Array[`1`, Obs](path) !
 
     import org.lasersonlab.zarr.cmp.untyped.struct
 

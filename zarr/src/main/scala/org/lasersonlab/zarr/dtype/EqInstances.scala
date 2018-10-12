@@ -9,8 +9,6 @@ import shapeless.the
  */
 trait EqInstances {
 
-  //implicit val checkStructTypedness = StructTypednessMatch.yes
-
   lazy val structEq: Eq[untyped.Struct] =
     Eq.by[
       untyped.Struct,
@@ -43,16 +41,12 @@ trait EqInstances {
         }
     }
 
-  implicit def auxEq[T](implicit structTypednessMatch: StructTypednessMatch): Eq[Aux[T]] =
+  implicit def auxEq[T]: Eq[Aux[T]] =
     new Eq[Aux[T]] {
-      def eqv(x: Aux[T], y: Aux[T]): Boolean = dataTypeEq(structTypednessMatch).eqv(x, y)
+      def eqv(x: Aux[T], y: Aux[T]): Boolean = dataTypeEq.eqv(x, y)
     }
 
-  object StructTypedness {
-    implicit val ignore: StructTypednessMatch = StructTypednessMatch.no
-  }
-
-  implicit def dataTypeEq(implicit structTypednessMatch: StructTypednessMatch): Eq[DataType] =
+  implicit lazy val dataTypeEq: Eq[DataType] =
     new Eq[DataType] {
       import cats.derived.auto.eq._
       import cats.implicits.catsKernelStdOrderForInt
@@ -78,20 +72,7 @@ trait EqInstances {
           ) ⇒
             structEntriesEq.eqv(xEntries, yEntries) &&
             x.size == y.size
-          case (untyped.Struct(xEntries), Struct(StructList(yEntries, _)))
-            if structTypednessMatch == StructTypednessMatch.no ⇒
-            structEntriesEq.eqv(xEntries, yEntries)
-          case (Struct(StructList(xEntries, _)), untyped.Struct(yEntries))
-            if structTypednessMatch == StructTypednessMatch.no ⇒
-            structEntriesEq.eqv(xEntries, yEntries)
           case _ ⇒ false  // different datatype-types
         }
     }
-}
-
-sealed trait StructTypednessMatch
-object StructTypednessMatch {
-  case object yes extends StructTypednessMatch
-  case object  no extends StructTypednessMatch
-  implicit val default: StructTypednessMatch = yes
 }

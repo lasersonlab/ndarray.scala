@@ -71,8 +71,7 @@ object metadata {
       Idx
     ](
       implicit
-      dim: Cmp[Shape[Dimension[Idx]]],
-      structTypednessMatch: StructTypednessMatch
+      dim: Cmp[Shape[Dimension[Idx]]]
     ):
       Cmp[
         Shaped[
@@ -108,8 +107,7 @@ object metadata {
       Idx
     ](
       implicit
-      dim: Cmp[Shape[Dimension[Idx]]],
-      structTypednessMatch: StructTypednessMatch
+      dim: Cmp[Shape[Dimension[Idx]]]
     ):
       Cmp[
         Shaped[

@@ -16,11 +16,11 @@ class LoadTest
   test("load") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr")
 
-    val ad = path.load[AnnData[Obs, Var]].get
+    val ad = path.load[AnnData[Obs, Var]] !
 
     implicit val AnnData(x, obs, v, uns) = ad
 
-    ==(x.shape, Dimension(5425, 299).get :: Dimension(27998) :: ⊥)
+    ==(x.shape, Dimension.int(5425, 299) :: Dimension(27998) :: ⊥)
 
     ==(x.foldLeft(0.0f)(_ + _), 8596396.0f)
 

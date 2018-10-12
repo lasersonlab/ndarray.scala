@@ -22,6 +22,7 @@ case class Dimension[Idx](
 )
 object Dimension {
   def apply(arr: Chunk.Idx): Dimension[Chunk.Idx] = Dimension(arr, arr, 1)
+  // TODO: make this another `apply` overload?
   def int(
     arr: Int,
     chunk: Chunk.Idx

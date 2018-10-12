@@ -5,7 +5,6 @@ import hammerlab.either._
 import hammerlab.option._
 import org.hammerlab.test.Cmp
 import org.lasersonlab.zarr.cmp.untyped.array.ElemsDiff.{ Index, Sizes }
-import org.lasersonlab.zarr.dtype.StructTypednessMatch
 import org.lasersonlab.zarr.{ Array, Attrs, Dimension }
 import shapeless.the
 
@@ -23,8 +22,7 @@ object array {
 
     implicit def arrayIdxsCmp[Idx](
       implicit
-      dim: Cmp[Dimension[Idx]],
-      structTypednessMatch: StructTypednessMatch
+      dim: Cmp[Dimension[Idx]]
     ):
       Cmp[
         Array.??[Idx]
@@ -36,8 +34,7 @@ object array {
       Idx
     ](
       implicit
-      dim: Cmp[Shape[Dimension[Idx]]],
-      structTypednessMatch: StructTypednessMatch
+      dim: Cmp[Shape[Dimension[Idx]]]
     ):
       Cmp[
         Array.?[

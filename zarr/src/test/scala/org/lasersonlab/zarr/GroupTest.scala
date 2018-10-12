@@ -1,7 +1,6 @@
 package org.lasersonlab.zarr
 
 import hammerlab.path._
-import org.lasersonlab.zarr.dtype.StructTypednessMatch
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.dtype.DataType
@@ -28,7 +27,7 @@ class GroupTest
         attrs,
         metadata
       ) =
-      Group(path).get
+      Group(path) !
 
     ==(arrays.keySet, Set("X", "obs", "var"))
     ==(groups.keySet, Set("uns"))
@@ -199,18 +198,9 @@ class GroupTest
       )
 
     val actual = tmpDir()
-    group.save(actual).get
+    group.save(actual).!
 
-    val group2 = actual.load[Group[Int]].get
-
-    implicit val ignore = DataType.StructTypedness.ignore
-
-    ignore: StructTypednessMatch
-
-    ==(
-      !![StructTypednessMatch],
-      StructTypednessMatch.no
-    )
+    val group2 = actual.load[Group[Int]] !
 
     ==(group, group2)
   }

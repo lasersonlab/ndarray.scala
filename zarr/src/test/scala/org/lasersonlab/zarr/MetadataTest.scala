@@ -41,7 +41,7 @@ class MetadataTest
     ) should be(
       Right(
         Metadata(
-           shape = Dimension(27998, 3092).get :: Dimension(5425) :: ⊥,
+           shape = Dimension.int(27998, 3092) :: Dimension(5425) :: ⊥,
            dtype = float,
           fill_value = 0.0f
         )

@@ -5,6 +5,7 @@ import hammerlab.either._
 import hammerlab.option._
 import org.hammerlab.test.Cmp
 import org.lasersonlab.zarr.cmp.untyped.array.ElemsDiff.{ Index, Sizes }
+import org.lasersonlab.zarr.dtype.StructTypednessMatch
 import org.lasersonlab.zarr.{ Array, Attrs, Dimension }
 import shapeless.the
 
@@ -20,11 +21,33 @@ object array {
 
   trait cmp {
 
-    implicit def arrayIdxsCmp[Idx](implicit dim: Cmp[Dimension[Idx]]): Cmp[Array.??[Idx]] = arrayShapedCmp[List, Idx]
-    def arrayShapedCmp[Shape[_], Idx](implicit dim: Cmp[Shape[Dimension[Idx]]]): Cmp[Array.?[Shape, Idx]] = {
+    implicit def arrayIdxsCmp[Idx](
+      implicit
+      dim: Cmp[Dimension[Idx]],
+      structTypednessMatch: StructTypednessMatch
+    ):
+      Cmp[
+        Array.??[Idx]
+      ] =
+      arrayShapedCmp[List, Idx]
+
+    def arrayShapedCmp[
+      Shape[_],
+      Idx
+    ](
+      implicit
+      dim: Cmp[Shape[Dimension[Idx]]],
+      structTypednessMatch: StructTypednessMatch
+    ):
+      Cmp[
+        Array.?[
+          Shape,
+          Idx
+        ]
+      ]
+    = {
       type Arr = Array.?[Shape, Idx]
       new Cmp[Arr] {
-
         val _metadata = metadata.cmp.baseCmp[Shape, Idx]
 
         type Diff =

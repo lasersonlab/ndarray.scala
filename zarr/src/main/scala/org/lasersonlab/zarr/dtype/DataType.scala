@@ -7,10 +7,12 @@ import cats.implicits._
 import io.circe.DecodingFailure.fromThrowable
 import io.circe._
 import lasersonlab.xscala._
+import org.lasersonlab.zarr
 import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.|
 import shapeless._
 
+import scala.collection.immutable.ListMap
 import scala.util.Try
 
 /**
@@ -100,10 +102,6 @@ object DataType
 
     def apply(buffer: ByteBuffer, t: String): Unit = {
       var i = 0
-      if (t.length != size)
-        throw new IllegalArgumentException(
-          s"Expected string of size $size, found ${t.length}: '$t'"
-        )
       while (i < t.length) {
         val ch = t(i)
         if (ch > maxValue)
@@ -111,6 +109,10 @@ object DataType
             s"Invalid character in string $t at position $i: $ch"
           )
         buffer.put(ch.toByte)
+        i += 1
+      }
+      while (i < size) {
+        buffer.put(`0`)
         i += 1
       }
     }
@@ -144,11 +146,11 @@ object DataType
 
   object untyped {
     /**
-     * [[org.lasersonlab.zarr.untyped.Struct "Untyped" struct]] [[DataType]]
+     * [[zarr.untyped.Struct "Untyped" struct]] [[DataType]]
      */
     case class Struct(entries: List[StructEntry])
       extends DataType {
-      type T = org.lasersonlab.zarr.untyped.Struct
+      type T = zarr.untyped.Struct
 
       val size: Int =
         entries
@@ -156,10 +158,10 @@ object DataType
           .sum
 
       def apply(buff: ByteBuffer): T =
-        org.lasersonlab.zarr.untyped.Struct(
+        zarr.untyped.Struct(
           entries
             .foldLeft(
-              Map.newBuilder[String, Any]
+              ListMap.newBuilder[String, Any]
             ) {
               case (
                 builder,
@@ -174,12 +176,38 @@ object DataType
             .result()
         )
 
-      def apply(buffer: ByteBuffer, t: org.lasersonlab.zarr.untyped.Struct): Unit =
-        for {
-          StructEntry(name, datatype) ← entries
-        } {
-          datatype(buffer, t[datatype.T](name))
+      def apply(buffer: ByteBuffer, t: zarr.untyped.Struct): Unit = {
+        val es = entries.iterator
+        val fields = t.iterator
+
+        while (es.hasNext) {
+          val (StructEntry(name, datatype), (k, v)) = (es.next, fields.next)
+          if (k != name)
+            throw new IllegalStateException(
+              s"Incorrect field in struct: [$k,$v] (expected: [$name,$datatype]). Full struct: ${
+                t
+                  .map { case (k, v) ⇒ s"[$k,$v]" }
+                  .mkString(" ")
+              }"
+            )
+
+          datatype(buffer, v.asInstanceOf[datatype.T])
         }
+        if (fields.hasNext)
+          throw new IllegalStateException(
+            s"Extra fields found in struct: ${
+              t
+                .map { case (k, v) ⇒ s"[$k,$v]" }
+                .mkString(" ")
+            } (expected: ${entries.mkString(" ")})"
+          )
+
+//        for {
+//          StructEntry(name, datatype) ← entries
+//        } {
+//          datatype(buffer, t[datatype.T](name))
+//        }
+      }
     }
   }
 
@@ -216,7 +244,7 @@ object DataType
     entries: StructList[L]
   )(
     implicit
-    g: Generic.Aux[S, L]
+    g: LabelledGeneric.Aux[S, L]
   )
   extends DataType {
     val size: Int = entries.size

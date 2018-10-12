@@ -2,6 +2,7 @@ package org.lasersonlab.zarr.dtype
 
 import org.lasersonlab.zarr.dtype.DataType._
 import shapeless._
+import shapeless.labelled.FieldType
 
 /**
  * Auto-derivations of [[Struct]] instances for case-classes
@@ -18,18 +19,20 @@ trait StructDerivations {
     )
 
   implicit def cons[
+    Name <: Symbol,
     Head,
     Tail <: HList
   ](
     implicit
     head: Aux[Head],
+    name: Witness.Aux[Name],
     tail: StructList[Tail]
   ):
-    StructList[Head :: Tail]
+    StructList[FieldType[Name, Head] :: Tail]
   = {
     implicit val headEntry =
       StructEntry(
-        head.toString,
+        name.value.name,  // TODO: this is wrong; drops field-name
         head
       )
 
@@ -38,7 +41,8 @@ trait StructDerivations {
       head.size  + tail.size
     )(
       buff ⇒
-        head(buff) ::
+        //FieldType
+        labelled.field[Name](head(buff)) ::
         tail(buff),
       {
         case (buffer, h :: t) ⇒
@@ -53,7 +57,7 @@ trait StructDerivations {
     L <: HList
   ](
     implicit
-    g: Generic.Aux[S, L],
+    lg: LabelledGeneric.Aux[S, L],
     l: StructList[L]
   ):
     Aux[S] =

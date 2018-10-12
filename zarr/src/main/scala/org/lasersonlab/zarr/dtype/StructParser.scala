@@ -6,6 +6,7 @@ import org.lasersonlab.zarr.|
 import shapeless._
 import DataType.StructList
 import org.lasersonlab.zarr.dtype.json.Entry
+import shapeless.labelled.FieldType
 
 /**
  * Parse an [[L HList]] from a list of JSON [[Entry field-entries]]
@@ -35,17 +36,19 @@ object StructParser {
     }
 
   implicit def cons[
+     Name <: Symbol,
      Head,
      Tail <: HList,
     DTail <: HList
   ](
     implicit
     head: Decoder[Head],
+    w: Witness.Aux[Name],
     tail: StructParser[Tail]
   ):
-        StructParser[Head :: Tail] =
-    new StructParser[Head :: Tail] {
-      def apply(entries: List[Entry]): Return[Head :: Tail] =
+        StructParser[FieldType[Name, Head] :: Tail] =
+    new StructParser[FieldType[Name, Head] :: Tail] {
+      def apply(entries: List[Entry]): Return[FieldType[Name, Head] :: Tail] =
         entries match {
           case Nil ⇒
             Left(
@@ -55,18 +58,27 @@ object StructParser {
               )
             )
           case scala.::(Entry(name, tpe), rest) ⇒
-            for {
-              h ←
-                head(
-                  HCursor.fromJson(
-                    Json.fromString(
-                      tpe
+            if (name == w.value.name)
+              for {
+                h ←
+                  head(
+                    HCursor.fromJson(
+                      Json.fromString(
+                        tpe
+                      )
                     )
                   )
+                t ← tail(rest)
+              } yield
+                DataType.cons[Name, Head, Tail](h, w, t)
+            else {
+              Left(
+                DecodingFailure(
+                  s"Expected field name ${w.value.name}, found $name (type: $tpe); entries: ${entries.mkString(",")}",  // TODO
+                  Nil   // TODO
                 )
-              t ← tail(rest)
-            } yield
-              DataType.cons[Head, Tail](h, t)
+              )
+            }
         }
     }
 }

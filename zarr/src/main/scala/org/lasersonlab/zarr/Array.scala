@@ -2,18 +2,25 @@ package org.lasersonlab.zarr
 
 import cats.data.Nested
 import cats.{ Eval, Foldable, Traverse }
+import circe.Json
+import hammerlab.option
 import hammerlab.option._
 import hammerlab.path._
 import org.lasersonlab.circe.EncoderK
-import org.lasersonlab.ndarray.{ ArrayLike, Indices, Vector }
-import org.lasersonlab.shapeless.{ Scannable, Zip }
+import org.lasersonlab.ndarray
+import org.lasersonlab.ndarray.{ ArrayLike, Indices, UnfoldRange, Vector }
+import org.lasersonlab.shapeless.{ Scannable, Size, Zip }
+import org.lasersonlab.zarr.Compressor.Blosc
+import org.lasersonlab.zarr.FillValue.Null
+import Format.`2`
+import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.array.metadata
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.utils.Idx.Long.CastException
 import org.lasersonlab.{ zarr ⇒ z }
-import shapeless.Nat
+import shapeless.{ Nat, the }
 
 import scala.util.Try
 
@@ -37,6 +44,7 @@ trait Array {
    * an [[Int]]
    */
   type Idx
+//  val idx: utils.Idx.T[Idx]
 
   /** Type of the "shape" of this [[Array]] */
   type Shape = ShapeT[Idx]
@@ -57,6 +65,7 @@ trait Array {
    * - [[ShapeT the "shape" type]] is [[Traverse traversable]]
    * - a [[Chunk]] is [[Foldable]]
    */
+//  implicit val arrayLikeA: ArrayLike.Aux[A, ShapeT]
   implicit val traverseA: Traverse[A]
   implicit val traverseShape: Traverse[ShapeT]
   implicit val foldableChunk: Foldable[Chunk]
@@ -99,6 +108,43 @@ trait Array {
    * Random-indexing operation
    */
   def apply(idx: Index): T  // TODO: support exceptions: IndexOutOfBounds, IO, etc.
+
+  import lasersonlab.shapeless.slist._
+
+//  import idx.int
+//
+//  def apply(idx: Shape): T = {
+//
+//    // aliases for annotating the `.sequence` shenanigans below
+//    type E[U] = CastException | U
+//    type F[U] = ShapeT[U]
+//    type G[U] = `2`[U]
+//    type T = Chunk.Idx
+//
+//    // traverse the dimensions in the requested idx, as well as this array's shape, to obtain the chunk index and
+//    // the intra-chunk offset (each of which has a component along each dimension)
+//    val chunkIdx :: offset ::  ⊥ =
+//      Nested(
+//        idx
+//          .zip(shape)
+//          .map {
+//            case (idx, Dimension(_, chunk, _)) ⇒
+//              int { idx / chunk } ::
+//              int { idx % chunk } ::
+//              ⊥
+//          }                    : F[G[E[T]]]
+//      )
+//      .sequence               // E[F[G[T]]]
+//      .map(_.value.sequence)  // E[G[F[T]]]
+//      .right.get               :   G[F[T]]
+//
+//    arrayLike(
+//      chunks,
+//      chunkIdx
+//    )(
+//      offset
+//    )
+//  }
 
   val metadata: Metadata[ShapeT, Idx, T]
 
@@ -156,6 +202,112 @@ object Array {
       )
     )
 
+  def apply[
+    _ShapeT[_]
+    : Scannable
+    : Size
+    : UnfoldRange
+    : Zip,
+    _T
+  ](
+    _shape: _ShapeT[Int],
+    _chunkSize: Opt[_ShapeT[Int]] = None,
+    _attrs: Opt[Json] = None
+  )(
+    _elems: _T*
+  )(
+    implicit
+       datatype: DataType.Aux[_T],
+     compressor:     Compressor     = Blosc(),
+          order:          Order     = C,
+     fill_value:      FillValue[_T] = Null,
+    zarr_format:         Format     = `2`,
+        filters: Opt[Seq[Filter]]   = None,
+      traverseShape: Traverse[_ShapeT]
+  ):
+    Aux[
+      _ShapeT,
+      Int,
+      ndarray.Vector[_ShapeT, ?],
+      ndarray.Vector[_ShapeT, ?],
+      _T
+    ] = {
+    val ts = traverseShape
+    new Array {
+      type T = _T
+      type ShapeT[U] = _ShapeT[U]
+      type Idx = Int
+      type A[U] = ndarray.Vector[ShapeT, U]
+      type Chunk[U] = ndarray.Vector[ShapeT, U]
+
+      implicit val traverseShape: Traverse[ShapeT] = ts
+      implicit val traverseA: Traverse[A] = ndarray.Vector.traverse
+      implicit val foldableChunk: Foldable[Chunk] = ndarray.Vector.traverse
+
+      val (size, strides) = _shape.scanRight(1)(_ * _)
+
+      val chunkShape = _chunkSize.getOrElse(_shape)
+      val (chunkSize, chunkStrides) = chunkShape.scanRight(1)(_ * _)
+
+      override val shape: ShapeT[Dimension[Idx]] =
+        _shape
+          .zip(chunkShape)
+          .map {
+            case (shape, chunk) ⇒
+              Dimension.int(shape, chunk)
+          }
+
+      val chunkRanges = shape.map { _.range }
+
+      val elems = ndarray.Vector[_ShapeT, _T](_shape, _elems: _*)
+
+      override def apply(idx: Index): T = elems(idx)
+
+      override val metadata: Metadata[ShapeT, Idx, T] =
+        Metadata(
+                shape = shape,
+                dtype = datatype,
+           compressor = compressor,
+                order = order,
+           fill_value = fill_value,
+          zarr_format = zarr_format,
+              filters = filters
+        )
+
+      val indices = the[Indices[A, ShapeT]]
+      override val chunks: A[Chunk[T]] = {
+        indices(chunkRanges)
+          .map {
+            chunkIdx ⇒
+              import lasersonlab.shapeless.slist._
+              val start :: size :: end :: ⊥ =
+                chunkShape
+                  .zip(chunkIdx, _shape)
+                  .map {
+                    case (chunkSize, idx, size) ⇒
+                      val start = chunkSize * idx
+                      val end = (chunkSize * (idx + 1)) min size
+                      start :: (end - start) :: end :: ⊥
+                  }
+                  .sequence
+
+              indices(size)
+                .map {
+                  offset ⇒
+                    apply(
+                      start
+                        .zip(offset)
+                        .map {
+                          case (start,  offset ) ⇒
+                                start + offset }
+                    )
+                }
+          }
+      }
+
+      override val attrs: Opt[Attrs] = _attrs.map(Attrs(_))
+    }
+  }
   /**
    * Load an ND-array of chunks from a [[Path directory]]
    *

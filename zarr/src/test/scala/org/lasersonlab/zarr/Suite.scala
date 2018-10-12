@@ -7,9 +7,9 @@ import org.scalatest.FunSuite
 trait HasGetOps {
   self: FunSuite ⇒
   /**
-   * Syntax for unwrapping an [[Either]], failing a test case with any [[Exception]], if present
+   * Syntax for unwrapping an [[Either]], failing a test case with any [[Throwable]], if present
    */
-  implicit class GetOps[T](val t: Either[Exception, T]) {
+  implicit class GetOps[T](val t: Either[Throwable, T]) {
     def get: T = t.fold(fail(_), identity)
   }
 }

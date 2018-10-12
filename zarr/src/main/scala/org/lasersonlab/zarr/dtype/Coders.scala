@@ -14,7 +14,9 @@ object json {
   /**
    * The JSON representation of a struct field
    */
-  case class Entry(name: String, `type`: String)
+  case class Entry(name: String, `type`: String) {
+    override def toString: String = s"[$name,${`type`}]"
+  }
   object Entry {
     implicit val decoder: circe.Decoder[Entry] =
       new circe.Decoder[Entry] {
@@ -45,7 +47,7 @@ trait StructDecoder {
   import shapeless._
   implicit def structDecoder[S, L <: HList, D <: HList](
     implicit
-    g: Generic.Aux[S, L],
+    g: LabelledGeneric.Aux[S, L],
     l: StructParser[L]
   ):
   Decoder[S] =
@@ -182,10 +184,7 @@ trait Coders
                     StructEntry(name, _)
                   }
               }
-              .sequence[
-                Result,
-                StructEntry
-              ]
+              .sequence
               .map { untyped.Struct }
           }
     }

@@ -1,15 +1,21 @@
 package org.lasersonlab.zarr
 
+import java.nio.file.{ Files, StandardCopyOption }
+import java.nio.file.Files.createTempDirectory
+
 import hammerlab.option._
 import hammerlab.path._
 import hammerlab.str._
+import org.hammerlab.paths.Path
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.io._
 import org.lasersonlab.zarr.utils.Idx
 
+import scala.util.Try
+
 case class Group[Idx](
-    arrays: Map[String, Array.??[Idx]] =      Map.empty,
-    groups: Map[String, Group   [Idx]] =      Map.empty,
+    arrays: Map[String, Array.??[Idx]] =      Map.empty[String, Array.??[Idx]],
+    groups: Map[String, Group   [Idx]] =      Map.empty[String, Group   [Idx]],
      attrs:                 Opt[Attrs] =           None,
   metadata:             Group.Metadata = Group.Metadata()
 )(
@@ -126,12 +132,13 @@ object Group {
   implicit def save[Idx: Idx.T]: Save[Group[Idx]] =
     new Save[Group[Idx]] {
       def apply(t: Group[Idx], dir: Path): Throwable | Unit = {
+        val tmp = Path(createTempDirectory(s"tmp-${dir.basename}"))
         val groups =
           (
             for {
               (name, group) ← t.groups.toList
             } yield
-              group.save(dir / name)
+              group.save(tmp / name)
           )
           .sequence
 
@@ -140,15 +147,21 @@ object Group {
             for {
               (name, array) ← t.arrays.toList
             } yield
-              array.aux.save(dir / name)
+              array.aux.save(tmp / name)
           )
           .sequence
 
         for {
           _ ← groups
           _ ← arrays
-          _ ← t.attrs.save(dir)
-          _ ← t.metadata.save(dir)
+          _ ← t.   attrs.save(tmp)
+          _ ← t.metadata.save(tmp)
+          _ ←
+            Try {
+              import StandardCopyOption._
+              Files.move(tmp, dir, REPLACE_EXISTING, ATOMIC_MOVE)
+            }
+            .toEither
         } yield
           ()
       }

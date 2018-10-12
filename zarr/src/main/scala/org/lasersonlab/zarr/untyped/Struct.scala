@@ -1,6 +1,8 @@
 package org.lasersonlab.zarr.untyped
 
-case class Struct(values: Map[String, Any]) {
+import scala.collection.immutable.ListMap  // preserves insertion order; important for serialization
+
+case class Struct(values: ListMap[String, Any]) {
   def apply[T](k: String): T =
     values(k)
       .asInstanceOf[T]
@@ -11,4 +13,15 @@ case class Struct(values: Map[String, Any]) {
       .map(
         _.asInstanceOf[T]
       )
+}
+
+object Struct {
+  def apply(values: (String, Any)*): Struct =
+    Struct(
+      ListMap(
+        values: _*
+      )
+    )
+
+  implicit def unwrap(t: Struct): ListMap[String, Any] = t.values
 }

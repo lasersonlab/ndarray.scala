@@ -5,7 +5,7 @@ import hammerlab.option._
 import org.hammerlab.test.Cmp
 import org.lasersonlab.zarr.FillValue.NonNull
 import org.lasersonlab.zarr.array.metadata.untyped.Shaped
-import org.lasersonlab.zarr.dtype.DataType
+import org.lasersonlab.zarr.dtype._
 import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.{ Dimension, FillValue, Metadata }
 import shapeless.the
@@ -71,7 +71,8 @@ object metadata {
       Idx
     ](
       implicit
-      dim: Cmp[Shape[Dimension[Idx]]]
+      dim: Cmp[Shape[Dimension[Idx]]],
+      structTypednessMatch: StructTypednessMatch
     ):
       Cmp[
         Shaped[
@@ -107,7 +108,8 @@ object metadata {
       Idx
     ](
       implicit
-      dim: Cmp[Shape[Dimension[Idx]]]
+      dim: Cmp[Shape[Dimension[Idx]]],
+      structTypednessMatch: StructTypednessMatch
     ):
       Cmp[
         Shaped[

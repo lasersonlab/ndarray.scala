@@ -2,6 +2,7 @@ package org.lasersonlab.zarr.untyped
 
 import scala.collection.immutable.ListMap  // preserves insertion order; important for serialization
 
+// TODO: make this Struct.?
 case class Struct(values: ListMap[String, Any]) {
   def apply[T](k: String): T =
     values(k)

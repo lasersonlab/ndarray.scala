@@ -84,47 +84,46 @@ class GroupTest
     )
   }
 
-  case class I4(value: Int)
-  case class Numbers(
-     short: Short,
-       int: Int,
-      long: Long,
-     float: Float,
-    double: Double
-  )
+  import DataType.{ untyped ⇒ _, _ }
 
-//  import lasersonlab.shapeless.slist._
-//  import lasersonlab.{ zarr ⇒ z }
-//
-//  case class Foo(
-//     shorts: z.Array[`1`,  Short],
-//       ints: z.Array[`1`,    Int],
-//      longs: z.Array[`1`,   Long],
-//     floats: z.Array[`1`,  Float],
-//    doubles: z.Array[`1`, Double],
-//    strings: Strings
-//  )
-//
-//  case class Strings(
-//    s2: z.Array[`2`, String],
-//    s3: z.Array[`2`, String]
-//  )
-//
-//  case class Structs(
-//       ints: z.Array[`1`,      I4],
-//    numbers: z.Array[`2`, Numbers]
-//  )
+  test("typed") {
+    import GroupTest._
+    import lasersonlab.shapeless.slist._
+    val group =
+      Foo(
+         shorts = Array(10 :: ⊥)((1  to 10).map(_.toShort) : _*),
+           ints = Array(10 :: ⊥)( 1  to 10  : _*),
+          longs = Array(10 :: ⊥)( 1L to 10L : _*),
+         floats = Array(20 :: ⊥)( 0f until 10f  by 0.5f : _*),
+        doubles = Array(20 :: ⊥)(0.0 until 10.0 by 0.5  : _*),
+        strings = Strings(
+          s2 = {
+            implicit val d = string(2)
+            Array(10 :: ⊥)((1 to 10).map(_.toString): _*)
+          },
+          s3 = {
+            implicit val d = string(3)
+            Array(
+              10 :: 10 :: ⊥,
+               3 ::  4 :: ⊥
+            )(
+              (1 to 100).map(_.toString): _*
+            )
+          }
+        )
+      )
+  }
 
-  test("save") {
+  test("untyped") {
     val group =
       Group(
         arrays =
           Map[String, Array.??[Int]](
              "shorts" → Array(10 :: Nil)((1  to 10).map(_.toShort) : _*),
-               "ints" → Array(10 :: Nil)( 1  to 10  : _*),
-              "longs" → Array(10 :: Nil)( 1L to 10L : _*),
-             "floats" → Array(20 :: Nil)( 0f until 10f  by 0.5f : _*),
-            "doubles" → Array(20 :: Nil)(0.0 until 10.0 by 0.5  : _*),
+               "ints" → Array(10 :: Nil)( 1  to 10                 : _*),
+              "longs" → Array(10 :: Nil)( 1L to 10L                : _*),
+             "floats" → Array(20 :: Nil)( 0f until 10f  by 0.5f    : _*),
+            "doubles" → Array(20 :: Nil)(0.0 until 10.0 by 0.5     : _*)
           ),
         groups =
           Map(
@@ -132,11 +131,11 @@ class GroupTest
               Group(
                 Map[String, Array.??[Int]](
                   "s2" → {
-                    implicit val d = DataType.string(2)
+                    implicit val d = string(2)
                     Array(10 :: Nil)((1 to 10).map(_.toString): _*)
                   },
                   "s3" → {
-                    implicit val d = DataType.string(3)
+                    implicit val d = string(3)
                     Array(
                       10 :: 10 :: Nil,
                        3 ::  4 :: Nil
@@ -150,7 +149,10 @@ class GroupTest
               Group(
                 Map[String, Array.??[Int]](
                   "ints" → {
-                    implicit val datatype = DataType.untyped.Struct(StructEntry("value", DataType.int) :: Nil)
+                    implicit val datatype =
+                      DataType.untyped.Struct(
+                        StructEntry("value", int) :: Nil
+                      )
                     Array(10 :: Nil)(
                       (1 to 10)
                         .map {
@@ -164,11 +166,11 @@ class GroupTest
                     implicit val datatype =
                       DataType.untyped.Struct(
                         List(
-                          StructEntry( "short", DataType. short),
-                          StructEntry(   "int", DataType.   int),
-                          StructEntry(  "long", DataType.  long),
-                          StructEntry( "float", DataType. float),
-                          StructEntry("double", DataType.double)
+                          StructEntry( "short",  short),
+                          StructEntry(   "int",    int),
+                          StructEntry(  "long",   long),
+                          StructEntry( "float",  float),
+                          StructEntry("double", double)
                         )
                       )
                     Array(
@@ -181,7 +183,7 @@ class GroupTest
                           c ← 0 until 10
                           n = 10 * r + c
                         } yield
-                          Struct(
+                          untyped.Struct(
                              "short" →  n.toShort,
                                "int" →  n,
                               "long" → (n          * 1e9 toLong),
@@ -203,5 +205,42 @@ class GroupTest
     val group2 = actual.load[Group[Int]] !
 
     ==(group, group2)
+
+    val expected = resource("grouptest.zarr").load[Group[Int]] !
+
+    ==(group, expected)
   }
+}
+
+object GroupTest {
+  case class I4(value: Int)
+  case class Numbers(
+     short: Short,
+       int: Int,
+      long: Long,
+     float: Float,
+    double: Double
+  )
+
+  import lasersonlab.shapeless.slist._
+  import lasersonlab.{ zarr ⇒ z }
+
+  case class Foo(
+     shorts: z.Array[`1`,  Short],
+       ints: z.Array[`1`,    Int],
+      longs: z.Array[`1`,   Long],
+     floats: z.Array[`1`,  Float],
+    doubles: z.Array[`1`, Double],
+    strings: Strings
+  )
+
+  case class Strings(
+    s2: z.Array[`1`, String],
+    s3: z.Array[`2`, String]
+  )
+
+  case class Structs(
+       ints: z.Array[`1`,      I4],
+    numbers: z.Array[`2`, Numbers]
+  )
 }

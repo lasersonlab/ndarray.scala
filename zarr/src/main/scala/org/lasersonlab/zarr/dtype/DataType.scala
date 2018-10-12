@@ -147,6 +147,8 @@ object DataType
   object untyped {
     /**
      * [[zarr.untyped.Struct "Untyped" struct]] [[DataType]]
+     *
+     * TODO: make this Struct.?
      */
     case class Struct(entries: List[StructEntry])
       extends DataType {

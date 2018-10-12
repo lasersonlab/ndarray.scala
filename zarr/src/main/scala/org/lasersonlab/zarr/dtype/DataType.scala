@@ -203,12 +203,6 @@ object DataType
                 .mkString(" ")
             } (expected: ${entries.mkString(" ")})"
           )
-
-//        for {
-//          StructEntry(name, datatype) ← entries
-//        } {
-//          datatype(buffer, t[datatype.T](name))
-//        }
       }
     }
   }

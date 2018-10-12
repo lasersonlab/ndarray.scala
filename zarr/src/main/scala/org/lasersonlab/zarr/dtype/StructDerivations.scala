@@ -57,7 +57,7 @@ trait StructDerivations {
     L <: HList
   ](
     implicit
-    lg: LabelledGeneric.Aux[S, L],
+    g: LabelledGeneric.Aux[S, L],
     l: StructList[L]
   ):
     Aux[S] =

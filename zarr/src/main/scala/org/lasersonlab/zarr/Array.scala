@@ -3,7 +3,7 @@ package org.lasersonlab.zarr
 import cats.data.Nested
 import cats.{ Eval, Foldable, Traverse }
 import circe.Json
-import hammerlab.option
+import hammerlab.{ either, option }
 import hammerlab.option._
 import hammerlab.path._
 import org.lasersonlab.circe.EncoderK
@@ -13,6 +13,7 @@ import org.lasersonlab.shapeless.{ Scannable, Size, Zip }
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.FillValue.Null
 import Format.`2`
+import lasersonlab.zarr
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.array.metadata
 import org.lasersonlab.zarr.dtype.DataType
@@ -689,6 +690,23 @@ object Array {
           a,
           dir
         )
+    }
+
+  implicit def saveOf[
+    _Shape[_]
+            : EncoderK
+            : Scannable,
+    _T
+  ]:
+    Save[
+      lasersonlab.zarr.Array[_Shape, _T]
+    ] =
+    new Save[
+      lasersonlab.zarr.Array[_Shape, _T]
+    ] {
+      implicit val __int = Idx.Int
+      override def apply(t: zarr.Array[_Shape, _T], dir: Path): Throwable | Unit =
+        save[_Shape, t.A, t.Chunk, _T].apply(t, dir)
     }
 
   implicit def save[

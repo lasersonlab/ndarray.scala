@@ -1,9 +1,9 @@
 {
     "shape": [
-        10
+        1000
     ],
     "chunks": [
-        10
+        1000
     ],
     "compressor": {
         "cname": "lz4",

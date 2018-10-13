@@ -8,6 +8,8 @@ import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Load
 import org.lasersonlab.zarr.utils.Idx
 
+import java.util.Random
+
 class GroupTest
   extends hammerlab.test.Suite
      with HasGetOps
@@ -33,23 +35,36 @@ class GroupTest
     )
     .toByte
 
-  val  shorts = (1  to 10).map(_.toShort)
-  val    ints =  1  to 10
-  val   longs =  1L to 10L
-  val  floats =  0f until 10f  by 0.5f
-  val doubles = 0.0 until 10.0 by 0.5
+  import math.{ sqrt, exp }
+
+  val random = new Random(1729)
+  import random.{ nextGaussian ⇒ unif }
+  lazy val stream: Stream[Double] = {
+    val a = unif
+    val b = unif
+    val repetitions = (a * a).ceil.toInt
+    val elem = exp(b)
+    Stream.fill(repetitions)(elem) #::: stream
+  }
+
+  val  shorts = (1  to 16).map(_.toShort)
+  val    ints = (1  to 1000).map(sqrt(_).toInt ).zipWithIndex.map { case (n, i) ⇒ if (i % 2 == 0) n else -n }
+  val   longs = ints.map(_.toLong)
+  val  floats = stream.map(_.toFloat).take(10000)
+  val doubles = stream.take(20)
+
   test("typed") {
     import lasersonlab.shapeless.slist.{ == ⇒ _, _ }
     import GroupTest.{ == ⇒ _, _ }
 
     val group =
       Foo(
-          bytes = Array(50 :: 100 :: 200 :: ⊥, 20 :: 50 :: 110 :: ⊥)(   bytes: _* ),
-         shorts = Array(              10 :: ⊥                      )(  shorts: _* ),
-           ints = Array(              10 :: ⊥                      )(    ints: _* ),
-          longs = Array(              10 :: ⊥                      )(   longs: _* ),
-         floats = Array(              20 :: ⊥                      )(  floats: _* ),
-        doubles = Array(              20 :: ⊥                      )( doubles: _* ),
+          bytes = Array(       50 :: 100 :: 200 :: ⊥,      20 :: 50 :: 110 :: ⊥)(   bytes: _* ),
+         shorts = Array( 2 ::   2 ::   2 ::   2 :: ⊥, 1 ::  1 ::  1 ::   1 :: ⊥)(  shorts: _* ),
+           ints = Array(                   1000 :: ⊥                           )(    ints: _* ),
+          longs = Array(                   1000 :: ⊥,                  100 :: ⊥)(   longs: _* ),
+         floats = Array(             100 :: 100 :: ⊥,            20 :: 100 :: ⊥)(  floats: _* ),
+        doubles = Array(                     20 :: ⊥                           )( doubles: _* ),
         strings =
           Strings(
             s2 = {
@@ -119,12 +134,12 @@ class GroupTest
         arrays =
           // TODO: remove need for explicit types on this Map
           Map[String, Array.*?[Int]](
-              "bytes" → Array(50 :: 100 :: 200 :: Nil, 20 :: 50 :: 110 :: Nil)(   bytes: _* ),
-             "shorts" → Array(              10 :: Nil                        )(  shorts: _* ),
-               "ints" → Array(              10 :: Nil                        )(    ints: _* ),
-              "longs" → Array(              10 :: Nil                        )(   longs: _* ),
-             "floats" → Array(              20 :: Nil                        )(  floats: _* ),
-            "doubles" → Array(              20 :: Nil                        )( doubles: _* )
+              "bytes" → Array(       50 :: 100 :: 200 :: Nil,      20 :: 50 :: 110 :: Nil)(   bytes: _* ),
+             "shorts" → Array( 2 ::   2 ::   2 ::   2 :: Nil, 1 ::  1 ::  1 ::   1 :: Nil)(  shorts: _* ),
+               "ints" → Array(                   1000 :: Nil                             )(    ints: _* ),
+              "longs" → Array(                   1000 :: Nil,                  100 :: Nil)(   longs: _* ),
+             "floats" → Array(             100 :: 100 :: Nil,            20 :: 100 :: Nil)(  floats: _* ),
+            "doubles" → Array(                     20 :: Nil                             )( doubles: _* )
           ),
         groups =
           Map(
@@ -227,10 +242,10 @@ object GroupTest {
 
   case class Foo(
       bytes: z.Array[`3`,   Byte],
-     shorts: z.Array[`1`,  Short],
+     shorts: z.Array[`4`,  Short],
        ints: z.Array[`1`,    Int],
       longs: z.Array[`1`,   Long],
-     floats: z.Array[`1`,  Float],
+     floats: z.Array[`2`,  Float],
     doubles: z.Array[`1`, Double],
     strings: Strings,
     structs: Structs

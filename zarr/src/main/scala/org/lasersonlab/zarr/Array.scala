@@ -218,12 +218,13 @@ object Array {
     _elems: _T*
   )(
     implicit
-       datatype: DataType.Aux[_T],
-     compressor:     Compressor     = Blosc(),
-          order:          Order     = C,
-     fill_value:      FillValue[_T] = Null,
-    zarr_format:         Format     = `2`,
-        filters: Opt[Seq[Filter]]   = None,
+      // TODO: implicitly construct the whole metadata at call-site
+       datatype:      DataType.Aux[_T],
+     compressor:        Compressor     = Blosc(),
+          order:             Order     = C,
+     fill_value:         FillValue[_T] = Null,
+    zarr_format:            Format     = `2`,
+        filters: Option[Seq[Filter]]   = None,
       traverseShape: Traverse[_ShapeT]
   ):
     Aux[

@@ -16,9 +16,7 @@ trait Save[T] {
   def apply(t: T, dir: Path): Throwable | Unit
 }
 
-trait LowPrioritySave
-  extends BasenameSave
-{
+trait LowPrioritySave {
 
   type Typeclass[T] = Save[T]
 
@@ -61,7 +59,7 @@ trait LowPrioritySave
 }
 
 trait BasenameSave
-{
+  extends LowPrioritySave {
 
   implicit def withBasenameAsJSON[T](
     implicit
@@ -86,13 +84,13 @@ trait BasenameSave
 }
 
 object Save
-  extends LowPrioritySave {
+  extends BasenameSave {
 
-  implicit def opt[T](implicit save: Save[T]): Save[Opt[T]] =
-    new Save[Opt[T]] {
-      def apply(t: Opt[T], dir: Path): Throwable | Unit =
+  implicit def opt[T](implicit save: Save[T]): Save[Option[T]] =
+    new Save[Option[T]] {
+      def apply(t: Option[T], dir: Path): Throwable | Unit =
         t match {
-          case Som(t) ⇒ save(t, dir)
+          case Some(t) ⇒ save(t, dir)
           case _ ⇒ Right(())
         }
     }

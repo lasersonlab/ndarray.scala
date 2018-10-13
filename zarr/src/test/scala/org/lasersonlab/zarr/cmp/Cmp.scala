@@ -24,6 +24,8 @@ object Cmp {
   type Aux[T, D] = Cmp[T] { type Diff = D }
   type Typeclass[T] = Cmp[T]
 
+  def by[L, R](fn: L ⇒ R)(implicit cmp: Cmp[R]): Cmp[L] = Cmp { (l, r) ⇒ cmp(fn(l), fn(r)) }
+
   def combine[T](ctx: CaseClass[Cmp, T]): Aux[T, NonEmptyList[(String, Any)]] =
     Cmp {
       (l, r) ⇒

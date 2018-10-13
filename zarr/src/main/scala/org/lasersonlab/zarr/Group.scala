@@ -1,5 +1,6 @@
 package org.lasersonlab.zarr
 
+import java.io.IOException
 import java.nio.file.{ Files, StandardCopyOption }
 import java.nio.file.Files.createTempDirectory
 
@@ -60,22 +61,31 @@ object Group {
     Exception | Group[Idx] =
     for {
       metadata ← dir.load[Metadata]
-         attrs ← dir.load[Opt[Attrs]]
+         attrs ← dir.load[Option[Attrs]]
 
       arrays = Map.newBuilder[String, Array.??[Idx]]
       groups = Map.newBuilder[String, Group   [Idx]]
 
+      files ←
+        try {
+          Right(
+            dir
+              .list
+              .filter {
+                _.basename match {
+                  case
+                    Metadata.basename |
+                    Attrs.basename ⇒ false
+                  case _ ⇒ true
+                }
+              }
+          )
+        } catch {
+          case e: IOException ⇒ Left(e)
+        }
+
       group ←
-        dir
-          .list
-          .filter {
-            _.basename match {
-              case
-                Metadata.basename |
-                   Attrs.basename ⇒ false
-              case _ ⇒ true
-            }
-          }
+        files
           .map {
             path: Path ⇒
               /** First, try to parse as an [[Array]] */
@@ -124,7 +134,7 @@ object Group {
 
   implicit def group[Idx](implicit idx: Idx.T[Idx]): Load[Group[Idx]] =
     new Load[Group[Idx]] {
-      override def apply(dir: Path): Exception | Group[Idx] =
+      def apply(dir: Path): Exception | Group[Idx] =
         Group(dir)
     }
 

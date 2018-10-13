@@ -46,15 +46,15 @@ object array {
     ]
     = {
       type Arr = z.Array[Shape, T]
-      new Cmp[Arr] {
-        val _metadata = metadata.cmp.baseCmp[Shape, Int]
+      Cmp {
+        (l, r) ⇒
+          val _metadata = metadata.cmp.baseCmp[Shape, Int]
 
-        type Diff =
-          _metadata.Diff |
-             _attrs.Diff |
-               ElemsDiff
+          type Diff =
+            _metadata.Diff |
+               _attrs.Diff |
+                 ElemsDiff
 
-        def apply(l: Arr, r: Arr): Option[Diff] =
           _metadata(l.metadata, r.metadata)
             .map(d ⇒ L(L(d)))
             .orElse {
@@ -109,16 +109,10 @@ object array {
       ]
     = {
       type Arr = Array.?[Shape, Idx]
-      new Cmp[Arr] {
-        val _metadata = metadata.cmp.baseCmp[Shape, Idx]
-
-        type Diff =
-          _metadata.Diff |
-             _attrs.Diff |
-               ElemsDiff
-
-        def apply(l: Arr, r: Arr): Option[Diff] =
-          _metadata(l.metadata, r.metadata)
+      Cmp {
+        (l, r) ⇒
+          metadata.cmp.baseCmp[Shape, Idx]
+            .apply(l.metadata, r.metadata)
             .map(d ⇒ L(L(d)))
             .orElse {
               _attrs(l.attrs, r.attrs)

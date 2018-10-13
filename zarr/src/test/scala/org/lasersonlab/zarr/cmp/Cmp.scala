@@ -24,10 +24,9 @@ object Cmp {
   type Aux[T, D] = Cmp[T] { type Diff = D }
   type Typeclass[T] = Cmp[T]
 
-  def combine[T](ctx: CaseClass[Cmp, T]): Cmp[T] =
-    new Cmp[T] {
-      type Diff = NonEmptyList[(String, Any)]
-      def apply(l: T, r: T): Option[Diff] =
+  def combine[T](ctx: CaseClass[Cmp, T]): Aux[T, NonEmptyList[(String, Any)]] =
+    Cmp {
+      (l, r) ⇒
         NonEmptyList.fromList(
           ctx
             .parameters
@@ -48,9 +47,8 @@ object Cmp {
     }
 
   def dispatch[T](ctx: SealedTrait[Cmp, T]): Cmp[T] =
-    new Cmp[T] {
-      type Diff = String
-      def apply(l: T, r: T): Option[Diff] =
+    Cmp {
+      (l, r) ⇒
         ctx
           .subtypes
           .flatMap {
@@ -75,7 +73,7 @@ object Cmp {
 
   def apply[T, D](fn: (T, T) ⇒ Option[D]): Aux[T, D] = new Cmp[T] { type Diff = D; def apply(l: T, r: T): Option[D] = fn(l, r) }
 
-  implicit def fromEq[T](implicit e: Eq[T]): Cmp[T] = //Aux[T, (T, T)] =
+  implicit def fromEq[T](implicit e: Eq[T]): Cmp[T] =
     Cmp {
       (l, r) ⇒
         if (e.eqv(l, r))
@@ -85,17 +83,6 @@ object Cmp {
     }
 
   implicit def fromSeq[T](implicit e: Cmp[T]): Cmp[Seq[T]] =
-//  implicit def fromSeq[T, E](implicit e: Aux[T, E]):
-//    Aux[
-//      Seq[T],
-//      Ior[
-//        NonEmptyList[
-//          (Int, E)
-//        ],
-//        Seq[T] |  // `l` has extra elems
-//        Seq[T]    // `r` has extra elems
-//      ]
-//    ] =
     Cmp {
       (l, r) ⇒
         Ior.fromOptions(
@@ -119,17 +106,6 @@ object Cmp {
     }
 
   implicit def fromMap[K, V](implicit v: Cmp[V]): Cmp[Map[K, V]] =
-//  implicit def fromMap[K, V, E](implicit v: Aux[V, E]):
-//    Aux[
-//      Map[K, V],
-//      Ior[
-//        Ior[
-//          NonEmptyList[(K, V)],  // keys in `l` but not `r`
-//          NonEmptyList[(K, V)]   // keys in `r` but not `lr
-//        ],
-//        NonEmptyList[(K, E)]     // keys in both, but values differ
-//      ]
-//    ] =
     Cmp {
       (l, r) ⇒
         val lk = l.keySet

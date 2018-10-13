@@ -1,12 +1,10 @@
 package org.lasersonlab.singlecell.hdf5
 
+import com.tom_e_white.hdf5_java_cloud.{ ArrayUtils, NioReadOnlyRandomAccessFile }
 import hammerlab.path._
-import com.tom_e_white.hdf5_java_cloud.ArrayUtils
-import com.tom_e_white.hdf5_java_cloud.NioReadOnlyRandomAccessFile
-import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.{ SparseVector, Vector, Vectors }
-import org.apache.spark.sql.{ Row, SaveMode, SparkSession }
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.{ Row, SaveMode, SparkSession }
 import ucar.nc2.NetcdfFile
 
 object Parquet {

@@ -147,7 +147,7 @@ lazy val zarr =
        xscala.jvm
     )
 
-lazy val `hdf5-java-cloud` = root(
+lazy val all = root(
    cloud,
    convert,
   `ndarray-x`,

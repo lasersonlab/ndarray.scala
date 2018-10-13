@@ -1,7 +1,8 @@
 package org.lasersonlab.zarr.cmp
 
-import cats.Eq
-import cats.data.NonEmptyList
+import cats.{ Eq, data }
+import cats.data.{ Ior, NonEmptyList }
+import hammerlab.either._
 import magnolia._
 import org.hammerlab.{ test ⇒ t }
 import org.scalatest.FunSuite
@@ -20,6 +21,7 @@ trait Cmp[T] {
 }
 
 object Cmp {
+  type Aux[T, D] = Cmp[T] { type Diff = D }
   type Typeclass[T] = Cmp[T]
 
   def combine[T](ctx: CaseClass[Cmp, T]): Cmp[T] =
@@ -71,11 +73,76 @@ object Cmp {
 
   implicit def gen[T]: Cmp[T] = macro Magnolia.gen[T]
 
-  implicit def fromEq[T](implicit e: Eq[T]): Cmp[T] = ???
+  def apply[T, D](fn: (T, T) ⇒ Option[D]): Aux[T, D] = new Cmp[T] { type Diff = D; def apply(l: T, r: T): Option[D] = fn(l, r) }
 
-  implicit def fromSeq[T](implicit e: Cmp[T]): Cmp[Seq[T]] = ???
+  implicit def fromEq[T](implicit e: Eq[T]): Cmp[T] = //Aux[T, (T, T)] =
+    Cmp {
+      (l, r) ⇒
+        if (e.eqv(l, r))
+          None
+        else
+          Some((l, r))
+    }
 
-  implicit def fromMap[K, V](implicit k: Cmp[K], v: Cmp[V]): Cmp[Map[K, V]] = ???
+  implicit def fromSeq[T](implicit e: Cmp[T]): Cmp[Seq[T]] =
+//  implicit def fromSeq[T, E](implicit e: Aux[T, E]):
+//    Aux[
+//      Seq[T],
+//      Ior[
+//        NonEmptyList[
+//          (Int, E)
+//        ],
+//        Seq[T] |  // `l` has extra elems
+//        Seq[T]    // `r` has extra elems
+//      ]
+//    ] =
+    Cmp {
+      (l, r) ⇒
+        Ior.fromOptions(
+          NonEmptyList.fromList(
+            l
+              .zip(r)
+              .zipWithIndex
+              .toList
+              .flatMap {
+                case ((l, r), i) ⇒
+                  e(l, r).map { i → _ }.toList
+              }
+          ),
+          if (l.size > r.size)
+            Some(Left(l.drop(r.size)))
+          else if (r.size > l.size)
+            Some(Left(r.drop(l.size)))
+          else
+            None
+        )
+    }
+
+  implicit def fromMap[K, V](implicit v: Cmp[V]): Cmp[Map[K, V]] =
+//  implicit def fromMap[K, V, E](implicit v: Aux[V, E]):
+//    Aux[
+//      Map[K, V],
+//      Ior[
+//        Ior[
+//          NonEmptyList[(K, V)],  // keys in `l` but not `r`
+//          NonEmptyList[(K, V)]   // keys in `r` but not `lr
+//        ],
+//        NonEmptyList[(K, E)]     // keys in both, but values differ
+//      ]
+//    ] =
+    Cmp {
+      (l, r) ⇒
+        val lk = l.keySet
+        val rk = r.keySet
+        val  diffs = NonEmptyList.fromList((for { (k, lv) ← l; rv ← r.get(k); d ← v(lv, rv) } yield k → d ) toList)
+        val  lefts = NonEmptyList.fromList((for { (k, v) ← l; if !r.contains(k) } yield k → v) toList)
+        val rights = NonEmptyList.fromList((for { (k, v) ← r; if !l.contains(k) } yield k → v) toList)
+
+        Ior.fromOptions(
+          Ior.fromOptions(lefts, rights),
+          diffs
+        )
+    }
 
   trait syntax {
     self: FunSuite ⇒

@@ -1,6 +1,8 @@
 # ndarray.scala
+[![Build Status](https://travis-ci.org/lasersonlab/ndarray.scala.svg?branch=master)](https://travis-ci.org/lasersonlab/ndarray.scala)
+[![codecov](https://codecov.io/gh/lasersonlab/ndarray.scala/branch/master/graph/badge.svg)](https://codecov.io/gh/lasersonlab/ndarray.scala)
 
-Tools for working with N-dimensional arrays, HDF5, and Zarr.
+Tools for working with N-dimensional arrays, [HDF5], and [Zarr].
 
 Modules:
 

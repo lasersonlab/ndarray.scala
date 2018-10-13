@@ -72,12 +72,11 @@ object Cmp {
 
   trait syntax {
     self: FunSuite ⇒
-    def eqv[T](l: T, r: T)(implicit ceq: Cmp[T]) = {
+    def eqv[T](l: T, r: T)(implicit ceq: Cmp[T]) =
       ceq(l, r)
-      .foreach {
-        d ⇒
-          fail(d.toString)
-      }
-    }
+        .foreach {
+          d ⇒
+            fail(d.toString)
+        }
   }
 }

@@ -1,12 +1,10 @@
 package org.lasersonlab.zarr
 
-import cats.data.NonEmptyList
 import hammerlab.path._
 import lasersonlab.{ zarr ⇒ z }
-import magnolia.{ CaseClass, Magnolia, SealedTrait }
-import org.hammerlab.{ test ⇒ t }
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.Format.`2`
+import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.io.Load
@@ -15,85 +13,14 @@ import org.lasersonlab.zarr.utils.Idx
 
 import scala.language.experimental.macros
 
-trait Cmp[T] {
-  type Diff
-  def apply(l: T, r: T): Option[Diff]
-}
-object Cmp {
-  type Aux[T, D] = Cmp[T] { type Diff = D }
-  implicit def fomUpstream[T, D](implicit cmp: t.Cmp.Aux[T, D]): Aux[T, D] =
-    new Cmp[T] {
-      type Diff = D
-      def apply(l: T, r: T): Option[D] = cmp(l, r)
-    }
-
-  type Typeclass[T] = Cmp[T]
-
-  def combine[T](ctx: CaseClass[Cmp, T]): Cmp[T] =
-    new Cmp[T] {
-      type Diff = NonEmptyList[(String, Any)]
-      def apply(l: T, r: T): Option[Diff] =
-        NonEmptyList.fromList(
-          ctx
-            .parameters
-            .toList
-            .flatMap {
-              p ⇒
-                p.typeclass(
-                  p.dereference(l),
-                  p.dereference(r)
-                )
-                .map {
-                  d ⇒
-                    p.label → (d: Any)
-                }
-                .toList
-            }
-        )
-    }
-
-  def dispatch[T](ctx: SealedTrait[Cmp, T]): Cmp[T] =
-    new Cmp[T] {
-      type Diff = String
-      def apply(l: T, r: T): Option[Diff] =
-        ctx
-          .subtypes
-          .flatMap {
-            t ⇒
-              val fn = t.cast.lift
-              (
-                fn(l),
-                fn(r)
-              ) match {
-                case (Some(l), Some(r)) ⇒
-                  t.typeclass(l, r).map(_.toString)
-                case (None, None) ⇒
-                  None
-                case _ ⇒
-                  Some(s"Different types: $l $r")
-              }
-          }
-          .headOption
-    }
-
-  implicit def gen[T]: Cmp[T] = macro Magnolia.gen[T]
-}
-
 class GroupTest
   extends hammerlab.test.Suite
      with HasGetOps
      with Load.syntax
-     with zarr.cmp.all {
+     with zarr.cmp.all
+     with Cmp.syntax {
 
   implicit val __int: Idx.T[Int] = Idx.Int
-
-  def eqv[T](l: T, r: T)(implicit ceq: Cmp[T]) = {
-    ceq(l, r)
-      .foreach {
-        d ⇒
-          fail(d.toString)
-      }
-  }
 
   test("load") {
     val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr")

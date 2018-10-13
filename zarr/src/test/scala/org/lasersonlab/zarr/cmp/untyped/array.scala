@@ -4,6 +4,7 @@ import cats.implicits._
 import hammerlab.either._
 import hammerlab.option._
 import org.hammerlab.test.Cmp
+import org.lasersonlab.zarr
 import org.lasersonlab.zarr.cmp.untyped.array.ElemsDiff.{ Index, Sizes }
 import org.lasersonlab.zarr.{ Array, Attrs, Dimension }
 import shapeless.the
@@ -39,7 +40,7 @@ object array {
       dim: Cmp[Shape[Dimension[Int]]],
       elem: Cmp[T]
     ):
-    org.lasersonlab.zarr.Cmp[
+    zarr.cmp.Cmp[
       z.Array[
         Shape,
         T
@@ -47,7 +48,7 @@ object array {
     ]
     = {
       type Arr = z.Array[Shape, T]
-      new org.lasersonlab.zarr.Cmp[Arr] {
+      new zarr.cmp.Cmp[Arr] {
         val _metadata = metadata.cmp.baseCmp[Shape, Int]
 
         type Diff =

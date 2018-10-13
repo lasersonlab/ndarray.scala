@@ -9,17 +9,18 @@ scala:
 
 before_install:
 - export LD_LIBRARY_PATH=$HOME/lib
-- ./.travis/setup.sh
+- "./.travis/setup.sh"
 
 script:
-- sbt ++$TRAVIS_SCALA_VERSION clean coverageTest
+- echo "$AWS_ACCESS_KEY_ID"
+- sbt ++$TRAVIS_SCALA_VERSION clean netcdf/coverageTest
 
 cache:
   directories:
-  - $HOME/.ivy2/cache
-  - $HOME/.sbt/boot/
-  - $HOME/.zinc
-  - $HOME/lib
+  - "$HOME/.ivy2/cache"
+  - "$HOME/.sbt/boot/"
+  - "$HOME/.zinc"
+  - "$HOME/lib"
 
 after_success: bash <(curl -s https://codecov.io/bash)
 
@@ -27,3 +28,8 @@ before_cache:
 # Tricks to avoid unnecessary cache updates
 - find $HOME/.ivy2 -name "ivydata-*.properties" -delete
 - find $HOME/.sbt -name "*.lock" -delete
+
+env:
+  global:
+  - secure: lWFqaRX6SHs9MGXYAsc3OBvuD0GosDZxwBOtpnORWP+q2aEO2vhU1KsR6+u88n+romUvBQxoUQ8j0/lCqjJYdmB8FE8uPrYR4oAKxCGgMxPALlzm+U1pohkHXE8LXUkR0nOoJI46ECnc54IKHDZ5jZAfi3Y4HpbsbX4M/5jr3fat80SzUJVnaDO9SdiJtYk99immaN9Cs4RVE9ExK4Fm0/2xjGUtR2eABBYAxO1yqFq9O4Aq+Qqqko7QrGnnKMbPBBv8bUsP5+sbxOrb8bzBRSVCwosbsprmu6I0f49hectZgnQ6ntyKUVGqKdshx0P8+v6vQAvJFz1T1IcrSlFwtV8KtyZnXfkdBb/qrxhDsYlLXOaVtbyN/QPpA22HRnzzg+MLEGcFdOsNaxGyy9vDflsnbK1mfw0h+j9OQMe4SrDcNQRRFNmd6aNDVxFHtTa3KX3Rd2xojsJpyky1pFp0miGs+sBB0Ofn67TYcsIYGh4+9P0/v5QNVK2xcj3FS8DBdwZz72uxsyOrhW5BlfFRz8nhDgZBU+M79TWbeD3bReBX4WyQdgGdfK/kHXt9pQ4eptl6IsRi1smNN5C0O2PUIc+l7b7sbbvqclQ2Rz97nKuagSNZpbB8ZxFBHZLzP7AAWOLuiOFIT7cBuimv104hDO0Qj38i/XxtpFGuhYf4uOg=
+  - secure: HWEMRiETh0M9Dh0kczlOdI07g4v2wz+PKgk6Zu7wIs9HeeP6kEScZ3N0tfGCeXoyrODPMKjz4lCpiWsT4Xi1H+4x43Vrc/VK6yaphh/SqPSOGfk3/f9v0nzpeZ48zUzaUkr0bysG3QbomOjFKduLNDHKJLhmtwFHLd3vvS6kESmh6yzHWksZyQ1ilQOdwCr4gdefKYWnQPzePUBMaFslpL9c+pJOCM8+cGiaTY/vKaXWAVvPaWKeIWmxwXyFF6YJbbByJLCZOmc3Lo/LmPEg8qfw9/IRyJEF5PmpqaMw6AgsLGyYxwtW+8JkcrJ61OQHmq5hnGle5n1VIzSNaPGjoZ9/syTfRXBFStO2f4hnsshyNQOn412MszAYGYE2EzGZuIGG/WQfYCRGF3VhE1F67YrcPY4XmRoWOfAJeHnu/Hr2lt9NJM3TPVxSBt5PXBJwsKNYSRaKnOjTU1KZnr+BzS5GLSP3HaBHyUe1If48hoQ7s42xO0Tji/J8n4cUM8NnTh30VaCEzG89BP3df8fIch9uho90eOwevN2pssiSN7EaXmxaBvtJuwm4tyZMeqy3Rmqw1BI1FI0qp6VWO7g+2KuAmEs4+JZDxNVhv01DV4d9HguO5HJrlajL/5xcFsS5kenHNNtVH+xJGhOKdgVN1zT7Q8wiK122ZoibmBAjA98=

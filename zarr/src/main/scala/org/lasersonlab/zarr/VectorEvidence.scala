@@ -44,7 +44,7 @@ object VectorEvidence {
     val      zipShape:       Zip    [    ShapeT],
     val     scannable: Scannable    [    ShapeT],
     val    shapeCodec:    CodecK    [    ShapeT],
-    val traverseShape:  Traverse    [    ShapeT],
+    val traverseShape:  Traverse    [    ShapeT]
   )
   extends VectorEvidence[ShapeT] {
     type A[U] = _A[U]

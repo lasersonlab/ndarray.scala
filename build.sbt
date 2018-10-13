@@ -82,8 +82,9 @@ lazy val netcdf = project.settings(
     hammerlab.cli.base,
     hammerlab.io,
     hammerlab.paths,
-    hammerlab.types
-  )
+    hammerlab.types,
+  ),
+  testDeps += log4j
 ).dependsOn(
   cloud,
   utils

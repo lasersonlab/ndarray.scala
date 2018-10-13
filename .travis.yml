@@ -4,22 +4,23 @@ jdk:
 - oraclejdk8
 
 scala:
-- 2.11.12
 - 2.12.7
 
 before_install:
 - export LD_LIBRARY_PATH=$HOME/lib
-- ./.travis/setup.sh
+- "./.travis/setup.sh"
 
 script:
+- sbt ++$TRAVIS_SCALA_VERSION 'show singlecell/dependencyClasspath'
 - sbt ++$TRAVIS_SCALA_VERSION clean coverageTest
 
 cache:
   directories:
-  - $HOME/.ivy2/cache
-  - $HOME/.sbt/boot/
-  - $HOME/.zinc
-  - $HOME/lib
+  - "$HOME/.ivy2/cache"
+  - "$HOME/.sbt/boot/"
+  - "$HOME/.zinc"
+  - "$HOME/.coursier"
+  - "$HOME/lib"
 
 after_success: bash <(curl -s https://codecov.io/bash)
 

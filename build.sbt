@@ -135,10 +135,12 @@ lazy val zarr =
         sourcecode,
 
         "org.typelevel" ^^ "kittens" ^ "1.1.0",
-        "org.lasersonlab" ^ "jblosc" ^ "1.0.1"
+        "org.lasersonlab" ^ "jblosc" ^ "1.0.1",
+        "com.propensive" ^^ "magnolia" ^ "0.10.0"
       ),
       kindProjector,
-      partialUnification
+      partialUnification,
+      excludeFilter in sbt.Test := NothingFilter
     )
     .dependsOn(
       ndarray.jvm,

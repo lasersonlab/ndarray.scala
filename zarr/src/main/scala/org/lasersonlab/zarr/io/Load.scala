@@ -1,14 +1,15 @@
 package org.lasersonlab.zarr.io
 
 import cats.implicits._
-
 import hammerlab.either._
 import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder
 import io.circe.parser.parse
-import shapeless.labelled._
-import shapeless.{ Witness ⇒ W, Path ⇒ _, _ }
+import magnolia._
+import scala.language.experimental.macros
+
+import scala.collection.mutable.ArrayBuffer
 
 trait Load[T] {
   def apply(dir: Path): Exception | T
@@ -56,42 +57,63 @@ object Load
       }
     }
 
-  implicit val hnil: Load[HNil] = new Load[HNil] {
-    def apply(dir: Path): Exception | HNil = Right(HNil)
-  }
+  type Typeclass[T] = Load[T]
 
-  implicit def cons[K <: Symbol, H, T <: HList](
-    implicit
-    h: Load[H],
-    t: Load[T],
-    w: W.Aux[K]
-  ):
-    Load[FieldType[K, H] :: T] =
-    new Load[FieldType[K, H] :: T] {
-      def apply(dir: Path):
-        Exception |
-        (
-          FieldType[K, H] ::
-          T
-        ) = {
-          for {
-            h ← h(dir / w.value)
-            t ← t(dir)
-          } yield
-            field[K](h) :: t
-        }
-    }
-
-  implicit def caseclass[T, L <: HList](
-    implicit
-    lg: LabelledGeneric.Aux[T, L],
-    load: Load[L]
-  ):
-    Load[T] =
+  /** defines equality for this case class in terms of equality for all its parameters */
+  def combine[T](ctx: CaseClass[Load, T]): Load[T] =
     new Load[T] {
-      def apply(dir: Path): Exception | T =
-        load(dir).map { lg.from }
+      def apply(dir: Path) =
+        ctx
+          .parameters
+          .toList
+          .map {
+            param ⇒
+              param.typeclass(
+                dir / param.label
+              )
+          }
+          .sequence
+          .map {
+            results ⇒
+              ctx.rawConstruct(results)
+          }
     }
+
+  case class CoproductLoadError(path: Path, exceptions: Seq[(String, Exception)]) extends RuntimeException
+  case class CoproductAmbiguousLoadError(path: Path, results: Seq[String]) extends RuntimeException
+
+  /** choose which equality subtype to defer to
+   *
+   *  Note that in addition to dispatching based on the type of the first parameter to the `equal`
+   *  method, we check that the second parameter is the same type. */
+  def dispatch[T](ctx: SealedTrait[Load, T]): Load[T] =
+    new Load[T] {
+      def apply(dir: Path) = {
+        val exceptions = ArrayBuffer[(String, Exception)]()
+        val  successes = ArrayBuffer[(String,         T)]()
+        ctx
+          .subtypes
+          .foreach {
+            t ⇒
+              val name = t.typeName.short
+              t
+                .typeclass(dir)
+                .fold(
+                  exceptions += name → _,
+                   successes += name → _
+                )
+          }
+
+        successes match {
+          case ArrayBuffer((_, success)) ⇒ Right(success)
+          case ArrayBuffer() ⇒ Left(CoproductLoadError(dir, exceptions))
+          case _ ⇒ Left(CoproductAmbiguousLoadError(dir, successes.map(_._1)))
+        }
+      }
+    }
+
+  /** binds the Magnolia macro to the `gen` method */
+  implicit def gen[T]: Load[T] = macro Magnolia.gen[T]
 
   implicit class Ops(val dir: Path) extends AnyVal {
     def load[T](implicit l: Load[T]): Exception | T = l(dir)

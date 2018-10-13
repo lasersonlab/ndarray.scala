@@ -90,5 +90,6 @@ package object zarr
   type Metadata[Shape[_], Idx, T] = array.metadata.Metadata[Shape, Idx, T]
   val Metadata = array.metadata.Metadata
 
+  // TODO: move to a circe pkg
   val pprint = Printer.spaces4.copy(colonLeft = "").pretty _
 }

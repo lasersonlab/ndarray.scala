@@ -1,13 +1,14 @@
 package org.lasersonlab.zarr.io
 
+import cats.implicits._
 import hammerlab.either._
 import hammerlab.option._
 import hammerlab.path._
 import io.circe.Encoder
 import lasersonlab.xscala._
+import magnolia._
 import org.lasersonlab.zarr.pprint
-import shapeless.labelled.FieldType
-import shapeless.{ Path ⇒ _, _ }
+import scala.language.experimental.macros
 
 import scala.util.Try
 
@@ -18,57 +19,45 @@ trait Save[T] {
 trait LowPrioritySave
   extends BasenameSave
 {
-  implicit val hnil: Save[HNil] = new Save[HNil] { def apply(t: HNil, dir: Path) = Right(()) }
 
-  implicit def savecons[
-    K <: Symbol,
-        Head,
-        Tail <: HList
-  ](
-    implicit
-//    name: Witness.Aux[Basename],
-//    head: Save[Head],
-//    tail: Save[Tail],
-    head: Lazy[Save[Head]],
-    tail: Lazy[Save[Tail]]
-  ):
-    Save[
-      FieldType[K, Head] ::
-      Tail
-    ] =
-    ???
-//    new Save[
-//      FieldType[Basename, Head] ::
-//      Tail
-//    ] {
-//      def apply(t: FieldType[Basename, Head] :: Tail, dir: Path): Throwable | Unit =
-//        t match {
-//          case h :: t ⇒
-//            for {
-////              _ ← head(h, dir / name.value.name)
-////              _ ← tail(t, dir)
-//              _ ← head.value(h, dir / name.value.name)
-//              _ ← tail.value(t, dir)
-//            } yield
-//              ()
-//        }
-//    }
+  type Typeclass[T] = Save[T]
 
-  implicit def caseclass[
-    CC,
-    L <: HList
-  ](
-    implicit
-    g: LabelledGeneric.Aux[CC, L],
-//    l: Save[L]
-    l: Lazy[Save[L]]
-  ):
-    Save[CC] =
-    new Save[CC] {
-      def apply(t: CC, dir: Path): Throwable | Unit =
-//        l(g.to(t), dir)
-        l.value(g.to(t), dir)
+  /** defines equality for this case class in terms of equality for all its parameters */
+  def combine[T](ctx: CaseClass[Save, T]): Save[T] =
+    new Save[T] {
+      def apply(value1: T, dir: Path) =
+        ctx
+          .parameters
+          .toList
+          .map {
+            param ⇒
+              param.typeclass(
+                param.dereference(value1),
+                dir / param.label
+              )
+          }
+          .sequence
+          .map { _ ⇒ () }
     }
+
+  /** choose which equality subtype to defer to
+   *
+   *  Note that in addition to dispatching based on the type of the first parameter to the `equal`
+   *  method, we check that the second parameter is the same type. */
+  def dispatch[T](ctx: SealedTrait[Save, T]): Save[T] =
+    new Save[T] {
+      def apply(value1: T, dir: Path) =
+        ctx.dispatch(value1) {
+          sub ⇒
+            sub.typeclass(
+              sub.cast(value1),
+              dir
+            )
+        }
+    }
+
+  /** binds the Magnolia macro to the `gen` method */
+  implicit def gen[T]: Save[T] = macro Magnolia.gen[T]
 }
 
 trait BasenameSave

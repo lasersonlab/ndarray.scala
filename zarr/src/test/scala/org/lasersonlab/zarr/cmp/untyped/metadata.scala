@@ -3,23 +3,18 @@ package org.lasersonlab.zarr.cmp.untyped
 import cats.implicits._
 import hammerlab.either._
 import hammerlab.option._
-import org.hammerlab.test.Cmp
-import org.lasersonlab.zarr
 import org.lasersonlab.zarr.FillValue.NonNull
 import org.lasersonlab.zarr.array.metadata.untyped.Shaped
-import org.lasersonlab.zarr.dtype._
+import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.dtype.DataType._
-import org.lasersonlab.zarr.{ Dimension, FillValue, Filter, Metadata }
+import org.lasersonlab.zarr.dtype._
+import org.lasersonlab.zarr.{ Dimension, FillValue, Metadata }
 import shapeless.the
 
 object metadata {
-  def cmpT[T](implicit t: zarr.cmp.Cmp[T]): zarr.cmp.Cmp[T] = t
-//    new Cmp[T] {
-//      type Diff = (T, T)
-//      def cmp(l: T, r: T): Option[Diff] = t(l, r).map(_ ⇒ (l, r))
-//    }
+  def cmpT[T](implicit t: Cmp[T]): Cmp[T] = t
 
-  def cmpFromDatatype[T](d: DataType.Aux[T]): zarr.cmp.Cmp[T] =
+  def cmpFromDatatype[T](d: DataType.Aux[T]): Cmp[T] =
     (
       d match {
         case d @ DataType.untyped.Struct(_) ⇒ cmpT[untyped.Struct]
@@ -31,22 +26,22 @@ object metadata {
         case d @ DataType.double(_) ⇒ cmpT[Double]
         case d @ DataType.string(_) ⇒ cmpT[String]
         case d @ DataType.Struct(_) ⇒
-          new zarr.cmp.Cmp[d.T] {
+          new Cmp[d.T] {
             type Diff = (d.T, d.T)
             def apply(l: d.T, r: d.T): Option[(d.T, d.T)] = (l != r) ? (l, r)
           }
       }
     )
-    .asInstanceOf[zarr.cmp.Cmp[d.T]]
+    .asInstanceOf[Cmp[d.T]]
 
   implicit def fillValueCanEq[T](
     implicit
     d: DataType.Aux[T]
   ):
-    zarr.cmp.Cmp[
+    Cmp[
       FillValue[T]
     ] =
-    new zarr.cmp.Cmp[FillValue[T]] {
+    new Cmp[FillValue[T]] {
       type Diff = Any
       def apply(l: FillValue[T], r: FillValue[T]): Option[Diff] =
         (l, r) match {
@@ -63,15 +58,15 @@ object metadata {
       Idx
     ](
       implicit
-      dim: zarr.cmp.Cmp[Shape[Dimension[Idx]]]
+      dim: Cmp[Shape[Dimension[Idx]]]
     ):
-      zarr.cmp.Cmp[
+      Cmp[
         Shaped[
           Shape,
           Idx
         ]
       ] = {
-      new zarr.cmp.Cmp[
+      new Cmp[
         Shaped[
           Shape,
           Idx
@@ -87,12 +82,7 @@ object metadata {
               r: Metadata[Shape, Idx, T]
             ) ⇒
               implicit val d = l.dtype
-              implicit val filter: zarr.cmp.Cmp[Filter] = ???
-              the[zarr.cmp.Cmp[FillValue[T]]]
-              the[zarr.cmp.Cmp[Filter]]
-              the[zarr.cmp.Cmp[Seq[Filter]]]
-//              the[zarr.cmp.Cmp[Opt[Seq[Filter]]]]
-              the[zarr.cmp.Cmp[Metadata[Shape, Idx, T]]].apply(l, r)
+              the[Cmp[Metadata[Shape, Idx, T]]].apply(l, r)
             case _ ⇒
               Some(s"Differing elem types: $l $r")
           }
@@ -106,9 +96,9 @@ object metadata {
       Idx
     ](
       implicit
-      dim: zarr.cmp.Cmp[Shape[Dimension[Idx]]]
+      dim: Cmp[Shape[Dimension[Idx]]]
     ):
-      zarr.cmp.Cmp[
+      Cmp[
         Shaped[
           Shape,
           Idx

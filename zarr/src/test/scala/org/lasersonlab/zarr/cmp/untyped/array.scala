@@ -2,16 +2,14 @@ package org.lasersonlab.zarr.cmp.untyped
 
 import cats.implicits._
 import hammerlab.either._
-import hammerlab.option._
-import org.hammerlab.test.Cmp
-import org.lasersonlab.zarr
+import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.cmp.untyped.array.ElemsDiff.{ Index, Sizes }
 import org.lasersonlab.zarr.{ Array, Attrs, Dimension }
 import shapeless.the
 
 object array {
 
-  val _attrs = the[Cmp[Opt[Attrs]]]
+  val _attrs = the[Cmp[Option[Attrs]]]
 
   sealed trait ElemsDiff
   object ElemsDiff {
@@ -23,7 +21,7 @@ object array {
 
     implicit def arrayIdxsCmp[Idx](
       implicit
-      dim: zarr.cmp.Cmp[Dimension[Idx]]
+      dim: Cmp[Dimension[Idx]]
     ):
       Cmp[
         Array.??[Idx]
@@ -37,10 +35,10 @@ object array {
       T
     ](
       implicit
-      dim: zarr.cmp.Cmp[Shape[Dimension[Int]]],
-      elem: zarr.cmp.Cmp[T]
+      dim: Cmp[Shape[Dimension[Int]]],
+      elem: Cmp[T]
     ):
-    zarr.cmp.Cmp[
+    Cmp[
       z.Array[
         Shape,
         T
@@ -48,7 +46,7 @@ object array {
     ]
     = {
       type Arr = z.Array[Shape, T]
-      new zarr.cmp.Cmp[Arr] {
+      new Cmp[Arr] {
         val _metadata = metadata.cmp.baseCmp[Shape, Int]
 
         type Diff =
@@ -101,7 +99,7 @@ object array {
       Idx
     ](
       implicit
-      dim: zarr.cmp.Cmp[Shape[Dimension[Idx]]]
+      dim: Cmp[Shape[Dimension[Idx]]]
     ):
       Cmp[
         Array.?[
@@ -119,7 +117,7 @@ object array {
              _attrs.Diff |
                ElemsDiff
 
-        def cmp(l: Arr, r: Arr): Option[Diff] =
+        def apply(l: Arr, r: Arr): Option[Diff] =
           _metadata(l.metadata, r.metadata)
             .map(d ⇒ L(L(d)))
             .orElse {

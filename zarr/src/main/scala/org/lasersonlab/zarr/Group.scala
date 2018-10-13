@@ -4,7 +4,6 @@ import java.nio.file.{ Files, StandardCopyOption }
 import java.nio.file.Files.createTempDirectory
 
 import hammerlab.option._
-import hammerlab.path._
 import hammerlab.str._
 import org.hammerlab.paths.Path
 import org.lasersonlab.zarr.Format._
@@ -16,7 +15,7 @@ import scala.util.Try
 case class Group[Idx](
     arrays: Map[String, Array.??[Idx]] =      Map.empty[String, Array.??[Idx]],
     groups: Map[String, Group   [Idx]] =      Map.empty[String, Group   [Idx]],
-     attrs:                 Opt[Attrs] =           None,
+     attrs:              Option[Attrs] =           None,
   metadata:             Group.Metadata = Group.Metadata()
 )(
   implicit

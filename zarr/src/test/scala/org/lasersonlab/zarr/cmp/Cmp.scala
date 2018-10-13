@@ -75,13 +75,7 @@ object Cmp {
 
   implicit def fromSeq[T](implicit e: Cmp[T]): Cmp[Seq[T]] = ???
 
-//  implicit val   byte: Cmp[  Byte] = ???
-//  implicit val  short: Cmp[ Short] = ???
-//  implicit val    int: Cmp[   Int] = ???
-//  implicit val   long: Cmp[  Long] = ???
-//  implicit val  float: Cmp[ Float] = ???
-//  implicit val double: Cmp[Double] = ???
-//  implicit val string: Cmp[String] = ???
+  implicit def fromMap[K, V](implicit k: Cmp[K], v: Cmp[V]): Cmp[Map[K, V]] = ???
 
   trait syntax {
     self: FunSuite ⇒

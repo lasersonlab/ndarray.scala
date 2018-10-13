@@ -68,7 +68,7 @@ package object convert
   implicit def convertAttributes(
     attributes: Seq[Attribute]
   ):
-    Opt[Attrs] =
+    Option[Attrs] =
     if (attributes.isEmpty)
       None
     else
@@ -268,7 +268,7 @@ package object convert
             chunk((h % rowsPerChunk) :: t)
           }
 
-          override val attrs: Opt[Attrs] = _attrs
+          override val attrs: Option[Attrs] = _attrs
         }
     }
 }

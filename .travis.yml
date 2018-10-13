@@ -9,17 +9,19 @@ scala:
 
 before_install:
 - export LD_LIBRARY_PATH=$HOME/lib
-- ./.travis/setup.sh
+- "./.travis/setup.sh"
 
 script:
 - sbt ++$TRAVIS_SCALA_VERSION clean coverageTest
 
 cache:
   directories:
-  - $HOME/.ivy2/cache
-  - $HOME/.sbt/boot/
-  - $HOME/.zinc
-  - $HOME/lib
+  - "$HOME/.ivy2/cache"
+  - "$HOME/.sbt/boot/"
+  - "$HOME/.sbt/launchers/"
+  - "$HOME/.zinc"
+  - "$HOME/.coursier"
+  - "$HOME/lib"
 
 after_success: bash <(curl -s https://codecov.io/bash)
 

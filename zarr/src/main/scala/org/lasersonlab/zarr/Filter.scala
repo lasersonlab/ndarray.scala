@@ -1,8 +1,8 @@
 package org.lasersonlab.zarr
 
-import circe.Decoder.Result
-import circe._
-import shapeless.{ CNil, Generic }
+import cats.Eq
+import org.lasersonlab.zarr.circe.Decoder.Result
+import org.lasersonlab.zarr.circe._
 
 // TODO: add filters
 sealed trait Filter
@@ -17,18 +17,8 @@ object Filter {
           )
         )
     }
-  implicit val encoder: Encoder[Filter] =
-    new Encoder[Filter] {
-      override def apply(f: Filter): Json = ???
-    }
 
-  /**
-   * Placeholder while [[Filter]] remains uninhabited; lets downstream derivations work
-   */
-  implicit val generic: Generic.Aux[Filter, CNil] =
-    new Generic[Filter] {
-      type Repr = CNil
-      override def   to(t: Filter):   CNil = ???
-      override def from(r:   CNil): Filter = ???
-    }
+  implicit val encoder: Encoder[Filter] = new Encoder[Filter] { def apply(f: Filter): Json = ??? }
+
+  implicit val _eq: Eq[Filter] = new Eq[Filter] { def eqv(x: Filter, y: Filter): Boolean = ??? }
 }

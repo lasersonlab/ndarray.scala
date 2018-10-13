@@ -155,7 +155,7 @@ trait Array {
   val chunks: A[Chunk[T]]
 
   // TODO: make this type-parameterizable, and validate accordingly during JSON-parsing
-  val attrs: Opt[Attrs]
+  val attrs: Option[Attrs]
 
   def foldLeft[B](b: B)(f: (B, T) ⇒ B): B =
     chunks
@@ -306,7 +306,7 @@ object Array {
           }
       }
 
-      override val attrs: Opt[Attrs] = _attrs.map(Attrs(_))
+      override val attrs: Option[Attrs] = _attrs.map(Attrs(_))
     }
   }
   /**
@@ -536,7 +536,7 @@ object Array {
     ]
   =
     for {
-      _attrs ← dir.load[Opt[Attrs]]
+      _attrs ← dir.load[Option[Attrs]]
       _chunks ← {
         implicit val md = _metadata
         import Metadata._

@@ -7,8 +7,6 @@ import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Load
 import org.lasersonlab.zarr.utils.Idx
 
-import scala.language.experimental.macros
-
 class GroupTest
   extends hammerlab.test.Suite
      with HasGetOps
@@ -180,11 +178,11 @@ class GroupTest
 
     val group2 = actual.load[Group[Int]] !
 
-    ==(group, group2)
+    eqv(group, group2)
 
     val expected = resource("grouptest.zarr").load[Group[Int]] !
 
-    ==(group, expected)
+    eqv(group, expected)
   }
 }
 

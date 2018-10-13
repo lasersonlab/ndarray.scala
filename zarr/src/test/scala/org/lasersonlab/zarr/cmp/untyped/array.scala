@@ -2,16 +2,14 @@ package org.lasersonlab.zarr.cmp.untyped
 
 import cats.implicits._
 import hammerlab.either._
-import hammerlab.option._
-import org.hammerlab.test.Cmp
-import org.lasersonlab.zarr
+import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.cmp.untyped.array.ElemsDiff.{ Index, Sizes }
 import org.lasersonlab.zarr.{ Array, Attrs, Dimension }
 import shapeless.the
 
 object array {
 
-  val _attrs = the[Cmp[Opt[Attrs]]]
+  val _attrs = the[Cmp[Option[Attrs]]]
 
   sealed trait ElemsDiff
   object ElemsDiff {
@@ -40,7 +38,7 @@ object array {
       dim: Cmp[Shape[Dimension[Int]]],
       elem: Cmp[T]
     ):
-    zarr.cmp.Cmp[
+    Cmp[
       z.Array[
         Shape,
         T
@@ -48,15 +46,15 @@ object array {
     ]
     = {
       type Arr = z.Array[Shape, T]
-      new zarr.cmp.Cmp[Arr] {
-        val _metadata = metadata.cmp.baseCmp[Shape, Int]
+      Cmp {
+        (l, r) ⇒
+          val _metadata = metadata.cmp.baseCmp[Shape, Int]
 
-        type Diff =
-          _metadata.Diff |
-             _attrs.Diff |
-               ElemsDiff
+          type Diff =
+            _metadata.Diff |
+               _attrs.Diff |
+                 ElemsDiff
 
-        def apply(l: Arr, r: Arr): Option[Diff] =
           _metadata(l.metadata, r.metadata)
             .map(d ⇒ L(L(d)))
             .orElse {
@@ -96,7 +94,7 @@ object array {
       }
     }
 
-      def arrayShapedCmp[
+    def arrayShapedCmp[
       Shape[_],
       Idx
     ](
@@ -111,16 +109,10 @@ object array {
       ]
     = {
       type Arr = Array.?[Shape, Idx]
-      new Cmp[Arr] {
-        val _metadata = metadata.cmp.baseCmp[Shape, Idx]
-
-        type Diff =
-          _metadata.Diff |
-             _attrs.Diff |
-               ElemsDiff
-
-        def cmp(l: Arr, r: Arr): Option[Diff] =
-          _metadata(l.metadata, r.metadata)
+      Cmp {
+        (l, r) ⇒
+          metadata.cmp.baseCmp[Shape, Idx]
+            .apply(l.metadata, r.metadata)
             .map(d ⇒ L(L(d)))
             .orElse {
               _attrs(l.attrs, r.attrs)

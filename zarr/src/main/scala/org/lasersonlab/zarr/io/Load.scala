@@ -40,9 +40,9 @@ object Load
     basename: Basename[T],
     decoder: Decoder[T]
   ):
-    Load[Opt[T]] =
-    new Load[Opt[T]] {
-      def apply(dir: Path): Exception | Opt[T] =  {
+    Load[Option[T]] =
+    new Load[Option[T]] {
+      def apply(dir: Path): Exception | Option[T] =  {
         val path = dir / basename
         if (!path.exists)
           Right(None)
@@ -53,7 +53,7 @@ object Load
                 decoder
                   .decodeJson(json)
             }
-            .map { o ⇒ o }
+            .map { Some(_) }
       }
     }
 

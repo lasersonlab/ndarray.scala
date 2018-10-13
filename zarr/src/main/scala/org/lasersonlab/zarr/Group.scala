@@ -1,10 +1,10 @@
 package org.lasersonlab.zarr
 
+import java.io.IOException
 import java.nio.file.{ Files, StandardCopyOption }
 import java.nio.file.Files.createTempDirectory
 
 import hammerlab.option._
-import hammerlab.path._
 import hammerlab.str._
 import org.hammerlab.paths.Path
 import org.lasersonlab.zarr.Format._
@@ -16,7 +16,7 @@ import scala.util.Try
 case class Group[Idx](
     arrays: Map[String, Array.??[Idx]] =      Map.empty[String, Array.??[Idx]],
     groups: Map[String, Group   [Idx]] =      Map.empty[String, Group   [Idx]],
-     attrs:                 Opt[Attrs] =           None,
+     attrs:              Option[Attrs] =           None,
   metadata:             Group.Metadata = Group.Metadata()
 )(
   implicit
@@ -61,22 +61,31 @@ object Group {
     Exception | Group[Idx] =
     for {
       metadata ← dir.load[Metadata]
-         attrs ← dir.load[Opt[Attrs]]
+         attrs ← dir.load[Option[Attrs]]
 
       arrays = Map.newBuilder[String, Array.??[Idx]]
       groups = Map.newBuilder[String, Group   [Idx]]
 
+      files ←
+        try {
+          Right(
+            dir
+              .list
+              .filter {
+                _.basename match {
+                  case
+                    Metadata.basename |
+                    Attrs.basename ⇒ false
+                  case _ ⇒ true
+                }
+              }
+          )
+        } catch {
+          case e: IOException ⇒ Left(e)
+        }
+
       group ←
-        dir
-          .list
-          .filter {
-            _.basename match {
-              case
-                Metadata.basename |
-                   Attrs.basename ⇒ false
-              case _ ⇒ true
-            }
-          }
+        files
           .map {
             path: Path ⇒
               /** First, try to parse as an [[Array]] */
@@ -125,7 +134,7 @@ object Group {
 
   implicit def group[Idx](implicit idx: Idx.T[Idx]): Load[Group[Idx]] =
     new Load[Group[Idx]] {
-      override def apply(dir: Path): Exception | Group[Idx] =
+      def apply(dir: Path): Exception | Group[Idx] =
         Group(dir)
     }
 

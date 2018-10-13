@@ -8,8 +8,6 @@ import org.lasersonlab.shapeless.{ Scannable, Zip }
 import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.utils.Idx
 
-import scala.util.{ Failure, Success, Try }
-
 /**
  * Spec / Format questions:
  *
@@ -26,8 +24,7 @@ import scala.util.{ Failure, Success, Try }
  * of full-sized/interior chunks? Seems like the latter… some edges to check here around handling that as well.
  */
 package object zarr
-  extends utils.opt.OptCodec
-     with utils.slist.Codecs
+  extends utils.slist.Codecs
      with HasPathOps
      with hammerlab.either
      with hammerlab.math.utils

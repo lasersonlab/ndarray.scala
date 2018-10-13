@@ -7,10 +7,10 @@ import org.lasersonlab.netcdf.show._
 import scala.collection.JavaConverters._
 
 case class Group(
-  name: String,
+        name:        String ,
   attributes: Seq[Attribute],
-  vars: Seq[Variable],
-  groups: Seq[Group]
+        vars: Seq[ Variable],
+      groups: Seq[    Group]
 ) {
   def group(name: Str): Group =
     groups

@@ -1,23 +1,20 @@
 package org.lasersonlab.zarr.cmp.untyped
 
+import cats.implicits._
 import hammerlab.either._
 import hammerlab.option._
-import org.hammerlab.test.Cmp
 import org.lasersonlab.zarr.FillValue.NonNull
 import org.lasersonlab.zarr.array.metadata.untyped.Shaped
-import org.lasersonlab.zarr.dtype._
+import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.dtype.DataType._
+import org.lasersonlab.zarr.dtype._
 import org.lasersonlab.zarr.{ Dimension, FillValue, Metadata }
 import shapeless.the
 
 object metadata {
-  def cmpT[T](implicit t: Cmp[T]): Cmp.Aux[T, (T, T)] =
-    new Cmp[T] {
-      type Diff = (T, T)
-      def cmp(l: T, r: T): Option[Diff] = t(l, r).map(_ ⇒ (l, r))
-    }
+  def cmpT[T](implicit t: Cmp[T]): Cmp[T] = t
 
-  def cmpFromDatatype[T](d: DataType.Aux[T]): Cmp.Aux[T, (T, T)] =
+  def cmpFromDatatype[T](d: DataType.Aux[T]): Cmp[T] =
     (
       d match {
         case d @ DataType.untyped.Struct(_) ⇒ cmpT[untyped.Struct]
@@ -29,34 +26,21 @@ object metadata {
         case d @ DataType.double(_) ⇒ cmpT[Double]
         case d @ DataType.string(_) ⇒ cmpT[String]
         case d @ DataType.Struct(_) ⇒
-          new Cmp[d.T] {
-            type Diff = (d.T, d.T)
-            def cmp(l: d.T, r: d.T): Option[(d.T, d.T)] = (l != r) ? (l, r)
+          Cmp[d.T, (d.T, d.T)] {
+            (l, r) ⇒
+            //def apply(l: d.T, r: d.T): Option[(d.T, d.T)] =
+              (l != r) ? (l, r)
           }
       }
     )
-    .asInstanceOf[
-      Cmp.Aux[
-        d.T,
-        (
-          d.T,
-          d.T
-        )
-      ]
-    ]
+    .asInstanceOf[Cmp[d.T]]
 
   implicit def fillValueCanEq[T](
     implicit
     d: DataType.Aux[T]
   ):
-    Cmp.Aux[
-      FillValue[T],
-      d.T |
-      d.T |
-      (
-        d.T,
-        d.T
-      )
+    Cmp[
+      FillValue[T]
     ] =
     Cmp {
       case (NonNull(l), NonNull(r)) ⇒ cmpFromDatatype(d)(l, r).map(R(_))
@@ -84,7 +68,7 @@ object metadata {
           Shape,
           Idx
         ],
-        Any  // TODO: fill in actual error type
+        Any
       ] {
         (l, r) ⇒
           type T = r.T

@@ -1,6 +1,8 @@
 package org.lasersonlab.zarr.cmp
 
-import cats.data.NonEmptyList
+import cats.{ Eq, data }
+import cats.data.{ Ior, NonEmptyList }
+import hammerlab.either._
 import magnolia._
 import org.hammerlab.{ test ⇒ t }
 import org.scalatest.FunSuite
@@ -19,12 +21,14 @@ trait Cmp[T] {
 }
 
 object Cmp {
+  type Aux[T, D] = Cmp[T] { type Diff = D }
   type Typeclass[T] = Cmp[T]
 
-  def combine[T](ctx: CaseClass[Cmp, T]): Cmp[T] =
-    new Cmp[T] {
-      type Diff = NonEmptyList[(String, Any)]
-      def apply(l: T, r: T): Option[Diff] =
+  def by[L, R](fn: L ⇒ R)(implicit cmp: Cmp[R]): Cmp[L] = Cmp { (l, r) ⇒ cmp(fn(l), fn(r)) }
+
+  def combine[T](ctx: CaseClass[Cmp, T]): Aux[T, NonEmptyList[(String, Any)]] =
+    Cmp {
+      (l, r) ⇒
         NonEmptyList.fromList(
           ctx
             .parameters
@@ -45,9 +49,8 @@ object Cmp {
     }
 
   def dispatch[T](ctx: SealedTrait[Cmp, T]): Cmp[T] =
-    new Cmp[T] {
-      type Diff = String
-      def apply(l: T, r: T): Option[Diff] =
+    Cmp {
+      (l, r) ⇒
         ctx
           .subtypes
           .flatMap {
@@ -70,14 +73,62 @@ object Cmp {
 
   implicit def gen[T]: Cmp[T] = macro Magnolia.gen[T]
 
+  def apply[T, D](fn: (T, T) ⇒ Option[D]): Aux[T, D] = new Cmp[T] { type Diff = D; def apply(l: T, r: T): Option[D] = fn(l, r) }
+
+  implicit def fromEq[T](implicit e: Eq[T]): Cmp[T] =
+    Cmp {
+      (l, r) ⇒
+        if (e.eqv(l, r))
+          None
+        else
+          Some((l, r))
+    }
+
+  implicit def fromSeq[T](implicit e: Cmp[T]): Cmp[Seq[T]] =
+    Cmp {
+      (l, r) ⇒
+        Ior.fromOptions(
+          NonEmptyList.fromList(
+            l
+              .zip(r)
+              .zipWithIndex
+              .toList
+              .flatMap {
+                case ((l, r), i) ⇒
+                  e(l, r).map { i → _ }.toList
+              }
+          ),
+          if (l.size > r.size)
+            Some(Left(l.drop(r.size)))
+          else if (r.size > l.size)
+            Some(Left(r.drop(l.size)))
+          else
+            None
+        )
+    }
+
+  implicit def fromMap[K, V](implicit v: Cmp[V]): Cmp[Map[K, V]] =
+    Cmp {
+      (l, r) ⇒
+        val lk = l.keySet
+        val rk = r.keySet
+        val  diffs = NonEmptyList.fromList((for { (k, lv) ← l; rv ← r.get(k); d ← v(lv, rv) } yield k → d ) toList)
+        val  lefts = NonEmptyList.fromList((for { (k, v) ← l; if !r.contains(k) } yield k → v) toList)
+        val rights = NonEmptyList.fromList((for { (k, v) ← r; if !l.contains(k) } yield k → v) toList)
+
+        Ior.fromOptions(
+          Ior.fromOptions(lefts, rights),
+          diffs
+        )
+    }
+
   trait syntax {
     self: FunSuite ⇒
-    def eqv[T](l: T, r: T)(implicit ceq: Cmp[T]) = {
+    def eqv[T](l: T, r: T)(implicit ceq: Cmp[T]) =
       ceq(l, r)
-      .foreach {
-        d ⇒
-          fail(d.toString)
-      }
-    }
+        .foreach {
+          d ⇒
+            fail(d.toString)
+        }
   }
 }

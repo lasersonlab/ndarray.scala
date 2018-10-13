@@ -18,16 +18,7 @@ trait Cmp[T] {
   def apply(l: T, r: T): Option[Diff]
 }
 
-trait LowPriCmp {
-  type Aux[T, D] = Cmp[T] { type Diff = D }
-  implicit def fromUpstream[T, D](implicit cmp: t.Cmp.Aux[T, D]): Aux[T, D] =
-    new Cmp[T] {
-      type Diff = D
-      def apply(l: T, r: T): Option[D] = cmp(l, r)
-    }
-}
-object Cmp
-  extends LowPriCmp {
+object Cmp {
   type Typeclass[T] = Cmp[T]
 
   def combine[T](ctx: CaseClass[Cmp, T]): Cmp[T] =

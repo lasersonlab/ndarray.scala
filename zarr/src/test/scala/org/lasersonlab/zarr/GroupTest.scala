@@ -1,14 +1,10 @@
 package org.lasersonlab.zarr
 
-import hammerlab.path._
 import lasersonlab.{ zarr ⇒ z }
 import org.lasersonlab.zarr
-import org.lasersonlab.zarr.Format.`2`
 import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.dtype.DataType
-import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.io.Load
-import org.lasersonlab.zarr.untyped.Struct
 import org.lasersonlab.zarr.utils.Idx
 
 import scala.language.experimental.macros
@@ -21,73 +17,6 @@ class GroupTest
      with Cmp.syntax {
 
   implicit val __int: Idx.T[Int] = Idx.Int
-
-  test("load") {
-    val path = Path("/Users/ryan/c/hdf5-experiments/files/L6_Microglia.ad.32m.zarr")
-
-    val group @
-      Group(
-        arrays,
-        groups,
-        attrs,
-        metadata
-      ) =
-      Group(path) !
-
-    ==(arrays.keySet, Set("X", "obs", "var"))
-    ==(groups.keySet, Set("uns"))
-
-    ==(attrs, None)
-    ==(metadata, Group.Metadata(`2`))
-
-    val `var`  = group[Struct]('var)
-    val `var2` = group ! 'var
-
-    ==(`var`.shape, Dimension(27998) :: Nil)
-
-    val datatype =
-      DataType.untyped.Struct(
-        List(
-          StructEntry(    "index",   long    ),
-          StructEntry("Accession", string(18)),
-          StructEntry(     "Gene",  short    ),
-          StructEntry(   "_LogCV", double    ),
-          StructEntry( "_LogMean", double    ),
-          StructEntry("_Selected",   long    ),
-          StructEntry(   "_Total", double    ),
-          StructEntry(   "_Valid",   long    )
-        )
-      )
-
-    val expected =
-      zarr.Metadata(
-        shape = List(Dimension(27998)),
-        dtype = datatype,
-        fill_value =
-          Struct(
-                "index" → 0L,
-            "Accession" → "",
-                 "Gene" → 0.toShort,
-               "_LogCV" → 0.0,
-             "_LogMean" → 0.0,
-            "_Selected" → 0L,
-               "_Total" → 0.0,
-               "_Valid" → 0L
-          )
-      )
-
-    ==(
-      `var`.metadata,
-      expected
-    )
-
-    ==(
-      `var2`
-        .metadata
-        .as[Struct],  // `var2` was accessed via the "untyped" group.array method
-      expected
-    )
-  }
 
   import DataType.{ untyped ⇒ _, _ }
 
@@ -102,48 +31,50 @@ class GroupTest
           longs = Array(10 :: ⊥)( 1L to 10L : _*),
          floats = Array(20 :: ⊥)( 0f until 10f  by 0.5f : _*),
         doubles = Array(20 :: ⊥)(0.0 until 10.0 by 0.5  : _*),
-        strings = Strings(
-          s2 = {
-            implicit val d = string(2)
-            Array(10 :: ⊥)((1 to 10).map(_.toString): _*)
-          },
-          s3 = {
-            implicit val d = string(3)
-            Array(
-              10 :: 10 :: ⊥,
-               3 ::  4 :: ⊥
-            )(
-              (1 to 100).map(_.toString): _*
-            )
-          }
-        ),
-        structs = Structs(
-          ints =
-            Array(10 :: ⊥)(
-              (1 to 10).map { I4 }: _*
-            ),
-          numbers =
-            Array(
-              10 :: 10 :: ⊥,
-               2 ::  5 :: ⊥
-            )(
-              (
-                for {
-                  r ← 0 until 10
-                  c ← 0 until 10
-                  n = 10 * r + c
-                } yield
-                  Numbers(
-                     short =  n.toShort,
-                       int =  n,
-                      long = n          * 1e9 toLong,
-                     float = n.toFloat  *  10,
-                    double = n.toDouble * 100
-                  )
+        strings =
+          Strings(
+            s2 = {
+              implicit val d = string(2)
+              Array(10 :: ⊥)((1 to 10).map(_.toString): _*)
+            },
+            s3 = {
+              implicit val d = string(3)
+              Array(
+                10 :: 10 :: ⊥,
+                 3 ::  4 :: ⊥
+              )(
+                (1 to 100).map(_.toString): _*
               )
-              : _*
-            )
-        )
+            }
+          ),
+        structs =
+          Structs(
+            ints =
+              Array(10 :: ⊥)(
+                (1 to 10).map { I4 }: _*
+              ),
+            numbers =
+              Array(
+                10 :: 10 :: ⊥,
+                 2 ::  5 :: ⊥
+              )(
+                (
+                  for {
+                    r ← 0 until 10
+                    c ← 0 until 10
+                    n = 10 * r + c
+                  } yield
+                    Numbers(
+                       short = n.toShort,
+                         int = n,
+                        long = n          * 1e9 toLong,
+                       float = n.toFloat  *  10,
+                      double = n.toDouble * 100
+                    )
+                )
+                : _*
+              )
+          )
       )
 
     val actual = tmpDir()
@@ -162,6 +93,7 @@ class GroupTest
     val group =
       Group(
         arrays =
+          // TODO: remove need for explicit types on this Map
           Map[String, Array.??[Int]](
              "shorts" → Array(10 :: Nil)((1  to 10).map(_.toShort) : _*),
                "ints" → Array(10 :: Nil)( 1  to 10                 : _*),
@@ -277,8 +209,6 @@ object GroupTest {
     strings: Strings,
     structs: Structs
   )
-
-  case class Bar(strings: Strings)
 
   case class Strings(
     s2: z.Array[`1`, String],

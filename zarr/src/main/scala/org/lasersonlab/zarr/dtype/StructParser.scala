@@ -35,11 +35,13 @@ object StructParser {
         }
     }
 
+  def fieldNamesMatch(code: String, data: String): Boolean =
+    data.toLowerCase.filter(_ != '_') == code.toLowerCase
+
   implicit def cons[
      Name <: Symbol,
      Head,
-     Tail <: HList,
-    DTail <: HList
+     Tail <: HList
   ](
     implicit
     head: Decoder[Head],
@@ -58,7 +60,7 @@ object StructParser {
               )
             )
           case scala.::(Entry(name, tpe), rest) ⇒
-            if (name == w.value.name)
+            if (fieldNamesMatch(w.value.name, name))
               for {
                 h ←
                   head(

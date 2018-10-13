@@ -101,7 +101,7 @@ package object convert
     compressor: Compressor,
     _chunkSize: Bytes
   ):
-    zarr.Array.??[Int] =
+    zarr.Array.*?[Int] =
     variable match {
       case Variable(
         name,

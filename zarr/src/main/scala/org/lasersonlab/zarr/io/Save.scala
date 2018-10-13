@@ -2,14 +2,14 @@ package org.lasersonlab.zarr.io
 
 import cats.implicits._
 import hammerlab.either._
-import hammerlab.option._
 import hammerlab.path._
 import io.circe.Encoder
 import lasersonlab.xscala._
 import magnolia._
-import org.lasersonlab.zarr.pprint
-import scala.language.experimental.macros
+import org.lasersonlab.zarr.circe.auto._
+import org.lasersonlab.zarr.{ Group, pprint }
 
+import scala.language.experimental.macros
 import scala.util.Try
 
 trait Save[T] {
@@ -17,25 +17,29 @@ trait Save[T] {
 }
 
 trait LowPrioritySave {
+  self: Save.type ⇒
 
   type Typeclass[T] = Save[T]
 
   /** defines equality for this case class in terms of equality for all its parameters */
   def combine[T](ctx: CaseClass[Save, T]): Save[T] =
     new Save[T] {
-      def apply(value1: T, dir: Path) =
-        ctx
-          .parameters
-          .toList
-          .map {
-            param ⇒
-              param.typeclass(
-                param.dereference(value1),
-                dir / param.label
-              )
-          }
-          .sequence
-          .map { _ ⇒ () }
+      def apply(t: T, dir: Path) =
+        (
+          Group.Metadata().save(dir) ::
+          ctx
+            .parameters
+            .toList
+            .map {
+              param ⇒
+                param.typeclass(
+                  param.dereference(t),
+                  dir / param.label
+                )
+            }
+        )
+        .sequence
+        .map { _ ⇒ () }
     }
 
   /** choose which equality subtype to defer to
@@ -44,11 +48,11 @@ trait LowPrioritySave {
    *  method, we check that the second parameter is the same type. */
   def dispatch[T](ctx: SealedTrait[Save, T]): Save[T] =
     new Save[T] {
-      def apply(value1: T, dir: Path) =
-        ctx.dispatch(value1) {
+      def apply(t: T, dir: Path) =
+        ctx.dispatch(t) {
           sub ⇒
             sub.typeclass(
-              sub.cast(value1),
+              sub.cast(t),
               dir
             )
         }
@@ -58,7 +62,7 @@ trait LowPrioritySave {
   implicit def gen[T]: Save[T] = macro Magnolia.gen[T]
 }
 
-trait BasenameSave
+object Save
   extends LowPrioritySave {
 
   implicit def withBasenameAsJSON[T](
@@ -81,10 +85,6 @@ trait BasenameSave
         }
         .toEither
     }
-}
-
-object Save
-  extends BasenameSave {
 
   implicit def opt[T](implicit save: Save[T]): Save[Option[T]] =
     new Save[Option[T]] {

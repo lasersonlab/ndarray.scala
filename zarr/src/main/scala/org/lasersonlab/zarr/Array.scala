@@ -80,7 +80,7 @@ trait Array {
    * }}}
    *
    * This is necessary due to some unification limitations relating to the various aliases ([[Array.?]],
-   * [[Array.Aux]], [[Array.??]], etc.) used to specify different subsets of an [[Array]]'s dependent types' that are
+   * [[Array.Aux]], [[Array.*?]], etc.) used to specify different subsets of an [[Array]]'s dependent types' that are
    * known at a given call-site
    */
   def t: Array.T[this.T] = this
@@ -181,7 +181,7 @@ object Array {
   type Aux[_ShapeT[_], _Idx, _A[_], _Chunk[_], _T] = Array { type ShapeT[U] = _ShapeT[U]; type Idx = _Idx ; type T = _T ; type A[U] = _A[U]; type Chunk[U] = _Chunk[U] }
   type  Of[_ShapeT[_], _Idx,                   _T] = Array { type ShapeT[U] = _ShapeT[U]; type Idx = _Idx ; type T = _T }
   type   ?[_ShapeT[_], _Idx                      ] = Array { type ShapeT[U] = _ShapeT[U]; type Idx = _Idx }  // element-type unknown
-  type  ??[            _Idx                      ] = Array { type ShapeT[U] =    List[U]; type Idx = _Idx }  // element-type and number of dimensions unknown
+  type  *?[            _Idx                      ] = Array { type ShapeT[U] =    List[U]; type Idx = _Idx }  // element-type and number of dimensions unknown
 
   /**
    * De-structure an [[Array]] into its [[Metadata]], [[Attrs]], and [[Array.chunks]] members, preserving whatever is
@@ -484,7 +484,7 @@ object Array {
     idx: Idx
   ):
     Exception |
-    Array.??[idx.T]
+    Array.*?[idx.T]
   =
     metadata.?(dir)
       .flatMap {
@@ -500,7 +500,7 @@ object Array {
             metadata.t
           )
           .map {
-            arr ⇒ arr: Array.??[idx.T]
+            arr ⇒ arr: Array.*?[idx.T]
           }
       }
 

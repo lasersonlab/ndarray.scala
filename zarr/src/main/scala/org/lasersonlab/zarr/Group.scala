@@ -14,16 +14,16 @@ import org.lasersonlab.zarr.utils.Idx
 import scala.util.Try
 
 case class Group[Idx](
-    arrays: Map[String, Array.??[Idx]] =      Map.empty[String, Array.??[Idx]],
-    groups: Map[String, Group   [Idx]] =      Map.empty[String, Group   [Idx]],
-     attrs:              Option[Attrs] =           None,
-  metadata:             Group.Metadata = Group.Metadata()
+  arrays: Map[String, Array.*?[Idx]] =      Map.empty[String, Array.*?[Idx]],
+  groups: Map[String, Group   [Idx]] =      Map.empty[String, Group   [Idx]],
+  attrs:              Option[Attrs]  =           None,
+  metadata:          Group.Metadata = Group.Metadata()
 )(
   implicit
   idx: Idx.T[Idx]
 ) {
-  def     !   (name: Str): Array.??[      Idx   ] = arrays(name)
-  def array   (name: Str): Array.??[      Idx   ] = arrays(name)
+  def     !   (name: Str): Array.*?[      Idx   ] = arrays(name)
+  def array   (name: Str): Array.*?[      Idx   ] = arrays(name)
   def apply[T](name: Str): Array.Of[List, Idx, T] = arrays(name).as[T]
   def     →[T](name: Str): Array.Of[List, Idx, T] = arrays(name).as[T]
 
@@ -63,7 +63,7 @@ object Group {
       metadata ← dir.load[Metadata]
          attrs ← dir.load[Option[Attrs]]
 
-      arrays = Map.newBuilder[String, Array.??[Idx]]
+      arrays = Map.newBuilder[String, Array.*?[Idx]]
       groups = Map.newBuilder[String, Group   [Idx]]
 
       files ←

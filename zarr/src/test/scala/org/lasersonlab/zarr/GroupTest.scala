@@ -1,6 +1,7 @@
 package org.lasersonlab.zarr
 
 import lasersonlab.{ zarr ⇒ z }
+import org.hammerlab.paths.Path
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.dtype.DataType
@@ -12,23 +13,43 @@ class GroupTest
      with HasGetOps
      with Load.syntax
      with zarr.cmp.all
-     with Cmp.syntax {
+     with Cmp.syntax
+     with cmp.path {
 
   implicit val __int: Idx.T[Int] = Idx.Int
 
   import DataType.{ untyped ⇒ _, _ }
 
+  val bytes =
+    for {
+      x ← 1 to  50
+      y ← 1 to 100
+      z ← 1 to 200
+    } yield (
+      if (y % 2 == 0) '0' else
+      if (z % 3 == 0) 'A' else
+      if (x % 2 == 0) 'z' else
+                      ' '
+    )
+    .toByte
+
+  val  shorts = (1  to 10).map(_.toShort)
+  val    ints =  1  to 10
+  val   longs =  1L to 10L
+  val  floats =  0f until 10f  by 0.5f
+  val doubles = 0.0 until 10.0 by 0.5
   test("typed") {
-    import GroupTest.{ == ⇒ _, _ }
     import lasersonlab.shapeless.slist.{ == ⇒ _, _ }
+    import GroupTest.{ == ⇒ _, _ }
 
     val group =
       Foo(
-         shorts = Array(10 :: ⊥)((1  to 10).map(_.toShort) : _*),
-           ints = Array(10 :: ⊥)( 1  to 10  : _*),
-          longs = Array(10 :: ⊥)( 1L to 10L : _*),
-         floats = Array(20 :: ⊥)( 0f until 10f  by 0.5f : _*),
-        doubles = Array(20 :: ⊥)(0.0 until 10.0 by 0.5  : _*),
+          bytes = Array(50 :: 100 :: 200 :: ⊥, 20 :: 50 :: 110 :: ⊥)(   bytes: _* ),
+         shorts = Array(              10 :: ⊥                      )(  shorts: _* ),
+           ints = Array(              10 :: ⊥                      )(    ints: _* ),
+          longs = Array(              10 :: ⊥                      )(   longs: _* ),
+         floats = Array(              20 :: ⊥                      )(  floats: _* ),
+        doubles = Array(              20 :: ⊥                      )( doubles: _* ),
         strings =
           Strings(
             s2 = {
@@ -76,13 +97,18 @@ class GroupTest
       )
 
     val actual = tmpDir()
+
     group.save(actual).!
+
+    val expectedPath = resource("grouptest.zarr")
+
+    eqv(actual, expectedPath)
 
     val group2 = actual.load[Foo] !
 
     eqv(group, group2)
 
-    val expected = resource("grouptest.zarr").load[Foo] !
+    val expected = expectedPath.load[Foo] !
 
     eqv(group, expected)
   }
@@ -92,18 +118,19 @@ class GroupTest
       Group(
         arrays =
           // TODO: remove need for explicit types on this Map
-          Map[String, Array.??[Int]](
-             "shorts" → Array(10 :: Nil)((1  to 10).map(_.toShort) : _*),
-               "ints" → Array(10 :: Nil)( 1  to 10                 : _*),
-              "longs" → Array(10 :: Nil)( 1L to 10L                : _*),
-             "floats" → Array(20 :: Nil)( 0f until 10f  by 0.5f    : _*),
-            "doubles" → Array(20 :: Nil)(0.0 until 10.0 by 0.5     : _*)
+          Map[String, Array.*?[Int]](
+              "bytes" → Array(50 :: 100 :: 200 :: Nil, 20 :: 50 :: 110 :: Nil)(   bytes: _* ),
+             "shorts" → Array(              10 :: Nil                        )(  shorts: _* ),
+               "ints" → Array(              10 :: Nil                        )(    ints: _* ),
+              "longs" → Array(              10 :: Nil                        )(   longs: _* ),
+             "floats" → Array(              20 :: Nil                        )(  floats: _* ),
+            "doubles" → Array(              20 :: Nil                        )( doubles: _* )
           ),
         groups =
           Map(
             "strings" →
               Group(
-                Map[String, Array.??[Int]](
+                Map[String, Array.*?[Int]](
                   "s2" → {
                     implicit val d = string(2)
                     Array(10 :: Nil)((1 to 10).map(_.toString): _*)
@@ -121,7 +148,7 @@ class GroupTest
               ),
             "structs" →
               Group(
-                Map[String, Array.??[Int]](
+                Map[String, Array.*?[Int]](
                   "ints" → {
                     implicit val datatype =
                       DataType.untyped.Struct(
@@ -199,6 +226,7 @@ object GroupTest {
   import lasersonlab.shapeless.slist._
 
   case class Foo(
+      bytes: z.Array[`3`,   Byte],
      shorts: z.Array[`1`,  Short],
        ints: z.Array[`1`,    Int],
       longs: z.Array[`1`,   Long],

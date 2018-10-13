@@ -27,13 +27,13 @@ case class Chunk[
   ShapeT[_] : Foldable : Zip,
   T
 ](
-  path: Path,
-  shape: ShapeT[Idx],
-  idx: ShapeT[Idx],
-  size: Int,
-  strides: ShapeT[Idx],
-  compressor: Compressor,
-  sizeHint: Opt[Int]
+        path:       Path     ,
+       shape:     ShapeT[Idx],
+         idx:     ShapeT[Idx],
+        size:        Int     ,
+     strides:     ShapeT[Idx],
+  compressor: Compressor     ,
+    sizeHint:        Opt[Int]
 )(
   implicit
   val dtype: DataType.Aux[T]
@@ -44,18 +44,18 @@ case class Chunk[
   lazy val bytes = {
     val bytes = compressor(path, size * dtype.size)
     sizeHint
-    .fold {
-      require(
-        size * dtype.size <= bytes.length,
-        s"Expected at least ${size * dtype.size} bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
-      )
-    } {
-      expected ⇒
+      .fold {
         require(
-          expected == bytes.length,
-          s"Expected $expected bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
+          size * dtype.size <= bytes.length,
+          s"Expected at least ${size * dtype.size} bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
         )
-    }
+      } {
+        expected ⇒
+          require(
+            expected == bytes.length,
+            s"Expected $expected bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
+          )
+      }
     bytes
   }
 
@@ -64,15 +64,16 @@ case class Chunk[
   @inline def apply(idx: Int): T = dtype.read(buff, idx)
 
   def apply(idx: Shape): T =
-    dtype.read(
-      buff,
-      idx
-        .zip(strides)
-        .foldLeft(0) {
-          case (sum, (idx, stride)) ⇒
-            sum + idx * stride
-        }
-    )
+    dtype
+      .read(
+        buff,
+        idx
+          .zip(strides)
+          .foldLeft(0) {
+            case (sum, (idx,  stride)) ⇒
+                  sum + idx * stride
+          }
+      )
 
   def foldLeft[V](base: V)(fn: (V, T) ⇒ V): V = {
     buff.clear()

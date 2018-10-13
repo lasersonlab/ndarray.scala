@@ -54,14 +54,14 @@ trait StructDecoder {
     new circe.Decoder[Aux[S]] {
       def apply(c: HCursor): Return[S] =
         c
-        .as[Vector[Entry]]
+          .as[Vector[Entry]]
           .flatMap {
             entries ⇒
-              // TODO: verify field-names (optionally?)
               l(entries.toList)
-                .map {
+                .bimap(
+                  DecodingFailure(_, c.history),
                   struct(g, _)
-                }
+                )
           }
     }
 }

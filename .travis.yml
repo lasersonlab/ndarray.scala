@@ -23,7 +23,8 @@ cache:
   - "$HOME/.coursier"
   - "$HOME/lib"
 
-after_success: bash <(curl -s https://codecov.io/bash)
+after_success:
+- if [ "$TRAVIS_SCALA_VERSION" = "2.12.7" ]; then bash <(curl -s https://codecov.io/bash) fi
 
 before_cache:
 # Tricks to avoid unnecessary cache updates

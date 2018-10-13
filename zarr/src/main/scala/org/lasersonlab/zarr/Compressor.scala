@@ -286,10 +286,10 @@ object Compressor {
     SimpleArgParser(
       "Compressor to use on zarr chunks",
       {
-        case ZLib.parse(zlib) ⇒ Right(zlib)
+        case  ZLib.parse( zlib) ⇒ Right( zlib)
         case Blosc.parse(blosc) ⇒ Right(blosc)
-        case "none" ⇒ Right(None)
-        case s ⇒ Left(UnrecognizedValue(s))
+        case             "none" ⇒ Right( None)
+        case                  s ⇒  Left(UnrecognizedValue(s))
       }
     )
 }

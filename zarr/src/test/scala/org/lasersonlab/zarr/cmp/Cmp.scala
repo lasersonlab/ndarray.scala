@@ -1,5 +1,6 @@
 package org.lasersonlab.zarr.cmp
 
+import cats.Eq
 import cats.data.NonEmptyList
 import magnolia._
 import org.hammerlab.{ test ⇒ t }
@@ -69,6 +70,18 @@ object Cmp {
     }
 
   implicit def gen[T]: Cmp[T] = macro Magnolia.gen[T]
+
+  implicit def fromEq[T](implicit e: Eq[T]): Cmp[T] = ???
+
+  implicit def fromSeq[T](implicit e: Cmp[T]): Cmp[Seq[T]] = ???
+
+//  implicit val   byte: Cmp[  Byte] = ???
+//  implicit val  short: Cmp[ Short] = ???
+//  implicit val    int: Cmp[   Int] = ???
+//  implicit val   long: Cmp[  Long] = ???
+//  implicit val  float: Cmp[ Float] = ???
+//  implicit val double: Cmp[Double] = ???
+//  implicit val string: Cmp[String] = ???
 
   trait syntax {
     self: FunSuite ⇒

@@ -1,5 +1,6 @@
 package org.lasersonlab.zarr
 
+import cats.Eq
 import circe.Decoder.Result
 import circe._
 import shapeless.{ CNil, Generic }
@@ -31,4 +32,6 @@ object Filter {
       override def   to(t: Filter):   CNil = ???
       override def from(r:   CNil): Filter = ???
     }
+
+  implicit val _eq: Eq[Filter] = ???
 }

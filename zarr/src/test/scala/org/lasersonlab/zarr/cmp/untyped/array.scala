@@ -23,7 +23,7 @@ object array {
 
     implicit def arrayIdxsCmp[Idx](
       implicit
-      dim: Cmp[Dimension[Idx]]
+      dim: zarr.cmp.Cmp[Dimension[Idx]]
     ):
       Cmp[
         Array.??[Idx]
@@ -37,8 +37,8 @@ object array {
       T
     ](
       implicit
-      dim: Cmp[Shape[Dimension[Int]]],
-      elem: Cmp[T]
+      dim: zarr.cmp.Cmp[Shape[Dimension[Int]]],
+      elem: zarr.cmp.Cmp[T]
     ):
     zarr.cmp.Cmp[
       z.Array[
@@ -96,12 +96,12 @@ object array {
       }
     }
 
-      def arrayShapedCmp[
+    def arrayShapedCmp[
       Shape[_],
       Idx
     ](
       implicit
-      dim: Cmp[Shape[Dimension[Idx]]]
+      dim: zarr.cmp.Cmp[Shape[Dimension[Idx]]]
     ):
       Cmp[
         Array.?[

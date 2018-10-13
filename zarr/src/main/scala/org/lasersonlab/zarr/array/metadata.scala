@@ -40,7 +40,7 @@ object metadata {
       val       order:           Order    =     C
       val  fill_value:       FillValue[T] =  Null
       val zarr_format:          Format    =    `2`
-      val     filters:  Opt[Seq[Filter]]  =  None
+      val     filters:  Option[Seq[Filter]]  =  None
 
       def d: DataType.Aux[T] = dtype
       final type T = dtype.T
@@ -138,13 +138,13 @@ object metadata {
       _Idx,
         _T
   ](
-                       shape: _Shape[Dimension[_Idx]],
-                       dtype:   DataType.Aux[_T],
-    override val  compressor:     Compressor     = Blosc(),
-    override val       order:          Order     = C,
-    override val  fill_value:      FillValue[_T] = Null,
-    override val zarr_format:         Format     = `2`,
-    override val     filters: Opt[Seq[Filter]]   = None
+                       shape:    _Shape[Dimension[_Idx]],
+                       dtype:      DataType.Aux[_T],
+    override val  compressor:        Compressor     = Blosc(),
+    override val       order:             Order     = C,
+    override val  fill_value:         FillValue[_T] = Null,
+    override val zarr_format:            Format     = `2`,
+    override val     filters: Option[Seq[Filter]]   = None
   )
   extends Interface
   {

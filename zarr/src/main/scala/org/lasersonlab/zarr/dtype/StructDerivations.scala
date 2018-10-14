@@ -24,7 +24,7 @@ trait StructDerivations {
     Tail <: HList
   ](
     implicit
-    head: Aux[Head],
+    head: DataType[Head],
     name: Witness.Aux[Name],
     tail: StructList[Tail]
   ):
@@ -60,6 +60,6 @@ trait StructDerivations {
     g: LabelledGeneric.Aux[S, L],
     l: StructList[L]
   ):
-    Aux[S] =
+    DataType[S] =
     struct[S, L](l)
 }

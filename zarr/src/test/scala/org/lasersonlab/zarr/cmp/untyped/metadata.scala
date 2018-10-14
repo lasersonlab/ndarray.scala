@@ -14,7 +14,7 @@ object metadata {
   def cmpT[T](implicit t: Cmp[T]): Cmp[T] = t
 
   import dtype.{ DataType ⇒ dt }
-  def cmpFromDatatype[T](d: DataType.Aux[T]): Cmp[T] =
+  def cmpFromDatatype[T](d: DataType[T]): Cmp[T] =
     d match {
       case d @ dt.  byte      ⇒ cmpT
       case d @ dt. short  (_) ⇒ cmpT
@@ -29,7 +29,7 @@ object metadata {
 
   implicit def fillValueCanEq[T](
     implicit
-    d: DataType.Aux[T]
+    d: DataType[T]
   ):
     Cmp[
       FillValue[T]

@@ -11,7 +11,7 @@ abstract class Type {
   type T
   def shape: List[Dimension[Int]]
   def sectionShape: Array[Int]
-  def datatype: DataType.Aux[T]
+  def datatype: DataType[T]
   def fill_value: FillValue[T]
   def next(it: IndexIterator): T
   implicit def encoder: FillValue.Encoder[T]
@@ -20,7 +20,7 @@ object Type {
   def make[_T](
     _shape: List[Dimension[Int]],
     _sectionShape: Array[Int],
-    _datatype: DataType.Aux[_T],
+    _datatype: DataType[_T],
     _fill_value: FillValue[_T],
     _next: IndexIterator ⇒ _T
   )(

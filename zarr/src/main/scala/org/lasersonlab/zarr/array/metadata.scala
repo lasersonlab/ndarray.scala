@@ -35,14 +35,14 @@ object metadata {
      */
     sealed trait Interface {
       val       shape: Shape[Dimension[Idx]]
-      val       dtype:        DataType
+      val       dtype:        DataType.?
       val  compressor:      Compressor    = Blosc()
       val       order:           Order    =     C
       val  fill_value:       FillValue[T] =  Null
       val zarr_format:          Format    =    `2`
       val     filters:  Option[Seq[Filter]]  =  None
 
-      def d: DataType.Aux[T] = dtype.t
+      def d: DataType[T] = dtype.t
       final type T = dtype.T
       type Shape[_]
       type Idx
@@ -108,12 +108,12 @@ object metadata {
         def apply(c: HCursor): Result[Shaped[Shape, Idx]] =
           for {
               dimensions ←   c.as[Shape[Dimension[idx.T]]]
-                  _dtype ←   c.downField(      "dtype").as[DataType]
+                  _dtype ←   c.downField(      "dtype").as[DataType.?]
              _compressor ←   c.downField( "compressor").as[Compressor]
                   _order ←   c.downField(      "order").as[Order]
             _zarr_format ←   c.downField("zarr_format").as[Format]
              _fill_value ← {
-                             implicit val d: DataType.Aux[_dtype.T] = _dtype.t
+                             implicit val d: DataType[_dtype.T] = _dtype.t
                              c.downField("fill_value").as[FillValue[_dtype.T]]
                            }
           } yield
@@ -139,7 +139,7 @@ object metadata {
         _T
   ](
                        shape:    _Shape[Dimension[_Idx]],
-                       dtype:      DataType.Aux[_T],
+                       dtype:      DataType[_T],
     override val  compressor:        Compressor     = Blosc(),
     override val       order:             Order     = C,
     override val  fill_value:         FillValue[_T] = Null,
@@ -158,7 +158,7 @@ object metadata {
 
     // Implicit unwrappers for some fields
     implicit def _compressor[S[_]   ](implicit md: Metadata[S, _, _]):      Compressor = md.compressor
-    implicit def _datatype  [S[_], T](implicit md: Metadata[S, _, T]): DataType.Aux[T] = md.     dtype
+    implicit def _datatype  [S[_], T](implicit md: Metadata[S, _, T]): DataType[T] = md.     dtype
 
     def apply[
           T

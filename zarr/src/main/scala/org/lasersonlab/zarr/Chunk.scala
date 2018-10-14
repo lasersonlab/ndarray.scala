@@ -37,7 +37,7 @@ case class Chunk[
     sizeHint:        Opt[Int]
 )(
   implicit
-  val dtype: DataType.Aux[T]
+  val dtype: DataType[T]
 ) {
 
   type Shape = ShapeT[Idx]
@@ -114,7 +114,7 @@ object Chunk {
             : Scannable
             : Zip,
          T
-            : DataType.Aux
+            : DataType
   ](
           path: Path,
          shape: ShapeT[Idx],

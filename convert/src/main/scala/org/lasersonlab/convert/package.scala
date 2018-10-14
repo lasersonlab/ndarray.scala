@@ -125,7 +125,7 @@ package object convert
           else
             _chunkSize.bytes.toInt
 
-        def dimensions(shape: Seq[Int], dtype: DataType) =
+        def dimensions(shape: Seq[Int], dtype: DataType.?) =
           shape
             .map {
               shape ⇒

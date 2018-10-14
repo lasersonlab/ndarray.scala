@@ -183,7 +183,7 @@ object Array {
   )(
     implicit
       // TODO: implicitly construct the whole metadata at call-site
-       datatype:      DataType.Aux[_T],
+       datatype:          DataType[_T],
      compressor:        Compressor     = Blosc(),
           order:             Order     = C,
      fill_value:         FillValue[_T] = Null,
@@ -293,7 +293,7 @@ object Array {
    implicit
       indices:    Indices    [A, Shape],
           idx:        Idx.  T[     Idx],
-     datatype:   DataType.Aux[      _T],
+     datatype:   DataType[      _T],
    compressor: Compressor
   ):
     Exception |

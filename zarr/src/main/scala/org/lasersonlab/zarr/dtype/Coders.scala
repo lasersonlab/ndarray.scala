@@ -51,7 +51,7 @@ trait StructDecoder {
     l: StructParser[L]
   ):
   Decoder[S] =
-    new circe.Decoder[Aux[S]] {
+    new circe.Decoder[DataType[S]] {
       def apply(c: HCursor): Return[S] =
         c
           .as[Vector[Entry]]
@@ -69,15 +69,15 @@ trait StructDecoder {
 trait Coders
   extends StructDecoder {
 
-  type Decoder[T] = circe.Decoder[Aux[T]]
-  type Encoder[T] = circe.Encoder[Aux[T]]
+  type Decoder[T] = circe.Decoder[DataType[T]]
+  type Encoder[T] = circe.Encoder[DataType[T]]
 
   /**
    * Decode a [[DataType]] when its constituent type is not known ahead of time
    */
-  implicit val decoder: circe.Decoder[DataType] =
-    new circe.Decoder[DataType] {
-      def apply(c: HCursor): Result[DataType] =
+  implicit val decoder: circe.Decoder[DataType.?] =
+    new circe.Decoder[DataType.?] {
+      def apply(c: HCursor): Result[DataType.?] =
         c
           .value
           .as[String]
@@ -90,7 +90,7 @@ trait Coders
   /**
    * Encode any datatype as JSON
    */
-  implicit def dataTypeEncoder[D <: DataType]: circe.Encoder[D] =
+  implicit def dataTypeEncoder[D <: DataType.?]: circe.Encoder[D] =
     new circe.Encoder[D] {
       def seq(entries: Seq[StructEntry]): Json =
         Json.arr(
@@ -112,20 +112,20 @@ trait Coders
         }
     }
 
-  type Return[T] = DecodingFailure | DataType.Aux[T]
+  type Return[T] = DecodingFailure | DataType[T]
 
   def make[T](
     fn:
       PartialFunction[
         List[Char],
-        DataType.Aux[T]
+        DataType[T]
       ]
   )(
     implicit
     name: Name[T]
   ):
     Decoder[T] =
-    new circe.Decoder[Aux[T]] {
+    new circe.Decoder[DataType[T]] {
       @inline def apply(c: HCursor): Return[T] =
         c
           .value
@@ -163,7 +163,7 @@ trait Coders
 
   import org.lasersonlab.zarr.{ untyped ⇒ u }
   implicit val untypedStructDecoder: Decoder[u.Struct] =
-    new circe.Decoder[Aux[u.Struct]] {
+    new circe.Decoder[DataType[u.Struct]] {
       override def apply(c: HCursor): Result[struct.?] =
         c
           .value

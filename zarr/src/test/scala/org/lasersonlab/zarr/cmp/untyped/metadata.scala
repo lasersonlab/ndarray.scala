@@ -4,7 +4,7 @@ import cats.implicits._
 import hammerlab.either._
 import hammerlab.option._
 import org.lasersonlab.zarr.FillValue.NonNull
-import org.lasersonlab.zarr.array.metadata.untyped.Shaped
+import org.lasersonlab.zarr.array.metadata.?
 import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.dtype._
 import org.lasersonlab.zarr.{ Dimension, FillValue, Metadata, dtype }
@@ -50,13 +50,13 @@ object metadata {
       dim: Cmp[Shape[Dimension[Idx]]]
     ):
       Cmp[
-        Shaped[
+        ?[
           Shape,
           Idx
         ]
       ] = {
       Cmp[
-        Shaped[
+        ?[
           Shape,
           Idx
         ],
@@ -86,7 +86,7 @@ object metadata {
       dim: Cmp[Shape[Dimension[Idx]]]
     ):
       Cmp[
-        Shaped[
+        ?[
           Shape,
           Idx
         ]

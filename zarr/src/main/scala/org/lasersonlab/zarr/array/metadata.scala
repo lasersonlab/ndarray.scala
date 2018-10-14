@@ -1,17 +1,15 @@
 package org.lasersonlab.zarr.array
 
 import cats.Traverse
-import hammerlab.option.Opt
 import hammerlab.path.Path
 import org.lasersonlab.circe.{ DecoderK, EncoderK }
 import org.lasersonlab.shapeless.Zip
-import org.lasersonlab.zarr
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr._
-import org.lasersonlab.zarr.array.metadata.untyped.{ Interface, Shaped }
+import org.lasersonlab.zarr.array.metadata.Metadata.basename
 import org.lasersonlab.zarr.circe.Decoder.Result
 import org.lasersonlab.zarr.circe._
 import org.lasersonlab.zarr.circe.parser._
@@ -22,58 +20,53 @@ import shapeless.the
 
 object metadata {
 
-  type ? = untyped.Interface
+  /**
+   * Base-trait for [[Metadata]] where type-params are type-members, allowing for construction in situations where
+   * relevant types (particularly [[Metadata.T]], the element-type) are not known ahead of time.
+   *
+   * The only implementation of this interface is [[Metadata]], and generally the interface should not be used
+   * directly outside this file
+   */
+  sealed trait Interface {
+    val       shape: Shape[Dimension[Idx]]
+    val       dtype:           DataType.?
+    val  compressor:         Compressor    = Blosc()
+    val       order:              Order    =     C
+    val  fill_value:          FillValue[T] =  Null
+    val zarr_format:             Format    =    `2`
+    val     filters:  Option[Seq[Filter]]  =  None
 
-  val ? = untyped
-  object untyped {
-    /**
-     * Base-trait for [[Metadata]] where type-params are type-members, allowing for construction in situations where
-     * relevant types (particularly [[Metadata.T]], the element-type) are not known ahead of time.
-     *
-     * The only implementation of this interface is [[Metadata]], and generally the interface should not be used
-     * directly outside this file
-     */
-    sealed trait Interface {
-      val       shape: Shape[Dimension[Idx]]
-      val       dtype:        DataType.?
-      val  compressor:      Compressor    = Blosc()
-      val       order:           Order    =     C
-      val  fill_value:       FillValue[T] =  Null
-      val zarr_format:          Format    =    `2`
-      val     filters:  Option[Seq[Filter]]  =  None
+    def d: DataType[T] = dtype.t
+    final type T = dtype.T
+    type Shape[_]
+    type Idx
 
-      def d: DataType[T] = dtype.t
-      final type T = dtype.T
-      type Shape[_]
-      type Idx
+    /** Narrow an [[Interface]] to its underlying [[Metadata]] */
+    def t =
+      this match {
+        case m: Metadata[Shape, Idx, T] ⇒ m
+      }
+  }
 
-      /** Allows a caller to coerce the type of a [[metadata.?]] to include its constituent types */
-      def t =
-        this match {
-          case m: Metadata[Shape, Idx, T] ⇒ m
-        }
-      def as[_T] = this.asInstanceOf[zarr.Metadata[Shape, Idx, _T]]
+  type ?[_Shape[_], _I] =
+    Interface {
+      type Shape[U] = _Shape[U]
+      type Idx = _I
     }
 
-    type Shaped[_Shape[_], _I] =
-      ? {
-        type Shape[U] = _Shape[U]
-        type Idx = _I
-      }
-
-    import Metadata.basename
-
+  val ? = Interface
+  object Interface {
     /**
-     * Load an [[Shaped "untyped"]] [[Metadata]] from the path to a containing directory
+     * Load an [[? "untyped"]] [[Metadata]] from the path to a containing directory
      *
      * @param dir directory containing `.zarray` metadata file
      * @param idx "index" type to use for dimensions' coordinates
      */
-    def apply(dir: Path)(implicit idx: Idx): Exception | Shaped[List, idx.T] =
+    def apply(dir: Path)(implicit idx: Idx): Exception | ?[List, idx.T] =
       dir ? basename flatMap {
         path ⇒
           decode[
-            Shaped[
+            ?[
               List,
               idx.T
             ]
@@ -92,20 +85,20 @@ object metadata {
       idx: Idx
     ):
       Decoder[
-        Shaped[
+        ?[
           Shape,
           idx.T
         ]
       ] =
       new Decoder[
-        Shaped[
+        ?[
           Shape,
           idx.T
         ]
       ] {
         type Idx = idx.T
         import Dimensions.decodeList
-        def apply(c: HCursor): Result[Shaped[Shape, Idx]] =
+        def apply(c: HCursor): Result[?[Shape, Idx]] =
           for {
               dimensions ←   c.as[Shape[Dimension[idx.T]]]
                   _dtype ←   c.downField(      "dtype").as[DataType.?]
@@ -117,7 +110,7 @@ object metadata {
                              c.downField("fill_value").as[FillValue[_dtype.T]]
                            }
           } yield
-            new Metadata[Shape, Idx, _dtype.T](
+            Metadata[Shape, Idx, _dtype.T](
               dimensions,
               _dtype.t,
               _compressor,
@@ -129,7 +122,7 @@ object metadata {
                 .as[Seq[Filter]]
                 .toOption
             )
-            : Shaped[Shape, Idx]
+            : ?[Shape, Idx]
       }
   }
 
@@ -188,9 +181,7 @@ object metadata {
             ]
           ](
             path.read
-          )/*(
-            decoder
-          )*/
+          )
       }
 
     /**
@@ -286,21 +277,21 @@ object metadata {
         Idx  : Encoder
     ]:
       Encoder[
-        Shaped[
+        ?[
           Shape,
           Idx
         ]
       ]
     =
       new Encoder[
-        Shaped[
+        ?[
           Shape,
           Idx
         ]
       ] {
-        @inline def apply(m: Shaped[Shape, Idx]): Json = {
+        @inline def apply(m: ?[Shape, Idx]): Json = {
           implicit val d = m.d
-          FillValue.Encoder.fromDataType[m.T](d.t)
+          //FillValue.Encoder.fromDataType[m.T](d.t)
           encoder[Shape, Idx, m.T].apply(m.t)
         }
       }

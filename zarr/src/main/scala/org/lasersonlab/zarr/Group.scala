@@ -1,10 +1,7 @@
 package org.lasersonlab.zarr
 
 import java.io.IOException
-import java.nio.file.{ Files, StandardCopyOption }
-import java.nio.file.Files.createTempDirectory
 
-import hammerlab.option._
 import hammerlab.str._
 import org.hammerlab.paths.Path
 import org.lasersonlab.zarr.Format._
@@ -140,14 +137,13 @@ object Group {
 
   implicit def save[Idx: Idx.T]: Save[Group[Idx]] =
     new Save[Group[Idx]] {
-      def apply(t: Group[Idx], dir: Path): Throwable | Unit = {
-        val tmp = Path(createTempDirectory(s"tmp-${dir.basename}"))
+      def direct(t: Group[Idx], dir: Path): Throwable | Unit = {
         val groups =
           (
             for {
               (name, group) ← t.groups.toList
             } yield
-              group.save(tmp / name)
+              group.save(dir / name)
           )
           .sequence
 
@@ -156,21 +152,15 @@ object Group {
             for {
               (name, array) ← t.arrays.toList
             } yield
-              array.aux.save(tmp / name)
+              array.aux.save(dir / name)
           )
           .sequence
 
         for {
           _ ← groups
           _ ← arrays
-          _ ← t.   attrs.save(tmp)
-          _ ← t.metadata.save(tmp)
-          _ ←
-            Try {
-              import StandardCopyOption._
-              Files.move(tmp, dir, REPLACE_EXISTING, ATOMIC_MOVE)
-            }
-            .toEither
+          _ ← t.   attrs.save(dir)
+          _ ← t.metadata.save(dir)
         } yield
           ()
       }

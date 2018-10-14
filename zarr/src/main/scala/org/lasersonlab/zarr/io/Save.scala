@@ -1,5 +1,9 @@
 package org.lasersonlab.zarr.io
 
+import java.nio.file.Files
+import java.nio.file.Files.{ createTempDirectory, move }
+import java.nio.file.StandardCopyOption._
+
 import cats.implicits._
 import hammerlab.either._
 import hammerlab.path._
@@ -9,12 +13,43 @@ import magnolia._
 import org.lasersonlab.zarr.Group
 import org.lasersonlab.zarr.circe.auto._
 import org.lasersonlab.zarr.circe.pprint
+import org.lasersonlab.zarr.io.Save.Atomic
+import org.lasersonlab.zarr.io.Save.Atomic._
 
 import scala.language.experimental.macros
 import scala.util.Try
 
 trait Save[T] {
-  def apply(t: T, dir: Path): Throwable | Unit
+  def apply(t: T, path: Path)(implicit atomic: Atomic): Throwable | Unit =
+    if (atomic == yes) {
+      val tmp = Path(createTempDirectory(s"tmp-${path.basename}"))
+      val out = tmp / 'out
+      val result =
+        for {
+          _ ← direct(t, out)
+          _ ←
+            Try {
+              if (out.isDirectory)
+                (path / 'foo) mkdirs
+              else if (out.isFile)
+                path.mkdirs
+
+              if (out.exists)
+                move(out, path, REPLACE_EXISTING, ATOMIC_MOVE)
+            }
+            .toEither
+        } yield
+          ()
+
+      tmp.delete(recursive = true)
+
+      result
+    } else
+      direct(t, path)
+
+  implicit val atomic: Atomic = no
+
+  protected def direct(t: T, dir: Path): Throwable | Unit
 }
 
 trait LowPrioritySave {
@@ -25,7 +60,8 @@ trait LowPrioritySave {
   /** defines equality for this case class in terms of equality for all its parameters */
   def combine[T](ctx: CaseClass[Save, T]): Save[T] =
     new Save[T] {
-      def apply(t: T, dir: Path) =
+      require(implicitly[Atomic] == Atomic.no)
+      def direct(t: T, dir: Path) =
         (
           Group.Metadata().save(dir) ::
           ctx
@@ -49,7 +85,7 @@ trait LowPrioritySave {
    *  method, we check that the second parameter is the same type. */
   def dispatch[T](ctx: SealedTrait[Save, T]): Save[T] =
     new Save[T] {
-      def apply(t: T, dir: Path) =
+      def direct(t: T, dir: Path) =
         ctx.dispatch(t) {
           sub ⇒
             sub.typeclass(
@@ -66,6 +102,12 @@ trait LowPrioritySave {
 object Save
   extends LowPrioritySave {
 
+  sealed trait Atomic
+  object Atomic {
+    /*implicit */case object yes extends Atomic
+             case object  no extends Atomic
+  }
+
   implicit def withBasenameAsJSON[T](
     implicit
     basename: Basename[T],
@@ -73,7 +115,7 @@ object Save
   ):
     Save[T] =
     new Save[T] {
-      def apply(t: T, dir: Path): Throwable | Unit =
+      def direct(t: T, dir: Path): Throwable | Unit =
         Try {
           val path = dir / basename
           path.mkdirs
@@ -89,7 +131,7 @@ object Save
 
   implicit def opt[T](implicit save: Save[T]): Save[Option[T]] =
     new Save[Option[T]] {
-      def apply(t: Option[T], dir: Path): Throwable | Unit =
+      def direct(t: Option[T], dir: Path): Throwable | Unit =
         t match {
           case Some(t) ⇒ save(t, dir)
           case _ ⇒ Right(())
@@ -97,7 +139,7 @@ object Save
     }
 
   implicit class Ops[T](val t: T) extends AnyVal {
-    def save(dir: Path)(implicit save: Save[T]): Throwable | Unit = save(t, dir)
+    def save(dir: Path)(implicit save: Save[T], atomic: Atomic = Atomic.yes): Throwable | Unit = save(t, dir)
   }
 
   trait syntax {

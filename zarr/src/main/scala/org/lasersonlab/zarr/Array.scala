@@ -677,7 +677,7 @@ object Array {
         idx.T
       ]
     ] {
-      def apply(
+      def direct(
         a: Array.?[Shape, idx.T],
         dir: Path
       ):
@@ -709,7 +709,7 @@ object Array {
       lasersonlab.zarr.Array[_Shape, _T]
     ] {
       implicit val __int = Idx.Int
-      override def apply(t: zarr.Array[_Shape, _T], dir: Path): Throwable | Unit =
+      def direct(t: zarr.Array[_Shape, _T], dir: Path): Throwable | Unit =
         save[_Shape, t.A, t.Chunk, _T].apply(t, dir)
     }
 
@@ -729,7 +729,7 @@ object Array {
     ] =
     new Save[Aux[_Shape, idx.T, A, Chunk, _T]] {
       type _Idx = idx.T
-      def apply(
+      def direct(
         a: Aux[_Shape, idx.T, A, Chunk, _T],
         dir: Path
       ):
@@ -807,10 +807,9 @@ object Array {
             .map { _ ⇒ () }
         }
 
-        // TODO: configure ability to write to a temporary location and then "commit" all results
         for {
           _ ← a.metadata.save(dir)
-          _ ← a.attrs.save(dir)
+          _ ← a.   attrs.save(dir)
           _ ← chunkResults
         } yield
           ()

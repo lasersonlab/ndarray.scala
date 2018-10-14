@@ -1,5 +1,7 @@
 package org.lasersonlab.zarr
 
+import java.util.Random
+
 import lasersonlab.{ zarr ⇒ z }
 import org.hammerlab.paths.Path
 import org.lasersonlab.zarr
@@ -7,8 +9,6 @@ import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Load
 import org.lasersonlab.zarr.utils.Idx
-
-import java.util.Random
 
 class GroupTest
   extends hammerlab.test.Suite
@@ -35,7 +35,7 @@ class GroupTest
     )
     .toByte
 
-  import math.{ sqrt, exp }
+  import math.{ exp, sqrt }
 
   val random = new Random(1729)
   import random.{ nextGaussian ⇒ unif }
@@ -54,8 +54,8 @@ class GroupTest
   val doubles = stream.take(20)
 
   test("typed") {
-    import lasersonlab.shapeless.slist.{ == ⇒ _, _ }
     import GroupTest.{ == ⇒ _, _ }
+    import lasersonlab.shapeless.slist.{ == ⇒ _, _ }
 
     val group =
       Foo(
@@ -116,6 +116,87 @@ class GroupTest
     group.save(actual).!
 
     val expectedPath = resource("grouptest.zarr")
+
+    eqv(actual, expectedPath)
+
+    val group2 = actual.load[Foo] !
+
+    eqv(group, group2)
+
+    val expected = expectedPath.load[Foo] !
+
+    eqv(group, expected)
+  }
+
+  test("typed – mixed compressors / endianness") {
+    import GroupTest.{ == ⇒ _, _ }
+    import lasersonlab.shapeless.slist.{ == ⇒ _, _ }
+    import org.lasersonlab.zarr.Compressor.Blosc
+    import org.lasersonlab.zarr.Compressor.Blosc._
+
+    val group =
+      Foo(
+          bytes = { import z.compress.zlib         ; Array(       50 :: 100 :: 200 :: ⊥,      20 :: 50 :: 110 :: ⊥)(   bytes: _* ) },
+         shorts = { import z.compress.   -         ; Array( 2 ::   2 ::   2 ::   2 :: ⊥, 1 ::  1 ::  1 ::   1 :: ⊥)(  shorts: _* ) },
+           ints = { implicit val b = Blosc( lz4hc) ; Array(                   1000 :: ⊥                           )(    ints: _* ) },
+          longs = { implicit val b = Blosc(  zlib) ; Array(                   1000 :: ⊥,                  100 :: ⊥)(   longs: _* ) },
+         floats = { implicit val b = Blosc(  zstd) ; Array(             100 :: 100 :: ⊥,            20 :: 100 :: ⊥)(  floats: _* ) },
+        doubles = { implicit val b = Blosc(snappy) ; Array(                     20 :: ⊥                           )( doubles: _* ) },
+        strings =
+          Strings(
+            s2 = {
+              implicit val d = string(2)
+              Array(10 :: ⊥)((1 to 10).map(_.toString): _*)
+            },
+            s3 = {
+              implicit val d = string(3)
+              Array(
+                10 :: 10 :: ⊥,
+                 3 ::  4 :: ⊥
+              )(
+                (1 to 100).map(_.toString): _*
+              )
+            }
+          ),
+        structs =
+          Structs(
+            ints = {
+              implicit val > = z.order.>
+              Array(10 :: ⊥)((1 to 10).map { I4 }: _*)
+            },
+            numbers = {
+              implicit val short_> = short(z.order.>)
+              implicit val  long_> =  long(z.order.>)
+              import z.compress.-
+              Array(
+                10 :: 10 :: ⊥,
+                 2 ::  5 :: ⊥
+              )(
+                (
+                  for {
+                    r ← 0 until 10
+                    c ← 0 until 10
+                    n = 10 * r + c
+                  } yield
+                    Numbers(
+                       short = n.toShort,
+                         int = n,
+                        long = n          * 1e9 toLong,
+                       float = n.toFloat  *  10,
+                      double = n.toDouble * 100
+                    )
+                )
+                : _*
+              )
+            }
+          )
+      )
+
+    val actual = tmpDir()
+
+    group.save(actual).!
+
+    val expectedPath = resource("mixed.zarr")
 
     eqv(actual, expectedPath)
 

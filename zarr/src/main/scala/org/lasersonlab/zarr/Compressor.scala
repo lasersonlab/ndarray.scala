@@ -263,13 +263,16 @@ object Compressor {
   implicit val decoder: Decoder[Compressor] =
     new Decoder[Compressor] {
       override def apply(c: HCursor): Result[Compressor] =
-        c
-          .get[String]("id")
-          .flatMap {
-            case "blosc" ⇒ the[Decoder[Blosc]].apply(c)
-            case  "zlib" ⇒ the[Decoder[ZLib]].apply(c)
-            case   null  ⇒ Right(None)
-          }
+        if (c.value.isNull)
+          Right(None)
+        else
+          c
+            .get[String]("id")
+            .flatMap {
+              case "blosc" ⇒ the[Decoder[Blosc]].apply(c)
+              case  "zlib" ⇒ the[Decoder[ ZLib]].apply(c)
+              case   null  ⇒ Right(None)
+            }
     }
 
   implicit val encoder: Encoder[Compressor] =

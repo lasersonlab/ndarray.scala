@@ -291,7 +291,6 @@ object metadata {
       ] {
         @inline def apply(m: ?[Shape, Idx]): Json = {
           implicit val d = m.d
-          //FillValue.Encoder.fromDataType[m.T](d.t)
           encoder[Shape, Idx, m.T].apply(m.t)
         }
       }

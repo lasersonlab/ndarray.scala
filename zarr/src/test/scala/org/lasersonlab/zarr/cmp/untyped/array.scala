@@ -4,7 +4,7 @@ import cats.implicits._
 import hammerlab.either._
 import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.cmp.untyped.array.ElemsDiff.{ Index, Sizes }
-import org.lasersonlab.zarr.{ Array, Attrs, Dimension }
+import org.lasersonlab.zarr.{ Array, Attrs, Dimension, Metadata }
 import shapeless.the
 
 object array {
@@ -35,7 +35,7 @@ object array {
       T
     ](
       implicit
-      dim: Cmp[Shape[Dimension[Int]]],
+       dim: Cmp[Shape[Dimension[Int]]],
       elem: Cmp[T]
     ):
     Cmp[
@@ -48,7 +48,7 @@ object array {
       type Arr = z.Array[Shape, T]
       Cmp {
         (l, r) ⇒
-          val _metadata = metadata.cmp.baseCmp[Shape, Int]
+          val _metadata = the[Cmp[Metadata[Shape, Int, T]]]
 
           type Diff =
             _metadata.Diff |
@@ -61,33 +61,8 @@ object array {
               _attrs(l.attrs, r.attrs)
                 .map(d ⇒ L(R(d)))
                 .orElse {
-                  var i = 0
-                  var diff: Option[ElemsDiff] = None
-                  val  left = l.t.toList.iterator
-                  val right = r.t.toList.iterator
-                  while (left.hasNext && right.hasNext && diff.isEmpty) {
-                    val l =  left.next
-                    val r = right.next
-                    elem(l, r)
-                      .foreach {
-                        d ⇒
-                          diff = Some(Index(i, d))
-                      }
-                    i += 1
-                  }
-
-                  diff
-                    .orElse {
-                      if (left.hasNext || right.hasNext)
-                        Some(
-                          Sizes(
-                            i + left.size,
-                            i + right.size
-                          )
-                        )
-                      else
-                        None
-                    }
+                  the[Cmp[Seq[T]]]
+                    .apply(l.t.toList, r.t.toList)  // TODO: make Foldable syntax work without .t here
                     .map { R(_) }
                 }
             }

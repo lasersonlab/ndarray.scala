@@ -237,8 +237,6 @@ package object convert
 
           val shape: List[Dimension[Int]] = tpe.shape
 
-          val chunkRanges = shape.map(_.range)
-
           val chunks: A[Chunk[T]] =
             (0 until numChunks)
               .map {
@@ -260,7 +258,7 @@ package object convert
               }
               .toVector
 
-          @inline override def apply(idx: List[Int]): T = {
+          override def apply(idx: List[Int]): T = {
             require(idx.size == rank, s"Index of size ${idx.size} (${idx.mkString(",")}) for array of rank $rank")
             val h :: t = idx
             val chunk = chunks(h / rowsPerChunk)

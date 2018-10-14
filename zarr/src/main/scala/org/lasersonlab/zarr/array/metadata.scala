@@ -308,7 +308,7 @@ object metadata {
     implicit def encoder[
       Shape[_]: Traverse : EncoderK,
         Idx   : Encoder,
-          T   //: DataType.Encoder : FillValue.Encoder,
+          T
     ]:
       Encoder[
         Metadata[

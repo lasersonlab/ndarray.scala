@@ -14,4 +14,13 @@ trait ArrayLike[A[_]] {
 
 object ArrayLike {
   type Aux[A[_], S[_]] = ArrayLike[A] { type Shape[T] = S[T] }
+
+  implicit class Ops[A[_], T](val a: A[T]) extends AnyVal {
+    def apply[S[_]](idx: S[Int])(implicit ev: Aux[A, S]): T = ev(a, idx)
+    def shape[S[_]](implicit ev: Aux[A, S]): S[Int] = ev.shape(a)
+  }
+
+  trait syntax {
+    @inline implicit def makeArrayLikeOps[A[_], T](a: A[T]): Ops[A, T] = Ops(a)
+  }
 }

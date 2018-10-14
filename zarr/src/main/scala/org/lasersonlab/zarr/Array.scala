@@ -48,7 +48,6 @@ trait Array {
    * an [[Int]]
    */
   type Idx
-//  val idx: utils.Idx.T[Idx]
 
   /** Type of the "shape" of this [[Array]] */
   type Shape = ShapeT[Idx]
@@ -69,7 +68,6 @@ trait Array {
    * - [[ShapeT the "shape" type]] is [[Traverse traversable]]
    * - a [[Chunk]] is [[Foldable]]
    */
-//  implicit val arrayLikeA: ArrayLike.Aux[A, ShapeT]
   implicit val traverseA: Traverse[A]
   implicit val traverseShape: Traverse[ShapeT]
   implicit val foldableChunk: Foldable[Chunk]
@@ -106,49 +104,12 @@ trait Array {
       ]
 
   val       shape: ShapeT[Dimension[Idx]]
-  val chunkRanges: ShapeT[    Chunk.Idx ]
+  def chunkRanges: ShapeT[    Chunk.Idx ] = shape.map { _.range }
 
   /**
    * Random-indexing operation
    */
   def apply(idx: Index): T  // TODO: support exceptions: IndexOutOfBounds, IO, etc.
-
-  import lasersonlab.shapeless.slist._
-
-//  import idx.int
-//
-//  def apply(idx: Shape): T = {
-//
-//    // aliases for annotating the `.sequence` shenanigans below
-//    type E[U] = CastException | U
-//    type F[U] = ShapeT[U]
-//    type G[U] = `2`[U]
-//    type T = Chunk.Idx
-//
-//    // traverse the dimensions in the requested idx, as well as this array's shape, to obtain the chunk index and
-//    // the intra-chunk offset (each of which has a component along each dimension)
-//    val chunkIdx :: offset ::  ⊥ =
-//      Nested(
-//        idx
-//          .zip(shape)
-//          .map {
-//            case (idx, Dimension(_, chunk, _)) ⇒
-//              int { idx / chunk } ::
-//              int { idx % chunk } ::
-//              ⊥
-//          }                    : F[G[E[T]]]
-//      )
-//      .sequence               // E[F[G[T]]]
-//      .map(_.value.sequence)  // E[G[F[T]]]
-//      .right.get               :   G[F[T]]
-//
-//    arrayLike(
-//      chunks,
-//      chunkIdx
-//    )(
-//      offset
-//    )
-//  }
 
   val metadata: Metadata[ShapeT, Idx, T]
 
@@ -242,7 +203,7 @@ object Array {
       type T = _T
       type ShapeT[U] = _ShapeT[U]
       type Idx = Int
-      type A[U] = ndarray.Vector[ShapeT, U]
+      type     A[U] = ndarray.Vector[ShapeT, U]
       type Chunk[U] = ndarray.Vector[ShapeT, U]
 
       implicit val traverseShape: Traverse[ShapeT] = ts
@@ -261,8 +222,6 @@ object Array {
             case (shape, chunk) ⇒
               Dimension.int(shape, chunk)
           }
-
-      val chunkRanges = shape.map { _.range }
 
       val elems = ndarray.Vector[_ShapeT, _T](_shape, _elems: _*)
 
@@ -571,10 +530,6 @@ object Array {
 
         val shape = metadata.shape
 
-        val chunkRanges =
-          shape
-            .map { _.range }
-
         import lasersonlab.shapeless.slist._
 
         def apply(idx: Shape): T = {
@@ -602,10 +557,9 @@ object Array {
             .map(_.value.sequence)  // E[G[F[T]]]
             .right.get               :   G[F[T]]
 
-          arrayLike(
-            chunks,
+          chunks(
             chunkIdx
-          )(
+          ).apply(
             offset
           )
         }

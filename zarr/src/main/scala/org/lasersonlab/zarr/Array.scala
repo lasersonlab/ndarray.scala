@@ -91,7 +91,7 @@ trait Array {
    * Short-hand for imbuing this [[Array]] with an element type at runtime, e.g. in the case where it was loaded without
    * that type having been known ahead of time
    */
-  def as[_T]: Array.Aux[this.ShapeT, this.Idx, this.A, this.Chunk, _T] =
+  def as[T]: Array.Aux[this.ShapeT, this.Idx, this.A, this.Chunk, T] =
     this
       .asInstanceOf[
         Array.Aux[
@@ -99,7 +99,7 @@ trait Array {
           this.Idx,
           this.A,
           this.Chunk,
-          _T
+          T
         ]
       ]
 

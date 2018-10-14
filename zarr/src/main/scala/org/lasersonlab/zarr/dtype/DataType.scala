@@ -61,11 +61,11 @@ object DataType
   /**
    * Common interface for non-struct datatypes (numerics, strings)
    */
-  sealed abstract class Primitive[_T](
+  sealed abstract class Primitive[T](
     val order: ByteOrder,
     val dType: DType,
     val size: Int
-  ) extends DataType[_T] {
+  ) extends DataType[T] {
     override val toString = s"$order$dType$size"
   }
 

@@ -129,13 +129,13 @@ object metadata {
   case class Metadata[
     _Shape[_],
       _Idx,
-        _T
+         T
   ](
                        shape:    _Shape[Dimension[_Idx]],
-                       dtype:      DataType[_T],
+                       dtype:      DataType[T],
     override val  compressor:        Compressor     = Blosc(),
     override val       order:             Order     = C,
-    override val  fill_value:         FillValue[_T] = Null,
+    override val  fill_value:         FillValue[T] = Null,
     override val zarr_format:            Format     = `2`,
     override val     filters: Option[Seq[Filter]]   = None
   )

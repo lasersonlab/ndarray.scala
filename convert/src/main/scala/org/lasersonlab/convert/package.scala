@@ -220,16 +220,14 @@ package object convert
             fill_value = fill_value
           )
 
-        new zarr.Array {
-          override type T = tpe.T
-          type ShapeT[U] = List[U]
-
-          type Idx = Int
-
+        new zarr.Array.Aux[
+          List,
+          Int,
+          Vector, // we're only chunking by "row" / major-axis; 1-D array of chunks is fine
+          convert.Chunk,
+          tpe.T
+        ] {
           override val metadata = _metadata
-
-          type     A[U] =        Vector[U]  // we're only chunking by "row" / major-axis; 1-D array of chunks is fine
-          type Chunk[U] = convert.Chunk[U]
 
           implicit val traverseA: Traverse[A] = catsStdInstancesForVector
           implicit val foldableChunk: Foldable[Chunk] = Chunk.foldable

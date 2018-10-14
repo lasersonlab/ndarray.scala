@@ -1,6 +1,5 @@
 package org.lasersonlab.zarr.io
 
-import java.nio.file.Files
 import java.nio.file.Files.{ createTempDirectory, move }
 import java.nio.file.StandardCopyOption._
 
@@ -52,7 +51,9 @@ trait Save[T] {
   protected def direct(t: T, dir: Path): Throwable | Unit
 }
 
-trait LowPrioritySave {
+trait LowPrioritySave
+  extends Pri2
+{
   self: Save.type ⇒
 
   type Typeclass[T] = Save[T]
@@ -60,8 +61,7 @@ trait LowPrioritySave {
   /** defines equality for this case class in terms of equality for all its parameters */
   def combine[T](ctx: CaseClass[Save, T]): Save[T] =
     new Save[T] {
-      require(implicitly[Atomic] == Atomic.no)
-      def direct(t: T, dir: Path) =
+      def direct(t: T, dir: Path): Throwable | Unit =
         (
           Group.Metadata().save(dir) ::
           ctx
@@ -85,7 +85,7 @@ trait LowPrioritySave {
    *  method, we check that the second parameter is the same type. */
   def dispatch[T](ctx: SealedTrait[Save, T]): Save[T] =
     new Save[T] {
-      def direct(t: T, dir: Path) =
+      def direct(t: T, dir: Path): Throwable | Unit =
         ctx.dispatch(t) {
           sub ⇒
             sub.typeclass(
@@ -97,15 +97,27 @@ trait LowPrioritySave {
 
   /** binds the Magnolia macro to the `gen` method */
   implicit def gen[T]: Save[T] = macro Magnolia.gen[T]
+
+  def apply[T](fn: (T, Path) ⇒ Throwable | Unit): Save[T] = new Save[T] { def direct(t: T, dir: Path): Throwable | Unit = fn(t, dir) }
+  def as[L, R: Save](fn: L ⇒ R): Save[L] = Save { (t, dir) ⇒ implicit val no = Atomic.no; fn(t).save(dir) }
+}
+
+trait Pri2
+//  extends LowPrioritySave
+{
+  self: Save.type ⇒
+//  implicit def narrow[U, T >: U](implicit save: Save[T], ev: U <:< T): Save[U] = ???
 }
 
 object Save
-  extends LowPrioritySave {
+  extends LowPrioritySave
+//extends Pri2
+{
 
   sealed trait Atomic
   object Atomic {
-    /*implicit */case object yes extends Atomic
-             case object  no extends Atomic
+    case object yes extends Atomic
+    case object  no extends Atomic
   }
 
   implicit def withBasenameAsJSON[T](
@@ -114,8 +126,8 @@ object Save
     encoder: Encoder[T]
   ):
     Save[T] =
-    new Save[T] {
-      def direct(t: T, dir: Path): Throwable | Unit =
+    Save {
+      (t, dir) ⇒
         Try {
           val path = dir / basename
           path.mkdirs
@@ -130,12 +142,9 @@ object Save
     }
 
   implicit def opt[T](implicit save: Save[T]): Save[Option[T]] =
-    new Save[Option[T]] {
-      def direct(t: Option[T], dir: Path): Throwable | Unit =
-        t match {
-          case Some(t) ⇒ save(t, dir)
-          case _ ⇒ Right(())
-        }
+    Save {
+      case (Some(t), dir) ⇒ save(t, dir)(Atomic.no)
+      case _ ⇒ Right(())
     }
 
   implicit class Ops[T](val t: T) extends AnyVal {

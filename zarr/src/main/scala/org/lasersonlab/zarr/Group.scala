@@ -7,6 +7,7 @@ import org.hammerlab.paths.Path
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.io._
 import org.lasersonlab.zarr.utils.Idx
+import shapeless.the
 
 case class Group[Idx](
   arrays: Map[String, Array.*?[Idx]] =      Map.empty[String, Array.*?[Idx]],
@@ -150,7 +151,7 @@ object Group {
   implicit def save[Idx: Idx.T]: Save[Group[Idx]] =
     new Save[Group[Idx]] {
       def direct(t: Group[Idx], dir: Path): Throwable | Unit = {
-        val groups =
+        def groups =
           (
             for {
               (name, group) ← t.groups.toList
@@ -159,12 +160,18 @@ object Group {
           )
           .sequence
 
-        val arrays =
+        def arrays =
           (
             for {
               (name, array) ← t.arrays.toList
-            } yield
-              array.aux.save(dir / name)
+            } yield {
+              //Save.narrow[Array.*?[Idx]]
+//              Array.save_?[List].apply(array, dir / name)
+              the[utils.Idx]
+              the[utils.Idx.T[Idx]]
+              array.save(dir / name)
+              //(array: Array.?[List, Idx]).save(dir / name)
+            }
           )
           .sequence
 

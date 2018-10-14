@@ -42,7 +42,7 @@ object metadata {
       val zarr_format:          Format    =    `2`
       val     filters:  Option[Seq[Filter]]  =  None
 
-      def d: DataType.Aux[T] = dtype
+      def d: DataType.Aux[T] = dtype.t
       final type T = dtype.T
       type Shape[_]
       type Idx
@@ -113,13 +113,13 @@ object metadata {
                   _order ←   c.downField(      "order").as[Order]
             _zarr_format ←   c.downField("zarr_format").as[Format]
              _fill_value ← {
-                             implicit val d: DataType.Aux[_dtype.T] = _dtype
+                             implicit val d: DataType.Aux[_dtype.T] = _dtype.t
                              c.downField("fill_value").as[FillValue[_dtype.T]]
                            }
           } yield
             new Metadata[Shape, Idx, _dtype.T](
               dimensions,
-              _dtype,
+              _dtype.t,
               _compressor,
               _order,
               _fill_value,

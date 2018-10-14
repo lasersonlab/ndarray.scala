@@ -15,23 +15,17 @@ object metadata {
 
   import dtype.{ DataType ⇒ dt }
   def cmpFromDatatype[T](d: DataType.Aux[T]): Cmp[T] =
-    (
-      d match {
-        case d @ dt.  byte      ⇒ cmpT[  Byte]
-        case d @ dt. short  (_) ⇒ cmpT[ Short]
-        case d @ dt.   int  (_) ⇒ cmpT[   Int]
-        case d @ dt.  long  (_) ⇒ cmpT[  Long]
-        case d @ dt. float  (_) ⇒ cmpT[ Float]
-        case d @ dt.double  (_) ⇒ cmpT[Double]
-        case d @ dt.string  (_) ⇒ cmpT[String]
-        case d @ dt.struct.?(_) ⇒ cmpT[dt.struct.?]
-        case d @ dt.struct  (_) ⇒
-          Cmp[d.T, (d.T, d.T)] {
-            (l, r) ⇒ (l != r) ? (l, r)
-          }
-      }
-    )
-    .asInstanceOf[Cmp[d.T]]
+    d match {
+      case d @ dt.  byte      ⇒ cmpT
+      case d @ dt. short  (_) ⇒ cmpT
+      case d @ dt.   int  (_) ⇒ cmpT
+      case d @ dt.  long  (_) ⇒ cmpT
+      case d @ dt. float  (_) ⇒ cmpT
+      case d @ dt.double  (_) ⇒ cmpT
+      case d @ dt.string  (_) ⇒ cmpT
+      case d @ dt.struct.?(_) ⇒ Cmp { (l, r) ⇒ (l != r) ? (l, r) }
+      case d @ dt.struct  (_) ⇒ Cmp { (l, r) ⇒ (l != r) ? (l, r) }
+    }
 
   implicit def fillValueCanEq[T](
     implicit

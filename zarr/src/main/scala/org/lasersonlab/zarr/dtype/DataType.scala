@@ -46,7 +46,7 @@ sealed trait DataType {
     apply(buff, t)
     buff.array()
   }
-  def t: Aux[T] = this
+  def t: Aux[T] = this match { case aux: Aux[T] ⇒ aux }
 }
 
 object DataType
@@ -54,7 +54,7 @@ object DataType
      with EqInstances
      with Coders {
 
-  type Aux[_T] = DataType { type T = _T }
+  sealed trait Aux[_T] extends DataType { type T = _T }
 
   /**
    * Common interface for non-struct datatypes (numerics, strings)
@@ -63,8 +63,7 @@ object DataType
     val order: ByteOrder,
     val dType: DType,
     val size: Int
-  ) extends DataType {
-    type T = _T
+  ) extends Aux[_T] {
     override val toString = s"$order$dType$size"
   }
 
@@ -179,9 +178,8 @@ object DataType
     implicit
     g: LabelledGeneric.Aux[S, L]
   )
-  extends DataType {
+  extends Aux[S] {
     val size: Int = entries.size
-    override type T = S
     @inline def apply(buffer: ByteBuffer): T = g.from(entries(buffer))
     @inline def apply(buffer: ByteBuffer, t: S): Unit = entries(buffer, g.to(t))
   }
@@ -191,8 +189,7 @@ object DataType
      * [[zarr.untyped.Struct "Untyped" struct]] [[DataType]]
      */
     case class ?(entries: List[StructEntry])
-      extends DataType {
-      type T = zarr.untyped.Struct
+      extends Aux[zarr.untyped.Struct] {
 
       val size: Int =
         entries

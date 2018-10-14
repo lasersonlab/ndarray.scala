@@ -72,8 +72,6 @@ object Idx {
   trait syntax {
     implicit def unwrapEncoder    (implicit idx: Idx     ): Encoder[idx.T] = idx.encoder
     implicit def unwrapDecoder    (implicit idx: Idx     ): Decoder[idx.T] = idx.decoder
-    implicit def unwrapEncoderT[T](implicit idx: Idx.T[T]): Encoder[    T] = idx.encoder
-    implicit def unwrapDecoderT[T](implicit idx: Idx.T[T]): Decoder[    T] = idx.decoder
     @inline def makeIdxOps[T](t: T): Ops[T] = Ops(t)
   }
   object syntax extends syntax

@@ -9,9 +9,9 @@ import shapeless.the
  */
 trait EqInstances {
 
-  lazy val structEq: Eq[untyped.Struct] =
+  lazy val structEq: Eq[struct.?] =
     Eq.by[
-      untyped.Struct,
+      struct.?,
       List[StructEntry]
     ](
       _
@@ -55,15 +55,15 @@ trait EqInstances {
       def eqv(x: DataType, y: DataType): Boolean =
         (x, y) match {
           case (x: Primitive[_], y: Primitive[_]) ⇒ primitive.eqv(x, y)
-          case (x: untyped.Struct, y: untyped.Struct) ⇒ structEq.eqv(x, y)
+          case (x: struct.?, y: struct.?) ⇒ structEq.eqv(x, y)
           case (
-            Struct(
+            struct(
               StructList(
                 xEntries,
                 xSize
               )
             ),
-            Struct(
+            struct(
               StructList(
                 yEntries,
                 ySize

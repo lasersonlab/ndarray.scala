@@ -20,7 +20,7 @@ class GroupTest
 
   implicit val __int: Idx.T[Int] = Idx.Int
 
-  import DataType.{ untyped ⇒ _, _ }
+  import DataType._
 
   val bytes =
     for {
@@ -54,8 +54,8 @@ class GroupTest
   val doubles = stream.take(20)
 
   test("typed") {
-    import GroupTest.{ == ⇒ _, _ }
-    import lasersonlab.shapeless.slist.{ == ⇒ _, _ }
+    import GroupTest._
+    import lasersonlab.shapeless.slist._
 
     val group =
       Foo(
@@ -247,7 +247,7 @@ class GroupTest
                 Map[String, Array.*?[Int]](
                   "ints" → {
                     implicit val datatype =
-                      DataType.untyped.Struct(
+                      struct.?(
                         StructEntry("value", int) :: Nil
                       )
                     Array(10 :: Nil)(
@@ -261,7 +261,7 @@ class GroupTest
                   },
                   "numbers" → {
                     implicit val datatype =
-                      DataType.untyped.Struct(
+                      struct.?(
                         List(
                           StructEntry( "short",  short),
                           StructEntry(   "int",    int),

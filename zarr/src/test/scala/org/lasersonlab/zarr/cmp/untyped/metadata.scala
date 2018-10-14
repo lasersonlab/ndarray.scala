@@ -6,30 +6,28 @@ import hammerlab.option._
 import org.lasersonlab.zarr.FillValue.NonNull
 import org.lasersonlab.zarr.array.metadata.untyped.Shaped
 import org.lasersonlab.zarr.cmp.Cmp
-import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.dtype._
-import org.lasersonlab.zarr.{ Dimension, FillValue, Metadata }
+import org.lasersonlab.zarr.{ Dimension, FillValue, Metadata, dtype }
 import shapeless.the
 
 object metadata {
   def cmpT[T](implicit t: Cmp[T]): Cmp[T] = t
 
+  import dtype.{ DataType ⇒ dt }
   def cmpFromDatatype[T](d: DataType.Aux[T]): Cmp[T] =
     (
       d match {
-        case d @ DataType.untyped.Struct(_) ⇒ cmpT[untyped.Struct]
-        case d @ DataType.  byte    ⇒ cmpT[  Byte]
-        case d @ DataType. short(_) ⇒ cmpT[ Short]
-        case d @ DataType.   int(_) ⇒ cmpT[   Int]
-        case d @ DataType.  long(_) ⇒ cmpT[  Long]
-        case d @ DataType. float(_) ⇒ cmpT[ Float]
-        case d @ DataType.double(_) ⇒ cmpT[Double]
-        case d @ DataType.string(_) ⇒ cmpT[String]
-        case d @ DataType.Struct(_) ⇒
+        case d @ dt.  byte      ⇒ cmpT[  Byte]
+        case d @ dt. short  (_) ⇒ cmpT[ Short]
+        case d @ dt.   int  (_) ⇒ cmpT[   Int]
+        case d @ dt.  long  (_) ⇒ cmpT[  Long]
+        case d @ dt. float  (_) ⇒ cmpT[ Float]
+        case d @ dt.double  (_) ⇒ cmpT[Double]
+        case d @ dt.string  (_) ⇒ cmpT[String]
+        case d @ dt.struct.?(_) ⇒ cmpT[dt.struct.?]
+        case d @ dt.struct  (_) ⇒
           Cmp[d.T, (d.T, d.T)] {
-            (l, r) ⇒
-            //def apply(l: d.T, r: d.T): Option[(d.T, d.T)] =
-              (l != r) ? (l, r)
+            (l, r) ⇒ (l != r) ? (l, r)
           }
       }
     )

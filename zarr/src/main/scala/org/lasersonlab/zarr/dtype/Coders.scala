@@ -60,7 +60,7 @@ trait StructDecoder {
               l(entries.toList)
                 .bimap(
                   DecodingFailure(_, c.history),
-                  struct(g, _)
+                  Struct(g, _)
                 )
           }
     }
@@ -106,9 +106,9 @@ trait Coders
         )
       def apply(a: D): Json =
         a match {
-          case p:   Primitive[_]                      ⇒ Json.fromString(p.toString)
-          case         Struct(StructList(entries, _)) ⇒ seq(entries)
-          case untyped.Struct           (entries    ) ⇒ seq(entries)
+          case      p: Primitive[_]           ⇒ Json.fromString(p.toString)
+          case struct(StructList(entries, _)) ⇒ seq(entries)
+          case struct.?         (entries    ) ⇒ seq(entries)
         }
     }
 
@@ -147,7 +147,7 @@ trait Coders
           }
     }
 
-  import DataType.{ Struct ⇒ _, _ }
+  import DataType._
 
   object Int {
     def unapply(s: Seq[Char]): Option[Int] = Some( s.mkString.toInt )
@@ -164,7 +164,7 @@ trait Coders
   import org.lasersonlab.zarr.{ untyped ⇒ u }
   implicit val untypedStructDecoder: Decoder[u.Struct] =
     new circe.Decoder[Aux[u.Struct]] {
-      override def apply(c: HCursor): Result[untyped.Struct] =
+      override def apply(c: HCursor): Result[struct.?] =
         c
           .value
           .as[
@@ -185,7 +185,7 @@ trait Coders
                   }
               }
               .sequence
-              .map { untyped.Struct }
+              .map {struct.? }
           }
     }
 }

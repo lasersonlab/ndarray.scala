@@ -24,6 +24,7 @@ cache:
   - "$HOME/lib"
 
 after_success:
+# work around https://github.com/codecov/codecov-bash/issues/133
 - curl -s https://codecov.io/bash > .codecov
 - sed -i -e 's/TRAVIS_.*_VERSION/^TRAVIS_.*_VERSION=/' .codecov
 - chmod +x .codecov

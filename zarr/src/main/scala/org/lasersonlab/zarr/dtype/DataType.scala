@@ -25,8 +25,8 @@ import scala.util.Try
  *   - Floating-point types: [[float]], [[double]]
  *   - [[string]]
  * - Structs:
- *   - [[Struct "typed"]]: auto-derived for a case-class
- *   - [[untyped.Struct "untyped"]]: "bag of fields", corresponding to [[org.lasersonlab.zarr.untyped.Struct]]
+ *   - [[struct "typed"]]: auto-derived for a case-class
+ *   - [[struct.? "untyped"]]: "bag of fields", corresponding to [[org.lasersonlab.zarr.untyped.Struct]]
  *
  * "Typed" and "Untyped" structs can represent the same logical underlying datatype (e.g. the JSON representation, in
  * [[org.lasersonlab.zarr.Metadata array metadata]]'s "dtype" field will be the same), but allow for call-sites that
@@ -144,13 +144,53 @@ object DataType
   implicit def  _float(implicit e: <>!): Aux[ Float] =  float(e)
   implicit def _double(implicit e: <>!): Aux[Double] = double(e)
 
-  object untyped {
+  case class StructEntry(name: String, datatype: DataType) {
+    val size = datatype.size
+    override def toString: String =
+      Seq(
+        name,
+        size
+      )
+      .mkString(
+        "[\"",
+        "\",\"",
+        "\"]"
+      )
+  }
+
+  case class StructList[L <: HList](
+    entries: List[StructEntry],
+    size: Int
+  )(
+    read: ByteBuffer ⇒ L,
+    write: (ByteBuffer, L) ⇒ Unit
+  ) {
+    type T = L
+    @inline def apply(buff: ByteBuffer): T = read(buff)
+    @inline def apply(buffer: ByteBuffer, t: L): Unit = write(buffer, t)
+  }
+
+  case class struct[
+    S,
+    L <: HList
+  ](
+    entries: StructList[L]
+  )(
+    implicit
+    g: LabelledGeneric.Aux[S, L]
+  )
+  extends DataType {
+    val size: Int = entries.size
+    override type T = S
+    @inline def apply(buffer: ByteBuffer): T = g.from(entries(buffer))
+    @inline def apply(buffer: ByteBuffer, t: S): Unit = entries(buffer, g.to(t))
+  }
+
+  object struct {
     /**
      * [[zarr.untyped.Struct "Untyped" struct]] [[DataType]]
-     *
-     * TODO: make this Struct.?
      */
-    case class Struct(entries: List[StructEntry])
+    case class ?(entries: List[StructEntry])
       extends DataType {
       type T = zarr.untyped.Struct
 
@@ -205,48 +245,6 @@ object DataType
           )
       }
     }
-  }
-
-  case class StructEntry(name: String, datatype: DataType) {
-    val size = datatype.size
-    override def toString: String =
-      Seq(
-        name,
-        size
-      )
-      .mkString(
-        "[\"",
-        "\",\"",
-        "\"]"
-      )
-  }
-
-  case class StructList[L <: HList](
-    entries: List[StructEntry],
-    size: Int
-  )(
-    read: ByteBuffer ⇒ L,
-    write: (ByteBuffer, L) ⇒ Unit
-  ) {
-    type T = L
-    @inline def apply(buff: ByteBuffer): T = read(buff)
-    @inline def apply(buffer: ByteBuffer, t: L): Unit = write(buffer, t)
-  }
-
-  case class Struct[
-    S,
-    L <: HList
-  ](
-    entries: StructList[L]
-  )(
-    implicit
-    g: LabelledGeneric.Aux[S, L]
-  )
-  extends DataType {
-    val size: Int = entries.size
-    override type T = S
-    @inline def apply(buffer: ByteBuffer): T = g.from(entries(buffer))
-    @inline def apply(buffer: ByteBuffer, t: S): Unit = entries(buffer, g.to(t))
   }
 
   def get(order: ByteOrder, dtype: DType, size: Int): String | DataType =

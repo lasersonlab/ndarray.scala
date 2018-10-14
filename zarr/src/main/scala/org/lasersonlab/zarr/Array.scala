@@ -686,12 +686,9 @@ object Array {
         Throwable |
         Unit
       = {
-        // TODO: these implicit vals shouldn't be necessary; minimize+file
-        implicit val ta: Traverse[     A] = a.traverseA
-        implicit val ts: Traverse[_Shape] = a.traverseShape
-        implicit val fc: Foldable[ Chunk] = a.foldableChunk
-
-        import a._
+        // work around https://github.com/scala/bug/issues/11086; method-params incorrectly considered "unstable"
+        val _a = a
+        import _a._
 
         def chunkResults: Throwable | Unit = {
           val (_, chunkStrides) = chunkRanges.scanRight(1)(_ * _)
@@ -702,7 +699,6 @@ object Array {
               }
 
           a
-            .aux
             .chunks
             .mapWithIndex {
               (chunk, int) ⇒

@@ -8,8 +8,6 @@ import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.io._
 import org.lasersonlab.zarr.utils.Idx
 
-import scala.util.Try
-
 case class Group[Idx](
   arrays: Map[String, Array.*?[Idx]] =      Map.empty[String, Array.*?[Idx]],
   groups: Map[String, Group   [Idx]] =      Map.empty[String, Group   [Idx]],
@@ -29,6 +27,20 @@ case class Group[Idx](
 }
 
 object Group {
+
+  sealed trait Arg[Idx]
+  object Arg {
+    case class Arr[Idx](k: String, v: Array.*?[Idx]) extends Arg[Idx]
+    case class Grp[Idx](k: String, v: Group   [Idx]) extends Arg[Idx]
+    implicit def arr[Idx: Idx.T](t: (Symbol, Array.*?[Idx])): Arg[Idx] = Arr(t._1, t._2)
+    implicit def grp[Idx: Idx.T](t: (Symbol, Group   [Idx])): Arg[Idx] = Grp(t._1, t._2)
+  }
+  def apply[Idx: Idx.T](args: Arg[Idx]*): Group[Idx] =
+    new Group(
+      args.collect { case Arg.Arr(k, v) ⇒ k → v }.toMap,
+      args.collect { case Arg.Grp(k, v) ⇒ k → v }.toMap
+    )
+
   case class Metadata(
     zarr_format: Format = `2`
   )

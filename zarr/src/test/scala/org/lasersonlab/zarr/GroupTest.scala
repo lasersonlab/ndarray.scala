@@ -201,82 +201,71 @@ class GroupTest
   test("untyped") {
     val group =
       Group(
-        arrays =
-          // TODO: remove need for explicit types on this Map
-          Map[String, Array.*?[Int]](
-              "bytes" → Array(       50 :: 100 :: 200 :: Nil,      20 :: 50 :: 110 :: Nil)(   bytes: _* ),
-             "shorts" → Array( 2 ::   2 ::   2 ::   2 :: Nil, 1 ::  1 ::  1 ::   1 :: Nil)(  shorts: _* ),
-               "ints" → Array(                   1000 :: Nil                             )(    ints: _* ),
-              "longs" → Array(                   1000 :: Nil,                  100 :: Nil)(   longs: _* ),
-             "floats" → Array(             100 :: 100 :: Nil,            20 :: 100 :: Nil)(  floats: _* ),
-            "doubles" → Array(                     20 :: Nil                             )( doubles: _* )
-          ),
-        groups =
-          Map(
-            "strings" →
-              Group(
-                Map[String, Array.*?[Int]](
-                  "s2" → {
-                    implicit val d = string(2)
-                    Array(10 :: Nil)((1 to 10).map(_.toString): _*)
-                  },
-                  "s3" → {
-                    implicit val d = string(3)
-                    Array(
-                      10 :: 10 :: Nil,
-                       3 ::  4 :: Nil
-                    )(
-                      (1 to 100).map(_.toString): _*
-                    )
-                  }
-                )
-              ),
-            "structs" →
-              Group(
-                Map[String, Array.*?[Int]](
-                  "ints" → {
-                    implicit val dtype = struct.?('value → int)
-                    Array(10 :: Nil)(
-                      (1 to 10)
-                        .map {
-                          i ⇒
-                            untyped.Struct("value" → i)
-                        }
-                      : _*
-                    )
-                  },
-                  "numbers" → {
-                    implicit val dtype =
-                      struct.?(
-                         'short → short,
-                           'int → int,
-                          'long → long,
-                         'float → float,
-                        'double → double
-                      )
-                    Array(
-                      10 :: 10 :: Nil,
-                       2 ::  5 :: Nil
-                    )(
-                      (
-                        for {
-                          r ← 0 until 10
-                          c ← 0 until 10
-                          n = 10 * r + c
-                        } yield
-                          untyped.Struct(
-                             "short" →  n.toShort,
-                               "int" →  n,
-                              "long" → (n          * 1e9 toLong),
-                             "float" → (n.toFloat  *  10),
-                            "double" → (n.toDouble * 100)
-                          )
-                      )
-                      : _*
-                    )
-                  }
-                )
+          'bytes → Array(       50 :: 100 :: 200 :: Nil,      20 :: 50 :: 110 :: Nil)(   bytes: _* ),
+         'shorts → Array( 2 ::   2 ::   2 ::   2 :: Nil, 1 ::  1 ::  1 ::   1 :: Nil)(  shorts: _* ),
+           'ints → Array(                   1000 :: Nil                             )(    ints: _* ),
+          'longs → Array(                   1000 :: Nil,                  100 :: Nil)(   longs: _* ),
+         'floats → Array(             100 :: 100 :: Nil,            20 :: 100 :: Nil)(  floats: _* ),
+        'doubles → Array(                     20 :: Nil                             )( doubles: _* ),
+        'strings →
+          Group(
+            's2 → {
+              implicit val d = string(2)
+              Array(10 :: Nil)((1 to 10).map(_.toString): _*)
+            },
+            's3 → {
+              implicit val d = string(3)
+              Array(
+                10 :: 10 :: Nil,
+                 3 ::  4 :: Nil
+              )(
+                (1 to 100).map(_.toString): _*
               )
+            }
+          ),
+        'structs →
+          Group(
+            'ints → {
+              implicit val dtype = struct.?('value → int)
+              Array(10 :: Nil)(
+                (1 to 10)
+                  .map {
+                    i ⇒
+                      untyped.Struct("value" → i)
+                  }
+                : _*
+              )
+            },
+            'numbers → {
+              implicit val dtype =
+                struct.?(
+                   'short → short,
+                     'int → int,
+                    'long → long,
+                   'float → float,
+                  'double → double
+                )
+              Array(
+                10 :: 10 :: Nil,
+                 2 ::  5 :: Nil
+              )(
+                (
+                  for {
+                    r ← 0 until 10
+                    c ← 0 until 10
+                    n = 10 * r + c
+                  } yield
+                    untyped.Struct(
+                       "short" →  n.toShort,
+                         "int" →  n,
+                        "long" → (n          * 1e9 toLong),
+                       "float" → (n.toFloat  *  10),
+                      "double" → (n.toDouble * 100)
+                    )
+                )
+                : _*
+              )
+            }
           )
       )
 

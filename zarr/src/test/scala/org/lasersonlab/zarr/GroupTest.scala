@@ -5,6 +5,7 @@ import java.util.Random
 import hammerlab.path._
 import lasersonlab.{ zarr ⇒ z }
 import org.lasersonlab.zarr
+import org.lasersonlab.zarr.GroupTest._
 import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Load
@@ -19,6 +20,7 @@ class GroupTest
 
   import DataType._
 
+  // set this to `true` to overwrite the existing "expected" data in src/test/resources
   val writeNewExpectedData = false
 
   val bytes =
@@ -54,8 +56,22 @@ class GroupTest
   val  floats = stream.map(_.toFloat).take(10000)
   val doubles = stream.take(20)
 
+  val i4s = (1 to 10).map { I4 }
+  val numbers =
+    for {
+      r ← 0 until 10
+      c ← 0 until 10
+      n = 10 * r + c
+    } yield
+      Numbers(
+         short = n.toShort,
+           int = n,
+          long = n          * 1e9 toLong,
+         float = n.toFloat  *  10,
+        double = n.toDouble * 100
+      )
+
   test("typed") {
-    import GroupTest._
     import lasersonlab.shapeless.slist._
 
     val group =
@@ -85,31 +101,8 @@ class GroupTest
           ),
         structs =
           Structs(
-            ints =
-              Array(10 :: ⊥)(
-                (1 to 10).map { I4 }: _*
-              ),
-            numbers =
-              Array(
-                10 :: 10 :: ⊥,
-                 2 ::  5 :: ⊥
-              )(
-                (
-                  for {
-                    r ← 0 until 10
-                    c ← 0 until 10
-                    n = 10 * r + c
-                  } yield
-                    Numbers(
-                       short = n.toShort,
-                         int = n,
-                        long = n          * 1e9 toLong,
-                       float = n.toFloat  *  10,
-                      double = n.toDouble * 100
-                    )
-                )
-                : _*
-              )
+               ints = Array(      10 :: ⊥              )(    i4s: _*),
+            numbers = Array(10 :: 10 :: ⊥, 2 ::  5 :: ⊥)(numbers: _*)
           )
       )
 
@@ -142,12 +135,12 @@ class GroupTest
 
     val group =
       Foo(
-          bytes = { import z.compress.zlib         ; Array(       50 :: 100 :: 200 :: ⊥,      20 :: 50 :: 110 :: ⊥)(   bytes: _* ) },
-         shorts = { import z.compress.   -         ; Array( 2 ::   2 ::   2 ::   2 :: ⊥, 1 ::  1 ::  1 ::   1 :: ⊥)(  shorts: _* ) },
-           ints = { implicit val b = Blosc( lz4hc) ; Array(                   1000 :: ⊥                           )(    ints: _* ) },
-          longs = { implicit val b = Blosc(  zlib) ; Array(                   1000 :: ⊥,                  100 :: ⊥)(   longs: _* ) },
-         floats = { implicit val b = Blosc(  zstd) ; Array(             100 :: 100 :: ⊥,            20 :: 100 :: ⊥)(  floats: _* ) },
-        doubles = { implicit val b = Blosc(snappy) ; Array(                     20 :: ⊥                           )( doubles: _* ) },
+          bytes = { Array(       50 :: 100 :: 200 :: ⊥,      20 :: 50 :: 110 :: ⊥,  compressor = z.compress.zlib )(   bytes: _* ) },
+         shorts = { Array( 2 ::   2 ::   2 ::   2 :: ⊥, 1 ::  1 ::  1 ::   1 :: ⊥,  compressor = z.compress.   - )(  shorts: _* ) },
+           ints = { Array(                   1000 :: ⊥,                             compressor =   Blosc( lz4hc) )(    ints: _* ) },
+          longs = { Array(                   1000 :: ⊥,                   100 :: ⊥, compressor =   Blosc(  zlib) )(   longs: _* ) },
+         floats = { Array(             100 :: 100 :: ⊥,             20 :: 100 :: ⊥, compressor =   Blosc(  zstd) )(  floats: _* ) },
+        doubles = { Array(                     20 :: ⊥,                             compressor =   Blosc(snappy) )( doubles: _* ) },
         strings =
           Strings(
             s2 = {
@@ -168,7 +161,7 @@ class GroupTest
           Structs(
             ints = {
               implicit val > = z.order.>
-              Array(10 :: ⊥)((1 to 10).map { I4 }: _*)
+              Array(10 :: ⊥)(i4s: _*)
             },
             numbers = {
               implicit val short_> = I16(z.order.>)
@@ -178,21 +171,7 @@ class GroupTest
                 10 :: 10 :: ⊥,
                  2 ::  5 :: ⊥
               )(
-                (
-                  for {
-                    r ← 0 until 10
-                    c ← 0 until 10
-                    n = 10 * r + c
-                  } yield
-                    Numbers(
-                       short = n.toShort,
-                         int = n,
-                        long = n          * 1e9 toLong,
-                       float = n.toFloat  *  10,
-                      double = n.toDouble * 100
-                    )
-                )
-                : _*
+                numbers: _*
               )
             }
           )

@@ -66,11 +66,11 @@ trait Array {
    *
    * - [[chunks the chunks array]] is [[Traverse traversable]]
    * - [[ShapeT the "shape" type]] is [[Traverse traversable]]
-   * - a [[Chunk]] is [[Foldable]]
+   * - [[Chunk chunks]] are [[Foldable]]
    */
-  implicit val traverseA: Traverse[A]
+  implicit val traverseA    : Traverse[     A]
   implicit val traverseShape: Traverse[ShapeT]
-  implicit val foldableChunk: Foldable[Chunk]
+  implicit val foldableChunk: Foldable[ Chunk]
 
   /**
    * Widen to an [[Array.T]], so that [[cats]] typeclasses (e.g. [[Array.foldableT]]) can be picked up, and
@@ -167,53 +167,64 @@ object Array {
       )
     )
 
+  /**
+   * Constructor for "in-line" / in-memory creation of [[Array]]s
+   *
+   * The [[_ShapeT shape]], [[_T elements]], and an implicit [[DataType]] are the only required parameters
+   *
+   * Many other parameters can be specified, either explicitly / by-name in the first parameter list, or via implicit
+   * instances (the former overrides the latter)
+   *
+   * The second parameter (in the first parameter list), `chunkSize`, may also be used positionally; if not specified,
+   * it defaults to the `shape` (first parameter), resulting in an [[Array]] that is one chunk
+   */
   def apply[
     _ShapeT[_]
     : Scannable
     : Size
+    : Traverse
     : UnfoldRange
     : Zip,
     _T
   ](
-    _shape: _ShapeT[Int],
-    _chunkSize: Opt[_ShapeT[Int]] = None,
-    _attrs: Opt[Json] = None
+         shape:        _ShapeT[Int]        ,
+     chunkSize: Opt[   _ShapeT[Int]] = None,
+        _attrs: Opt[      Json     ] = None,
+         dtype: Opt[  DataType[ _T]] = None,
+    compressor: Opt[Compressor     ] = None,
+         order: Opt[     Order     ] = None,
+    fill_value: Opt[ FillValue[ _T]] = None
   )(
     _elems: _T*
   )(
     implicit
-      // TODO: implicitly construct the whole metadata at call-site
-       datatype:          DataType[_T],
-     compressor:        Compressor     = Blosc(),
-          order:             Order     = C,
-     fill_value:         FillValue[_T] = Null,
-    zarr_format:            Format     = `2`,
-        filters: Option[Seq[Filter]]   = None,
-      traverseShape: Traverse[_ShapeT]
+       _datatype:          DataType[_T],
+     _compressor:        Compressor     = Blosc(),
+          _order:             Order     = C,
+     _fill_value:         FillValue[_T] = Null,
+     zarr_format:            Format     = `2`,
+         filters: Option[Seq[Filter]]   = None
   ):
     Aux[
       _ShapeT,
       Int,
-      ndarray.Vector[_ShapeT, ?],
-      ndarray.Vector[_ShapeT, ?],
+      Vector[_ShapeT, ?],
+      Vector[_ShapeT, ?],
       _T
     ] = {
-    val ts = traverseShape
+    val _shape = shape  // shadowing work-around
     new Array {
-      type T = _T
+      type      T    = _T
       type ShapeT[U] = _ShapeT[U]
-      type Idx = Int
-      type     A[U] = ndarray.Vector[ShapeT, U]
-      type Chunk[U] = ndarray.Vector[ShapeT, U]
+      type    Idx    = Int
+      type      A[U] = Vector[ShapeT, U]
+      type  Chunk[U] = Vector[ShapeT, U]
 
-      implicit val traverseShape: Traverse[ShapeT] = ts
-      implicit val traverseA    : Traverse[     A] = ndarray.Vector.traverse
-      implicit val foldableChunk: Foldable[ Chunk] = ndarray.Vector.traverse
+      val traverseShape: Traverse[ShapeT] = Traverse[_ShapeT]
+      val traverseA    : Traverse[     A] = Vector.traverse
+      val foldableChunk: Foldable[ Chunk] = Vector.traverse
 
-      val (size, strides) = _shape.scanRight(1)(_ * _)
-
-      val chunkShape = _chunkSize.getOrElse(_shape)
-      val (chunkSize, chunkStrides) = chunkShape.scanRight(1)(_ * _)
+      val chunkShape = chunkSize.getOrElse(_shape)
 
       override val shape: ShapeT[Dimension[Idx]] =
         _shape
@@ -223,17 +234,17 @@ object Array {
               Dimension.int(shape, chunk)
           }
 
-      val elems = ndarray.Vector[_ShapeT, _T](_shape, _elems: _*)
+      val elems = Vector[_ShapeT, _T](_shape, _elems: _*)
 
       override def apply(idx: Index): T = elems(idx)
 
       override val metadata: Metadata[ShapeT, Idx, T] =
         Metadata(
                 shape = shape,
-                dtype = datatype,
-           compressor = compressor,
-                order = order,
-           fill_value = fill_value,
+                dtype =      dtype.getOrElse(  _datatype),
+           compressor = compressor.getOrElse(_compressor),
+                order =      order.getOrElse(     _order),
+           fill_value = fill_value.getOrElse(_fill_value),
           zarr_format = zarr_format,
               filters = filters
         )

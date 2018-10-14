@@ -172,7 +172,6 @@ object metadata {
     =
       dir ? basename flatMap {
         path ⇒
-          import Idx.helpers.specify
           decode[
             Metadata[
               Shape,

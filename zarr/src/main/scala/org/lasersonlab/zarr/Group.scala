@@ -49,19 +49,19 @@ object Group {
 
   import circe.auto._
 
-  def apply[Idx](
+  def apply(
     dir: Path
   )(
     implicit
-    idx: Idx.T[Idx]
+    idx: Idx
   ):
-    Exception | Group[Idx] =
+    Exception | Group[idx.T] =
     for {
       metadata ← dir.load[Metadata]
          attrs ← dir.load[Option[Attrs]]
 
-      arrays = Map.newBuilder[String, Array.*?[Idx]]
-      groups = Map.newBuilder[String, Group   [Idx]]
+      arrays = Map.newBuilder[String, Array.*?[idx.T]]
+      groups = Map.newBuilder[String, Group   [idx.T]]
 
       files ←
         try {

@@ -3,7 +3,6 @@ package org.lasersonlab.zarr
 import java.util.Random
 
 import lasersonlab.{ zarr ⇒ z }
-import org.hammerlab.paths.Path
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.dtype.DataType
@@ -17,8 +16,6 @@ class GroupTest
      with zarr.cmp.all
      with Cmp.syntax
      with cmp.path {
-
-  implicit val __int: Idx.T[Int] = Idx.Int
 
   import DataType._
 
@@ -297,6 +294,7 @@ class GroupTest
       )
 
     val actual = tmpDir()
+
     group.save(actual).!
 
     val group2 = actual.load[Group[Int]] !

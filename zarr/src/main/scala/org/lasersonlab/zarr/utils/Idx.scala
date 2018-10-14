@@ -18,11 +18,13 @@ sealed trait Idx {
   implicit val decoder: Decoder[T]
 }
 object Idx {
-  type T[_T] = Idx { type T = _T }
+  sealed trait T[_T] extends Idx { type T = _T }
+  object T {
+    implicit def specify(implicit idx: Idx): Idx.T[idx.T] = idx match { case t: T[idx.T] ⇒ t }
+  }
 
-  object Int
-    extends Idx {
-    type T = scala.Int
+  implicit object Int
+    extends T[scala.Int] {
 
     val arithmeticId : Id[Int] = Arithmetic.intint
     val arithmeticInt: Id[Int] = Arithmetic.intint
@@ -34,14 +36,12 @@ object Idx {
   }
 
   object Long
-    extends Idx {
+    extends T[scala.Long] {
 
     case class CastException(value: Long)
       extends RuntimeException(
         s"Attempting to case $value to an integer"
       )
-
-    type T = scala.Long
 
     val arithmeticId : Arithmetic[Long, Long] = Arithmetic.longlong
     val arithmeticInt: Arithmetic[Long,  Int] = Arithmetic.longint
@@ -64,14 +64,14 @@ object Idx {
     // TODO: remove explicit imports of this, mix it in instead
     // NOTE: this can cause implicit-resolution ambiguity if an implicit `Idx.T` is already in scope and an `Idx` (or
     // maybe `Idx.T`) is needed
-    implicit def specify(implicit idx: Idx): Idx.T[idx.T] = idx
+
   }
 
   // TODO: would be nice to not need all these, but afaict each set is necessary depending whether an `Idx` is
   // identified as `Idx.T` or not
   trait syntax {
-    implicit def unwrapEncoder    (implicit idx: Idx     ): Encoder[idx.T] = idx.encoder
-    implicit def unwrapDecoder    (implicit idx: Idx     ): Decoder[idx.T] = idx.decoder
+    implicit def unwrapEncoder(implicit idx: Idx): Encoder[idx.T] = idx.encoder
+    implicit def unwrapDecoder(implicit idx: Idx): Decoder[idx.T] = idx.decoder
     @inline def makeIdxOps[T](t: T): Ops[T] = Ops(t)
   }
   object syntax extends syntax

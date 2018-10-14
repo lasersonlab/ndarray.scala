@@ -419,7 +419,6 @@ object Array {
       T
     ]
   = {
-    import Idx.helpers.specify
     import ev.{ A ⇒ _, _ }
     for {
       _metadata ←
@@ -452,7 +451,6 @@ object Array {
     metadata.?(dir)
       .flatMap {
         metadata ⇒
-          import Idx.helpers.specify
           apply[
             List,
             idx.T,
@@ -580,44 +578,38 @@ object Array {
 
   // TODO: would be nice to not need multiple overloads corresponding to different "Aux" aliases
   implicit def loadArrInt[
-    Shape[_],
-        T
-          :  DataType.Decoder
-          : FillValue.Decoder
-  ](
-    implicit
-    v: VectorEvidence[Shape]
-  ):
+    Shape[_]
+    : VectorEvidence,
+    T
+    :  DataType.Decoder
+    : FillValue.Decoder
+  ]:
     Load[
       lasersonlab.zarr.Array[Shape, T]
     ] =
-  {
-    implicit val int = Idx.Int
     loadArr[Shape, T]
-  }
 
   implicit def loadArr[
-    Shape[_],
+    Shape[_]
+    : VectorEvidence,
     T
-      :  DataType.Decoder
-      : FillValue.Decoder
+    :  DataType.Decoder
+    : FillValue.Decoder
   ](
     implicit
-      v: VectorEvidence[Shape],
     idx: Idx
   ):
     Load[
       Of[Shape, idx.T, T]
     ] =
     new Load[Of[Shape, idx.T, T]] {
-      override def apply(dir: Path): Exception | Of[Shape, idx.T, T] =
-        Array[Shape, T](dir)
+      def apply(dir: Path): Exception | Of[Shape, idx.T, T] = Array[Shape, T](dir)
     }
 
-  implicit def saveUntyped[
+  implicit def save_?[
     Shape[_]
-           : EncoderK
-           : Scannable
+    : EncoderK
+    : Scannable
   ](
     implicit
     idx: Idx
@@ -651,20 +643,20 @@ object Array {
     }
 
   implicit def saveOf[
-    _Shape[_]
-            : EncoderK
-            : Scannable,
-    _T
+    ShapeT[_]
+    : EncoderK
+    : Scannable,
+    T
   ]:
     Save[
-      lasersonlab.zarr.Array[_Shape, _T]
+      lasersonlab.zarr.Array[ShapeT, T]
     ] =
     new Save[
-      lasersonlab.zarr.Array[_Shape, _T]
+      lasersonlab.zarr.Array[ShapeT, T]
     ] {
-      implicit val __int = Idx.Int
-      def direct(t: zarr.Array[_Shape, _T], dir: Path): Throwable | Unit =
-        save[_Shape, t.A, t.Chunk, _T].apply(t, dir)
+      implicit val int = Idx.Int
+      def direct(t: zarr.Array[ShapeT, T], dir: Path): Throwable | Unit =
+        save[ShapeT, t.A, t.Chunk, T].apply(t, dir)
     }
 
   implicit def save[
@@ -716,7 +708,7 @@ object Array {
                     .scanLeft_→(
                       (
                         int,  // output
-                        int
+                        int   // remaining
                       )
                     ) {
                       case (

@@ -5,6 +5,7 @@ import org.lasersonlab.zarr.circe.parser._
 import org.lasersonlab.zarr.data._
 import org.lasersonlab.zarr.dtype.ByteOrder.LittleEndian
 import org.lasersonlab.zarr.dtype.DataType._
+import org.lasersonlab.zarr.utils.Idx
 
 class MetadataTest
   extends Suite {

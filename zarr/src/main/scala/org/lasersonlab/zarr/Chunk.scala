@@ -6,6 +6,7 @@ import java.nio.ByteBuffer
 import cats.{ Eval, Foldable, Semigroupal }
 import hammerlab.option._
 import hammerlab.path._
+import org.lasersonlab.ndarray.ArrayLike
 import org.lasersonlab.shapeless.{ Scannable, Zip }
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.Chunk.Idx
@@ -36,7 +37,7 @@ case class Chunk[
     sizeHint:        Opt[Int]
 )(
   implicit
-  val dtype: DataType.Aux[T]
+  val dtype: DataType[T]
 ) {
 
   type Shape = ShapeT[Idx]
@@ -113,7 +114,7 @@ object Chunk {
             : Scannable
             : Zip,
          T
-            : DataType.Aux
+            : DataType
   ](
           path: Path,
          shape: ShapeT[Idx],
@@ -143,6 +144,13 @@ object Chunk {
           sizeHint
         )
       )
+    }
+
+  implicit def arrayLike[S[_]]: ArrayLike.Aux[Chunk[S, ?], S] =
+    new ArrayLike[Chunk[S, ?]] {
+      type Shape[U] = S[U]
+      @inline def shape   (chunk: Chunk[Shape, _]): Shape[Int] = chunk.shape
+      @inline def apply[T](chunk: Chunk[Shape, T], idx: S[Int]): T = chunk(idx)
     }
 
   implicit def foldable[Shape[_]]: Foldable[Chunk[Shape, ?]] =

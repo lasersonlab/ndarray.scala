@@ -5,7 +5,7 @@ import shapeless._
 import shapeless.labelled.FieldType
 
 /**
- * Auto-derivations of [[Struct]] instances for case-classes
+ * Auto-derivations of [[struct]] instances for case-classes
  */
 trait StructDerivations {
 
@@ -24,7 +24,7 @@ trait StructDerivations {
     Tail <: HList
   ](
     implicit
-    head: Aux[Head],
+    head: DataType[Head],
     name: Witness.Aux[Name],
     tail: StructList[Tail]
   ):
@@ -52,7 +52,7 @@ trait StructDerivations {
     )
   }
 
-  implicit def struct[
+  implicit def Struct[
     S,
     L <: HList
   ](
@@ -60,6 +60,6 @@ trait StructDerivations {
     g: LabelledGeneric.Aux[S, L],
     l: StructList[L]
   ):
-    Aux[S] =
-    Struct[S, L](l)
+    DataType[S] =
+    struct[S, L](l)
 }

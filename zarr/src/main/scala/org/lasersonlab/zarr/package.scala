@@ -3,7 +3,7 @@ package org.lasersonlab
 import io.circe.generic.AutoDerivation
 import io.circe.{ Parser, ParsingFailure, Printer }
 import org.hammerlab.paths.HasPathOps
-import org.lasersonlab.ndarray.Arithmetic
+import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike }
 import org.lasersonlab.shapeless.{ Scannable, Zip }
 import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.utils.Idx
@@ -29,6 +29,7 @@ package object zarr
      with hammerlab.either
      with hammerlab.math.utils
      with Arithmetic.syntax
+     with ArrayLike.syntax
      with        Idx.syntax
      with       Load.syntax
      with       Save.syntax

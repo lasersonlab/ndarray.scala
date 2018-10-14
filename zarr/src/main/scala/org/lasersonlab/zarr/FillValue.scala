@@ -38,14 +38,14 @@ object FillValue {
    * encoded as taking up a specific number of bytes, which is discarded in the parsed type [[String]].
    */
   sealed trait Decoder[T]  {
-    def apply(json: Json, datatype: DataType.Aux[T]): Result[T]
+    def apply(json: Json, datatype: DataType[T]): Result[T]
   }
   trait StructDecoder {
     implicit def base64StringDecoder[T]: Decoder[T] =
       new Decoder[T] {
         def apply(
           json: Json,
-          datatype: DataType.Aux[T]
+          datatype: DataType[T]
          ):
           Result[T] =
           if (json.isNull)
@@ -79,7 +79,7 @@ object FillValue {
   }
   trait FromDataType
     extends StructDecoder {
-    implicit def fromDataType[T](implicit d: DataType.Aux[T]): Decoder[T] =
+    implicit def fromDataType[T](implicit d: DataType[T]): Decoder[T] =
       d match {
         case p: Primitive[T] ⇒
           p match {
@@ -105,7 +105,7 @@ object FillValue {
          * Decoder for types where the [[DataType]] parameter is not necessary (because the JSON representation is
          * always the same size), e.g. numeric types.
          */
-        def apply(json: Json, unused: DataType.Aux[T]): Result[T] =
+        def apply(json: Json, unused: DataType[T]): Result[T] =
           if (json.isNull)
             Right(Null)
           else
@@ -123,7 +123,7 @@ object FillValue {
     implicit val string: Decoder[String] =
       new Decoder[String] {
         val stringDecoder = base64StringDecoder[String]
-        def apply(json: Json, datatype: DataType.Aux[String]): Result[String] =
+        def apply(json: Json, datatype: DataType[String]): Result[String] =
           if (json.isNull)
             Right(Null)
           else
@@ -157,7 +157,7 @@ object FillValue {
   /**
    * In general, decoding a [[FillValue]] requires a [[DataType]], even when the type [[T]] of the [[FillValue]] is
    * known, because e.g. [[string]] fields are encoded as a specific length that is not captured in the decoded
-   * [[String]] type (which also affects parsing of [[Struct typed]] and [[untyped.Struct untyped]] structs).
+   * [[String]] type (which also affects parsing of [[struct typed]] and [[struct.? untyped]] structs).
    *
    * [[Metadata]]-parsing machinery needs to open the JSON, parse the [[DataType]], and then make that implicitly
    * available in order to get [[FillValue]]-decoding
@@ -165,7 +165,7 @@ object FillValue {
   implicit def decoder[T](
     implicit
     d: Decoder[T],
-    datatype: DataType.Aux[T]
+    datatype: DataType[T]
   ):
     circe.Decoder[
       FillValue[T]
@@ -178,7 +178,7 @@ object FillValue {
         )
     }
 
-  sealed case class Encoder[T](apply: (T, DataType.Aux[T]) ⇒ Json)
+  sealed case class Encoder[T](apply: (T, DataType[T]) ⇒ Json)
   trait LowPriorityEncoder {
     def default[T]: Encoder[T] =
       Encoder {
@@ -192,7 +192,7 @@ object FillValue {
   }
   trait MedPriorityEncoder
     extends LowPriorityEncoder {
-    implicit def fromDataType[T](implicit d: DataType.Aux[T]): Encoder[T] =
+    implicit def fromDataType[T](implicit d: DataType[T]): Encoder[T] =
       d match {
         case p: Primitive[T] ⇒
           p match {
@@ -232,7 +232,7 @@ object FillValue {
   implicit def encoder[T](
     implicit
      encoder:  Encoder    [T],
-    datatype: DataType.Aux[T]
+    datatype: DataType[T]
   ):
     circe.Encoder[
       FillValue[T]

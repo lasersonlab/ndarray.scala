@@ -1,7 +1,6 @@
 package lasersonlab
 
 import org.lasersonlab.zarr.Compressor
-import org.lasersonlab.zarr.dtype.ByteOrder
 import org.lasersonlab.zarr.dtype.ByteOrder._
 import org.lasersonlab.{ zarr ⇒ z }
 

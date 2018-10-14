@@ -9,9 +9,9 @@ import shapeless.the
  */
 trait EqInstances {
 
-  lazy val structEq: Eq[untyped.Struct] =
+  lazy val structEq: Eq[struct.?] =
     Eq.by[
-      untyped.Struct,
+      struct.?,
       List[StructEntry]
     ](
       _
@@ -41,29 +41,29 @@ trait EqInstances {
         }
     }
 
-  implicit def auxEq[T]: Eq[Aux[T]] =
-    new Eq[Aux[T]] {
-      def eqv(x: Aux[T], y: Aux[T]): Boolean = dataTypeEq.eqv(x, y)
+  implicit def auxEq[T]: Eq[DataType[T]] =
+    new Eq[DataType[T]] {
+      def eqv(x: DataType[T], y: DataType[T]): Boolean = dataTypeEq.eqv(x, y)
     }
 
-  implicit lazy val dataTypeEq: Eq[DataType] =
-    new Eq[DataType] {
+  implicit lazy val dataTypeEq: Eq[DataType.?] =
+    new Eq[DataType.?] {
       import cats.derived.auto.eq._
       import cats.implicits.catsKernelStdOrderForInt
       val primitive = the[Eq[Primitive[_]]]
 
-      def eqv(x: DataType, y: DataType): Boolean =
+      def eqv(x: DataType.?, y: DataType.?): Boolean =
         (x, y) match {
           case (x: Primitive[_], y: Primitive[_]) ⇒ primitive.eqv(x, y)
-          case (x: untyped.Struct, y: untyped.Struct) ⇒ structEq.eqv(x, y)
+          case (x: struct.?, y: struct.?) ⇒ structEq.eqv(x, y)
           case (
-            Struct(
+            struct(
               StructList(
                 xEntries,
                 xSize
               )
             ),
-            Struct(
+            struct(
               StructList(
                 yEntries,
                 ySize

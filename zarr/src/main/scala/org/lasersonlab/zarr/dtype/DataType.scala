@@ -25,46 +25,47 @@ import scala.util.Try
  *   - Floating-point types: [[float]], [[double]]
  *   - [[string]]
  * - Structs:
- *   - [[Struct "typed"]]: auto-derived for a case-class
- *   - [[untyped.Struct "untyped"]]: "bag of fields", corresponding to [[org.lasersonlab.zarr.untyped.Struct]]
+ *   - [[struct "typed"]]: auto-derived for a case-class
+ *   - [[struct.? "untyped"]]: "bag of fields", corresponding to [[org.lasersonlab.zarr.untyped.Struct]]
  *
  * "Typed" and "Untyped" structs can represent the same logical underlying datatype (e.g. the JSON representation, in
  * [[org.lasersonlab.zarr.Metadata array metadata]]'s "dtype" field will be the same), but allow for call-sites that
  * know/enforce a more structured schema vs. not
  */
-sealed trait DataType {
-  def size: Int
-  type T
-  def apply(buff: ByteBuffer): T
-  def  read(buff: ByteBuffer, idx: Int): T = {
-    buff.position(size * idx)
-    apply(buff)
-  }
-  def apply(buffer: ByteBuffer, t: T): Unit
-  def apply(t: T): Array[Byte] = {
-    val buff = allocate(size)
-    apply(buff, t)
-    buff.array()
-  }
-  def t: Aux[T] = this
-}
+sealed trait DataType[_T] extends DataType.? { type T = _T }
 
 object DataType
   extends StructDerivations
      with EqInstances
      with Coders {
 
-  type Aux[_T] = DataType { type T = _T }
+  sealed trait ? {
+    def size: Int
+    type T
+    def apply(buff: ByteBuffer): T
+    def  read(buff: ByteBuffer, idx: Int): T = {
+      buff.position(size * idx)
+      apply(buff)
+    }
+    def apply(buffer: ByteBuffer, t: T): Unit
+    def apply(t: T): Array[Byte] = {
+      val buff = allocate(size)
+      apply(buff, t)
+      buff.array()
+    }
+    def t: DataType[T] = this match { case aux: DataType[T] ⇒ aux }
+  }
+
+  type T[T] = DataType[T]
 
   /**
    * Common interface for non-struct datatypes (numerics, strings)
    */
-  sealed abstract class Primitive[_T](
+  sealed abstract class Primitive[T](
     val order: ByteOrder,
     val dType: DType,
     val size: Int
-  ) extends DataType {
-    type T = _T
+  ) extends DataType[T] {
     override val toString = s"$order$dType$size"
   }
 
@@ -127,32 +128,70 @@ object DataType
 
   type <>! = Endianness
 
-  object  short { implicit def apply(v:  short.type)(implicit e: <>!): Aux[ Short] =  short(e) }
-  object    int { implicit def apply(v:    int.type)(implicit e: <>!): Aux[   Int] =    int(e) }
-  object   long { implicit def apply(v:   long.type)(implicit e: <>!): Aux[  Long] =   long(e) }
-  object  float { implicit def apply(v:  float.type)(implicit e: <>!): Aux[ Float] =  float(e) }
-  object double { implicit def apply(v: double.type)(implicit e: <>!): Aux[Double] = double(e) }
+  object  short { implicit def apply(v:  short.type)(implicit e: <>!): T[ Short] =  short(e) }
+  object    int { implicit def apply(v:    int.type)(implicit e: <>!): T[   Int] =    int(e) }
+  object   long { implicit def apply(v:   long.type)(implicit e: <>!): T[  Long] =   long(e) }
+  object  float { implicit def apply(v:  float.type)(implicit e: <>!): T[ Float] =  float(e) }
+  object double { implicit def apply(v: double.type)(implicit e: <>!): T[Double] = double(e) }
 
   /**
    * Expose implicit [[Primitive]] instances for derivations (assuming sufficient [[Endianness]] evidence)
    */
 
   implicit val   _byte                               =   byte
-  implicit def  _short(implicit e: <>!): Aux[ Short] =  short(e)
-  implicit def    _int(implicit e: <>!): Aux[   Int] =    int(e)
-  implicit def   _long(implicit e: <>!): Aux[  Long] =   long(e)
-  implicit def  _float(implicit e: <>!): Aux[ Float] =  float(e)
-  implicit def _double(implicit e: <>!): Aux[Double] = double(e)
+  implicit def  _short(implicit e: <>!): T[ Short] =  short(e)
+  implicit def    _int(implicit e: <>!): T[   Int] =    int(e)
+  implicit def   _long(implicit e: <>!): T[  Long] =   long(e)
+  implicit def  _float(implicit e: <>!): T[ Float] =  float(e)
+  implicit def _double(implicit e: <>!): T[Double] = double(e)
 
-  object untyped {
+  case class StructEntry(name: String, datatype: DataType.?) {
+    val size = datatype.size
+    override def toString: String =
+      Seq(
+        name,
+        size
+      )
+      .mkString(
+        "[\"",
+        "\",\"",
+        "\"]"
+      )
+  }
+
+  case class StructList[L <: HList](
+    entries: List[StructEntry],
+    size: Int
+  )(
+    read: ByteBuffer ⇒ L,
+    write: (ByteBuffer, L) ⇒ Unit
+  ) {
+    type T = L
+    @inline def apply(buff: ByteBuffer): T = read(buff)
+    @inline def apply(buffer: ByteBuffer, t: L): Unit = write(buffer, t)
+  }
+
+  case class struct[
+    S,
+    L <: HList
+  ](
+    entries: StructList[L]
+  )(
+    implicit
+    g: LabelledGeneric.Aux[S, L]
+  )
+  extends DataType[S] {
+    val size: Int = entries.size
+    @inline def apply(buffer: ByteBuffer): T = g.from(entries(buffer))
+    @inline def apply(buffer: ByteBuffer, t: S): Unit = entries(buffer, g.to(t))
+  }
+
+  object struct {
     /**
      * [[zarr.untyped.Struct "Untyped" struct]] [[DataType]]
-     *
-     * TODO: make this Struct.?
      */
-    case class Struct(entries: List[StructEntry])
-      extends DataType {
-      type T = zarr.untyped.Struct
+    case class ?(entries: List[StructEntry])
+      extends DataType[zarr.untyped.Struct] {
 
       val size: Int =
         entries
@@ -207,49 +246,7 @@ object DataType
     }
   }
 
-  case class StructEntry(name: String, datatype: DataType) {
-    val size = datatype.size
-    override def toString: String =
-      Seq(
-        name,
-        size
-      )
-      .mkString(
-        "[\"",
-        "\",\"",
-        "\"]"
-      )
-  }
-
-  case class StructList[L <: HList](
-    entries: List[StructEntry],
-    size: Int
-  )(
-    read: ByteBuffer ⇒ L,
-    write: (ByteBuffer, L) ⇒ Unit
-  ) {
-    type T = L
-    @inline def apply(buff: ByteBuffer): T = read(buff)
-    @inline def apply(buffer: ByteBuffer, t: L): Unit = write(buffer, t)
-  }
-
-  case class Struct[
-    S,
-    L <: HList
-  ](
-    entries: StructList[L]
-  )(
-    implicit
-    g: LabelledGeneric.Aux[S, L]
-  )
-  extends DataType {
-    val size: Int = entries.size
-    override type T = S
-    @inline def apply(buffer: ByteBuffer): T = g.from(entries(buffer))
-    @inline def apply(buffer: ByteBuffer, t: S): Unit = entries(buffer, g.to(t))
-  }
-
-  def get(order: ByteOrder, dtype: DType, size: Int): String | DataType =
+  def get(order: ByteOrder, dtype: DType, size: Int): String | DataType.? =
     (order, dtype, size) match {
       case (  None, _: d.   int,    1) ⇒ Right(  byte      )
       case (e: <>!, _: d.   int,    2) ⇒ Right( short(   e))
@@ -265,7 +262,7 @@ object DataType
     }
 
   val regex = """(.)(.)(\d+)""".r
-  def get(str: String, c: HCursor): DecodingFailure | DataType =
+  def get(str: String, c: HCursor): DecodingFailure | DataType.? =
     for {
       t ←
         Try {

@@ -4,40 +4,30 @@ import cats.implicits._
 import hammerlab.either._
 import hammerlab.option._
 import org.lasersonlab.zarr.FillValue.NonNull
-import org.lasersonlab.zarr.array.metadata.untyped.Shaped
+import org.lasersonlab.zarr.array.{ metadata ⇒ md }
 import org.lasersonlab.zarr.cmp.Cmp
-import org.lasersonlab.zarr.dtype.DataType._
 import org.lasersonlab.zarr.dtype._
-import org.lasersonlab.zarr.{ Dimension, FillValue, Metadata }
+import org.lasersonlab.zarr.{ Dimension, FillValue, Metadata, dtype }
 import shapeless.the
 
 object metadata {
-  def cmpT[T](implicit t: Cmp[T]): Cmp[T] = t
+  import dtype.{ DataType ⇒ dt }
+  def cmpFromDatatype[T](d: DataType[T]): Cmp[T] =
+    d match {
+      case d @ dt.  byte      ⇒ the[Cmp[T]]
+      case d @ dt. short  (_) ⇒ the[Cmp[T]]
+      case d @ dt.   int  (_) ⇒ the[Cmp[T]]
+      case d @ dt.  long  (_) ⇒ the[Cmp[T]]
+      case d @ dt. float  (_) ⇒ the[Cmp[T]]
+      case d @ dt.double  (_) ⇒ the[Cmp[T]]
+      case d @ dt.string  (_) ⇒ the[Cmp[T]]
+      case d @ dt.struct.?(_) ⇒ Cmp { (l, r) ⇒ (l != r) ? (l, r) }
+      case d @ dt.struct  (_) ⇒ Cmp { (l, r) ⇒ (l != r) ? (l, r) }
+    }
 
-  def cmpFromDatatype[T](d: DataType.Aux[T]): Cmp[T] =
-    (
-      d match {
-        case d @ DataType.untyped.Struct(_) ⇒ cmpT[untyped.Struct]
-        case d @ DataType.  byte    ⇒ cmpT[  Byte]
-        case d @ DataType. short(_) ⇒ cmpT[ Short]
-        case d @ DataType.   int(_) ⇒ cmpT[   Int]
-        case d @ DataType.  long(_) ⇒ cmpT[  Long]
-        case d @ DataType. float(_) ⇒ cmpT[ Float]
-        case d @ DataType.double(_) ⇒ cmpT[Double]
-        case d @ DataType.string(_) ⇒ cmpT[String]
-        case d @ DataType.Struct(_) ⇒
-          Cmp[d.T, (d.T, d.T)] {
-            (l, r) ⇒
-            //def apply(l: d.T, r: d.T): Option[(d.T, d.T)] =
-              (l != r) ? (l, r)
-          }
-      }
-    )
-    .asInstanceOf[Cmp[d.T]]
-
-  implicit def fillValueCanEq[T](
+  implicit def fillValueCmp[T](
     implicit
-    d: DataType.Aux[T]
+    d: DataType[T]
   ):
     Cmp[
       FillValue[T]
@@ -49,8 +39,8 @@ object metadata {
       case _ ⇒ None
     }
 
-  object base {
-    def cmp[
+  trait cmp {
+    def baseCmp[
       Shape[_],
       Idx
     ](
@@ -58,13 +48,13 @@ object metadata {
       dim: Cmp[Shape[Dimension[Idx]]]
     ):
       Cmp[
-        Shaped[
+        md.?[
           Shape,
           Idx
         ]
       ] = {
       Cmp[
-        Shaped[
+        md.?[
           Shape,
           Idx
         ],
@@ -84,22 +74,6 @@ object metadata {
           }
       }
     }
-  }
-  trait cmp {
-    implicit def baseCmp[
-      Shape[_],
-      Idx
-    ](
-      implicit
-      dim: Cmp[Shape[Dimension[Idx]]]
-    ):
-      Cmp[
-        Shaped[
-          Shape,
-          Idx
-        ]
-      ] =
-      base.cmp
   }
   object cmp extends cmp
 }

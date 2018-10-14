@@ -51,7 +51,7 @@ trait StructDecoder {
     l: StructParser[L]
   ):
   Decoder[S] =
-    new circe.Decoder[Aux[S]] {
+    new circe.Decoder[DataType[S]] {
       def apply(c: HCursor): Return[S] =
         c
           .as[Vector[Entry]]
@@ -60,7 +60,7 @@ trait StructDecoder {
               l(entries.toList)
                 .bimap(
                   DecodingFailure(_, c.history),
-                  struct(g, _)
+                  Struct(g, _)
                 )
           }
     }
@@ -69,15 +69,15 @@ trait StructDecoder {
 trait Coders
   extends StructDecoder {
 
-  type Decoder[T] = circe.Decoder[Aux[T]]
-  type Encoder[T] = circe.Encoder[Aux[T]]
+  type Decoder[T] = circe.Decoder[DataType[T]]
+  type Encoder[T] = circe.Encoder[DataType[T]]
 
   /**
    * Decode a [[DataType]] when its constituent type is not known ahead of time
    */
-  implicit val decoder: circe.Decoder[DataType] =
-    new circe.Decoder[DataType] {
-      def apply(c: HCursor): Result[DataType] =
+  implicit val decoder: circe.Decoder[DataType.?] =
+    new circe.Decoder[DataType.?] {
+      def apply(c: HCursor): Result[DataType.?] =
         c
           .value
           .as[String]
@@ -90,7 +90,7 @@ trait Coders
   /**
    * Encode any datatype as JSON
    */
-  implicit def dataTypeEncoder[D <: DataType]: circe.Encoder[D] =
+  implicit def dataTypeEncoder[D <: DataType.?]: circe.Encoder[D] =
     new circe.Encoder[D] {
       def seq(entries: Seq[StructEntry]): Json =
         Json.arr(
@@ -106,26 +106,26 @@ trait Coders
         )
       def apply(a: D): Json =
         a match {
-          case p:   Primitive[_]                      ⇒ Json.fromString(p.toString)
-          case         Struct(StructList(entries, _)) ⇒ seq(entries)
-          case untyped.Struct           (entries    ) ⇒ seq(entries)
+          case      p: Primitive[_]           ⇒ Json.fromString(p.toString)
+          case struct(StructList(entries, _)) ⇒ seq(entries)
+          case struct.?         (entries    ) ⇒ seq(entries)
         }
     }
 
-  type Return[T] = DecodingFailure | DataType.Aux[T]
+  type Return[T] = DecodingFailure | DataType[T]
 
   def make[T](
     fn:
       PartialFunction[
         List[Char],
-        DataType.Aux[T]
+        DataType[T]
       ]
   )(
     implicit
     name: Name[T]
   ):
     Decoder[T] =
-    new circe.Decoder[Aux[T]] {
+    new circe.Decoder[DataType[T]] {
       @inline def apply(c: HCursor): Return[T] =
         c
           .value
@@ -147,7 +147,7 @@ trait Coders
           }
     }
 
-  import DataType.{ Struct ⇒ _, _ }
+  import DataType._
 
   object Int {
     def unapply(s: Seq[Char]): Option[Int] = Some( s.mkString.toInt )
@@ -163,8 +163,8 @@ trait Coders
 
   import org.lasersonlab.zarr.{ untyped ⇒ u }
   implicit val untypedStructDecoder: Decoder[u.Struct] =
-    new circe.Decoder[Aux[u.Struct]] {
-      override def apply(c: HCursor): Result[untyped.Struct] =
+    new circe.Decoder[DataType[u.Struct]] {
+      override def apply(c: HCursor): Result[struct.?] =
         c
           .value
           .as[
@@ -185,7 +185,7 @@ trait Coders
                   }
               }
               .sequence
-              .map { untyped.Struct }
+              .map {struct.? }
           }
     }
 }

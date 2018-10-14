@@ -31,7 +31,7 @@ object Dimension {
     Dimension(
       arr,
       chunk,
-      (arr + chunk - 1) / chunk
+      arr /↑ chunk
     )
 
   def apply[Idx](

@@ -1,8 +1,7 @@
 package org.lasersonlab.zarr.cmp
 
-import cats.{ Eq, data }
+import cats.Eq
 import cats.data.{ Ior, NonEmptyList }
-import hammerlab.either._
 import magnolia._
 import org.hammerlab.{ test ⇒ t }
 import org.scalatest.FunSuite
@@ -130,5 +129,9 @@ object Cmp {
           d ⇒
             fail(d.toString)
         }
+  }
+
+  trait ops {
+    def cmp[T](l: T, r: T)(implicit cmp: Cmp[T]): Option[cmp.Diff] = cmp(l, r)
   }
 }

@@ -23,7 +23,12 @@ cache:
   - "$HOME/.coursier"
   - "$HOME/lib"
 
-after_success: bash <(curl -s https://codecov.io/bash)
+after_success:
+- curl -s https://codecov.io/bash > .codecov
+- sed -i -e 's/TRAVIS_.*_VERSION/^TRAVIS_.*_VERSION=/' .codecov
+- chmod +x .codecov
+- |
+  if [[ $TRAVIS_SCALA_VERSION == 2.12.7 ]]; then ./.codecov; fi
 
 before_cache:
 # Tricks to avoid unnecessary cache updates

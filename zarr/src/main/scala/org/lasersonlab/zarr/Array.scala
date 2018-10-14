@@ -30,6 +30,9 @@ import scala.util.Try
  *
  * Storage of the ND-array of chunks, as well as the records in each chunk, are each a configurable type-param; see
  * companion-object for some convenient constructors
+ *
+ * TODO: experiment with Breeze vector/array for 1D/2D cases
+ * TODO: make this a sealed hierarchy with progressively more type-members are type-paramters in the subclasses
  */
 trait Array {
   /** Element type */
@@ -80,7 +83,7 @@ trait Array {
    * }}}
    *
    * This is necessary due to some unification limitations relating to the various aliases ([[Array.?]],
-   * [[Array.Aux]], [[Array.??]], etc.) used to specify different subsets of an [[Array]]'s dependent types' that are
+   * [[Array.Aux]], [[Array.*?]], etc.) used to specify different subsets of an [[Array]]'s dependent types' that are
    * known at a given call-site
    */
   def t: Array.T[this.T] = this
@@ -181,7 +184,7 @@ object Array {
   type Aux[_ShapeT[_], _Idx, _A[_], _Chunk[_], _T] = Array { type ShapeT[U] = _ShapeT[U]; type Idx = _Idx ; type T = _T ; type A[U] = _A[U]; type Chunk[U] = _Chunk[U] }
   type  Of[_ShapeT[_], _Idx,                   _T] = Array { type ShapeT[U] = _ShapeT[U]; type Idx = _Idx ; type T = _T }
   type   ?[_ShapeT[_], _Idx                      ] = Array { type ShapeT[U] = _ShapeT[U]; type Idx = _Idx }  // element-type unknown
-  type  ??[            _Idx                      ] = Array { type ShapeT[U] =    List[U]; type Idx = _Idx }  // element-type and number of dimensions unknown
+  type  *?[            _Idx                      ] = Array { type ShapeT[U] =    List[U]; type Idx = _Idx }  // element-type and number of dimensions unknown
 
   /**
    * De-structure an [[Array]] into its [[Metadata]], [[Attrs]], and [[Array.chunks]] members, preserving whatever is
@@ -218,12 +221,13 @@ object Array {
     _elems: _T*
   )(
     implicit
-       datatype: DataType.Aux[_T],
-     compressor:     Compressor     = Blosc(),
-          order:          Order     = C,
-     fill_value:      FillValue[_T] = Null,
-    zarr_format:         Format     = `2`,
-        filters: Opt[Seq[Filter]]   = None,
+      // TODO: implicitly construct the whole metadata at call-site
+       datatype:      DataType.Aux[_T],
+     compressor:        Compressor     = Blosc(),
+          order:             Order     = C,
+     fill_value:         FillValue[_T] = Null,
+    zarr_format:            Format     = `2`,
+        filters: Option[Seq[Filter]]   = None,
       traverseShape: Traverse[_ShapeT]
   ):
     Aux[
@@ -484,7 +488,7 @@ object Array {
     idx: Idx
   ):
     Exception |
-    Array.??[idx.T]
+    Array.*?[idx.T]
   =
     metadata.?(dir)
       .flatMap {
@@ -500,7 +504,7 @@ object Array {
             metadata.t
           )
           .map {
-            arr ⇒ arr: Array.??[idx.T]
+            arr ⇒ arr: Array.*?[idx.T]
           }
       }
 
@@ -673,7 +677,7 @@ object Array {
         idx.T
       ]
     ] {
-      def apply(
+      def direct(
         a: Array.?[Shape, idx.T],
         dir: Path
       ):
@@ -705,7 +709,7 @@ object Array {
       lasersonlab.zarr.Array[_Shape, _T]
     ] {
       implicit val __int = Idx.Int
-      override def apply(t: zarr.Array[_Shape, _T], dir: Path): Throwable | Unit =
+      def direct(t: zarr.Array[_Shape, _T], dir: Path): Throwable | Unit =
         save[_Shape, t.A, t.Chunk, _T].apply(t, dir)
     }
 
@@ -725,7 +729,7 @@ object Array {
     ] =
     new Save[Aux[_Shape, idx.T, A, Chunk, _T]] {
       type _Idx = idx.T
-      def apply(
+      def direct(
         a: Aux[_Shape, idx.T, A, Chunk, _T],
         dir: Path
       ):
@@ -803,10 +807,9 @@ object Array {
             .map { _ ⇒ () }
         }
 
-        // TODO: configure ability to write to a temporary location and then "commit" all results
         for {
           _ ← a.metadata.save(dir)
-          _ ← a.attrs.save(dir)
+          _ ← a.   attrs.save(dir)
           _ ← chunkResults
         } yield
           ()

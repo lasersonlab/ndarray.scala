@@ -24,7 +24,7 @@ object array {
       dim: Cmp[Dimension[Idx]]
     ):
       Cmp[
-        Array.??[Idx]
+        Array.*?[Idx]
       ] =
       arrayShapedCmp[List, Idx]
 

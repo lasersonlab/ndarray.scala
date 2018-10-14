@@ -5,7 +5,7 @@ import _root_.cats.{ Foldable, Traverse }
 import _root_.shapeless.the
 import com.tom_e_white.hdf5_java_cloud.NioReadOnlyRandomAccessFile
 import hammerlab.bytes._
-import hammerlab.option._
+import hammerlab.math.utils._
 import hammerlab.path.Path
 import io.circe.Json
 import lasersonlab.zarr.Group
@@ -209,8 +209,7 @@ package object convert
             )
           )
 
-        // TODO: add /↑ helper for rounding-up division
-        val numChunks = (numRows + rowsPerChunk - 1) / rowsPerChunk
+        val numChunks = numRows /↑ rowsPerChunk
 
         val _metadata =
           Metadata(

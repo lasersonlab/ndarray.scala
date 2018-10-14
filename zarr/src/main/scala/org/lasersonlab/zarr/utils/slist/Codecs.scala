@@ -8,6 +8,7 @@ import lasersonlab.shapeless.slist._
 import org.lasersonlab.shapeless.SList.FromList
 import org.lasersonlab.shapeless.SList.FromList.{ TooFew, TooMany }
 import org.lasersonlab.circe.{ CodecK, DecoderK, EncoderK }
+import org.lasersonlab.zarr.circe.pprint
 
 trait Codecs {
 
@@ -28,10 +29,9 @@ trait Codecs {
                 case Nil ⇒
                   Right(⊥)
                 case extra ⇒
-                  val print = Printer.spaces4.copy(colonLeft = "").pretty _
                   Left(
                     DecodingFailure(
-                      s"Found ${extra.size} extra elements: ${print(c.value)}",
+                      s"Found ${extra.size} extra elements: ${pprint(c.value)}",
                       c.history
                     )
                   )
@@ -62,11 +62,10 @@ trait Codecs {
                   .left
                   .map {
                     err ⇒
-                      val print = Printer.spaces4.copy(colonLeft = "").pretty _
                       DecodingFailure(
                         err match {
-                          case TooFew (    by) ⇒ s"Expected ${from.size} elements; found ${from.size -          by}: ${print(c.value)}"
-                          case TooMany(extras) ⇒ s"Expected ${from.size} elements, found ${from.size + extras.size}: ${print(c.value)}"
+                          case TooFew (    by) ⇒ s"Expected ${from.size} elements; found ${from.size -          by}: ${pprint(c.value)}"
+                          case TooMany(extras) ⇒ s"Expected ${from.size} elements, found ${from.size + extras.size}: ${pprint(c.value)}"
                         },
                         c.history
                       )

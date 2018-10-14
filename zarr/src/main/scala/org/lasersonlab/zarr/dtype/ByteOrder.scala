@@ -20,7 +20,7 @@ object ByteOrder
     extends ByteOrder(toString)
 
   implicit case object LittleEndian extends Endianness("<")
-           case object    BigEndian extends Endianness(">")  // TODO: test big-endian datatypes
+           case object    BigEndian extends Endianness(">")
            case object         None extends  ByteOrder("|")
 
   object implicits

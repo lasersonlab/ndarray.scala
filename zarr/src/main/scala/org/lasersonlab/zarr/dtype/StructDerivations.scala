@@ -32,7 +32,7 @@ trait StructDerivations {
   = {
     implicit val headEntry =
       StructEntry(
-        name.value.name,  // TODO: this is wrong; drops field-name
+        name.value.name,
         head
       )
 

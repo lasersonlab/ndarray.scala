@@ -6,8 +6,9 @@ import hammerlab.path._
 import io.circe.Encoder
 import lasersonlab.xscala._
 import magnolia._
+import org.lasersonlab.zarr.Group
 import org.lasersonlab.zarr.circe.auto._
-import org.lasersonlab.zarr.{ Group, pprint }
+import org.lasersonlab.zarr.circe.pprint
 
 import scala.language.experimental.macros
 import scala.util.Try

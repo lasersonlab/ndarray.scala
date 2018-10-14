@@ -30,6 +30,9 @@ import scala.util.Try
  *
  * Storage of the ND-array of chunks, as well as the records in each chunk, are each a configurable type-param; see
  * companion-object for some convenient constructors
+ *
+ * TODO: experiment with Breeze vector/array for 1D/2D cases
+ * TODO: make this a sealed hierarchy with progressively more type-members are type-paramters in the subclasses
  */
 trait Array {
   /** Element type */

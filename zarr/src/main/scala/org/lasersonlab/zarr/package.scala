@@ -64,6 +64,8 @@ package object zarr
     type         Decoder[T] = c.        Decoder[T]
     type DecodingFailure    = c.DecodingFailure
     type         HCursor    = c.        HCursor
+
+    val pprint = Printer.spaces4.copy(colonLeft = "").pretty _
   }
 
   /**
@@ -86,7 +88,4 @@ package object zarr
 
   type Metadata[Shape[_], Idx, T] = array.metadata.Metadata[Shape, Idx, T]
   val Metadata = array.metadata.Metadata
-
-  // TODO: move to a circe pkg
-  val pprint = Printer.spaces4.copy(colonLeft = "").pretty _
 }

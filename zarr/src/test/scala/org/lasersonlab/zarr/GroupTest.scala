@@ -2,13 +2,13 @@ package org.lasersonlab.zarr
 
 import java.util.Random
 
+import hammerlab.path._
 import lasersonlab.{ zarr ⇒ z }
-import org.hammerlab.paths.Path
 import org.lasersonlab.zarr
+import org.lasersonlab.zarr.GroupTest._
 import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Load
-import org.lasersonlab.zarr.utils.Idx
 
 class GroupTest
   extends hammerlab.test.Suite
@@ -18,9 +18,10 @@ class GroupTest
      with Cmp.syntax
      with cmp.path {
 
-  implicit val __int: Idx.T[Int] = Idx.Int
-
   import DataType._
+
+  // set this to `true` to overwrite the existing "expected" data in src/test/resources
+  val writeNewExpectedData = false
 
   val bytes =
     for {
@@ -39,6 +40,8 @@ class GroupTest
 
   val random = new Random(1729)
   import random.{ nextGaussian ⇒ unif }
+
+  // Generate random (log-normal) Doubles, and repeat each one ceil(χ²) number of times
   lazy val stream: Stream[Double] = {
     val a = unif
     val b = unif
@@ -53,8 +56,22 @@ class GroupTest
   val  floats = stream.map(_.toFloat).take(10000)
   val doubles = stream.take(20)
 
+  val i4s = (1 to 10).map { I4 }
+  val numbers =
+    for {
+      r ← 0 until 10
+      c ← 0 until 10
+      n = 10 * r + c
+    } yield
+      Numbers(
+         short = n.toShort,
+           int = n,
+          long = n          * 1e9 toLong,
+         float = n.toFloat  *  10,
+        double = n.toDouble * 100
+      )
+
   test("typed") {
-    import GroupTest._
     import lasersonlab.shapeless.slist._
 
     val group =
@@ -68,6 +85,7 @@ class GroupTest
         strings =
           Strings(
             s2 = {
+              // TODO: add optional path for inferring string datatype size from data (requires O(n) pass)
               implicit val d = string(2)
               Array(10 :: ⊥)((1 to 10).map(_.toString): _*)
             },
@@ -83,65 +101,46 @@ class GroupTest
           ),
         structs =
           Structs(
-            ints =
-              Array(10 :: ⊥)(
-                (1 to 10).map { I4 }: _*
-              ),
-            numbers =
-              Array(
-                10 :: 10 :: ⊥,
-                 2 ::  5 :: ⊥
-              )(
-                (
-                  for {
-                    r ← 0 until 10
-                    c ← 0 until 10
-                    n = 10 * r + c
-                  } yield
-                    Numbers(
-                       short = n.toShort,
-                         int = n,
-                        long = n          * 1e9 toLong,
-                       float = n.toFloat  *  10,
-                      double = n.toDouble * 100
-                    )
-                )
-                : _*
-              )
+               ints = Array(      10 :: ⊥              )(    i4s: _*),
+            numbers = Array(10 :: 10 :: ⊥, 2 ::  5 :: ⊥)(numbers: _*)
           )
       )
 
-    val actual = tmpDir()
+    if (writeNewExpectedData)
+      group.save(Path("zarr/src/test/resources/grouptest.zarr")) !
+    else {
+      val actual = tmpDir()
 
-    group.save(actual).!
+      group.save(actual).!
 
-    val expectedPath = resource("grouptest.zarr")
+      val expectedPath = resource("grouptest.zarr")
 
-    eqv(actual, expectedPath)
+      eqv(actual, expectedPath)
 
-    val group2 = actual.load[Foo] !
+      val group2 = actual.load[Foo] !
 
-    eqv(group, group2)
+      eqv(group, group2)
 
-    val expected = expectedPath.load[Foo] !
+      val expected = expectedPath.load[Foo] !
 
-    eqv(group, expected)
+      eqv(group, expected)
+    }
   }
 
   test("typed – mixed compressors / endianness") {
-    import GroupTest.{ == ⇒ _, _ }
-    import lasersonlab.shapeless.slist.{ == ⇒ _, _ }
+    import GroupTest._
+    import lasersonlab.shapeless.slist._
     import org.lasersonlab.zarr.Compressor.Blosc
     import org.lasersonlab.zarr.Compressor.Blosc._
 
     val group =
       Foo(
-          bytes = { import z.compress.zlib         ; Array(       50 :: 100 :: 200 :: ⊥,      20 :: 50 :: 110 :: ⊥)(   bytes: _* ) },
-         shorts = { import z.compress.   -         ; Array( 2 ::   2 ::   2 ::   2 :: ⊥, 1 ::  1 ::  1 ::   1 :: ⊥)(  shorts: _* ) },
-           ints = { implicit val b = Blosc( lz4hc) ; Array(                   1000 :: ⊥                           )(    ints: _* ) },
-          longs = { implicit val b = Blosc(  zlib) ; Array(                   1000 :: ⊥,                  100 :: ⊥)(   longs: _* ) },
-         floats = { implicit val b = Blosc(  zstd) ; Array(             100 :: 100 :: ⊥,            20 :: 100 :: ⊥)(  floats: _* ) },
-        doubles = { implicit val b = Blosc(snappy) ; Array(                     20 :: ⊥                           )( doubles: _* ) },
+          bytes = { Array(       50 :: 100 :: 200 :: ⊥,      20 :: 50 :: 110 :: ⊥,  compressor = z.compress.zlib )(   bytes: _* ) },
+         shorts = { Array( 2 ::   2 ::   2 ::   2 :: ⊥, 1 ::  1 ::  1 ::   1 :: ⊥,  compressor = z.compress.   - )(  shorts: _* ) },
+           ints = { Array(                   1000 :: ⊥,                             compressor =   Blosc( lz4hc) )(    ints: _* ) },
+          longs = { Array(                   1000 :: ⊥,                   100 :: ⊥, compressor =   Blosc(  zlib) )(   longs: _* ) },
+         floats = { Array(             100 :: 100 :: ⊥,             20 :: 100 :: ⊥, compressor =   Blosc(  zstd) )(  floats: _* ) },
+        doubles = { Array(                     20 :: ⊥,                             compressor =   Blosc(snappy) )( doubles: _* ) },
         strings =
           Strings(
             s2 = {
@@ -162,15 +161,93 @@ class GroupTest
           Structs(
             ints = {
               implicit val > = z.order.>
-              Array(10 :: ⊥)((1 to 10).map { I4 }: _*)
+              Array(10 :: ⊥)(i4s: _*)
             },
             numbers = {
-              implicit val short_> = short(z.order.>)
-              implicit val  long_> =  long(z.order.>)
+              implicit val short_> = I16(z.order.>)
+              implicit val  long_> = I64(z.order.>)
               import z.compress.-
               Array(
                 10 :: 10 :: ⊥,
                  2 ::  5 :: ⊥
+              )(
+                numbers: _*
+              )
+            }
+          )
+      )
+
+    if (writeNewExpectedData)
+      group.save(Path("zarr/src/test/resources/mixed.zarr")) !
+    else {
+      val actual = tmpDir()
+
+      group.save(actual).!
+
+      val expectedPath = resource("mixed.zarr")
+
+      eqv(actual, expectedPath)
+
+      val group2 = actual.load[Foo] !
+
+      eqv(group, group2)
+
+      val expected = expectedPath.load[Foo] !
+
+      eqv(group, expected)
+    }
+  }
+
+  test("untyped") {
+    val group =
+      Group(
+          'bytes → Array(       50 :: 100 :: 200 :: Nil,      20 :: 50 :: 110 :: Nil)(   bytes: _* ),
+         'shorts → Array( 2 ::   2 ::   2 ::   2 :: Nil, 1 ::  1 ::  1 ::   1 :: Nil)(  shorts: _* ),
+           'ints → Array(                   1000 :: Nil                             )(    ints: _* ),
+          'longs → Array(                   1000 :: Nil,                  100 :: Nil)(   longs: _* ),
+         'floats → Array(             100 :: 100 :: Nil,            20 :: 100 :: Nil)(  floats: _* ),
+        'doubles → Array(                     20 :: Nil                             )( doubles: _* ),
+        'strings →
+          Group(
+            's2 → {
+              implicit val d = string(2)
+              Array(10 :: Nil)((1 to 10).map(_.toString): _*)
+            },
+            's3 → {
+              implicit val d = string(3)
+              Array(
+                10 :: 10 :: Nil,
+                 3 ::  4 :: Nil
+              )(
+                (1 to 100).map(_.toString): _*
+              )
+            }
+          ),
+        'structs →
+          Group(
+            'ints → {
+              implicit val dtype = struct.?('value → int)
+              Array(10 :: Nil)(
+                (1 to 10)
+                  .map {
+                    i ⇒
+                      untyped.Struct("value" → i)
+                  }
+                : _*
+              )
+            },
+            'numbers → {
+              implicit val dtype =
+                struct.?(
+                   'short → short,
+                     'int → int,
+                    'long → long,
+                   'float → float,
+                  'double → double
+                )
+              Array(
+                10 :: 10 :: Nil,
+                 2 ::  5 :: Nil
               )(
                 (
                   for {
@@ -178,12 +255,12 @@ class GroupTest
                     c ← 0 until 10
                     n = 10 * r + c
                   } yield
-                    Numbers(
-                       short = n.toShort,
-                         int = n,
-                        long = n          * 1e9 toLong,
-                       float = n.toFloat  *  10,
-                      double = n.toDouble * 100
+                    untyped.Struct(
+                       "short" →  n.toShort,
+                         "int" →  n,
+                        "long" → (n          * 1e9 toLong),
+                       "float" → (n.toFloat  *  10),
+                      "double" → (n.toDouble * 100)
                     )
                 )
                 : _*
@@ -196,109 +273,6 @@ class GroupTest
 
     group.save(actual).!
 
-    val expectedPath = resource("mixed.zarr")
-
-    eqv(actual, expectedPath)
-
-    val group2 = actual.load[Foo] !
-
-    eqv(group, group2)
-
-    val expected = expectedPath.load[Foo] !
-
-    eqv(group, expected)
-  }
-
-  test("untyped") {
-    val group =
-      Group(
-        arrays =
-          // TODO: remove need for explicit types on this Map
-          Map[String, Array.*?[Int]](
-              "bytes" → Array(       50 :: 100 :: 200 :: Nil,      20 :: 50 :: 110 :: Nil)(   bytes: _* ),
-             "shorts" → Array( 2 ::   2 ::   2 ::   2 :: Nil, 1 ::  1 ::  1 ::   1 :: Nil)(  shorts: _* ),
-               "ints" → Array(                   1000 :: Nil                             )(    ints: _* ),
-              "longs" → Array(                   1000 :: Nil,                  100 :: Nil)(   longs: _* ),
-             "floats" → Array(             100 :: 100 :: Nil,            20 :: 100 :: Nil)(  floats: _* ),
-            "doubles" → Array(                     20 :: Nil                             )( doubles: _* )
-          ),
-        groups =
-          Map(
-            "strings" →
-              Group(
-                Map[String, Array.*?[Int]](
-                  "s2" → {
-                    implicit val d = string(2)
-                    Array(10 :: Nil)((1 to 10).map(_.toString): _*)
-                  },
-                  "s3" → {
-                    implicit val d = string(3)
-                    Array(
-                      10 :: 10 :: Nil,
-                       3 ::  4 :: Nil
-                    )(
-                      (1 to 100).map(_.toString): _*
-                    )
-                  }
-                )
-              ),
-            "structs" →
-              Group(
-                Map[String, Array.*?[Int]](
-                  "ints" → {
-                    implicit val datatype =
-                      struct.?(
-                        StructEntry("value", int) :: Nil
-                      )
-                    Array(10 :: Nil)(
-                      (1 to 10)
-                        .map {
-                          i ⇒
-                            untyped.Struct("value" → i)
-                        }
-                      : _*
-                    )
-                  },
-                  "numbers" → {
-                    implicit val datatype =
-                      struct.?(
-                        List(
-                          StructEntry( "short",  short),
-                          StructEntry(   "int",    int),
-                          StructEntry(  "long",   long),
-                          StructEntry( "float",  float),
-                          StructEntry("double", double)
-                        )
-                      )
-                    Array(
-                      10 :: 10 :: Nil,
-                       2 ::  5 :: Nil
-                    )(
-                      (
-                        for {
-                          r ← 0 until 10
-                          c ← 0 until 10
-                          n = 10 * r + c
-                        } yield
-                          untyped.Struct(
-                             "short" →  n.toShort,
-                               "int" →  n,
-                              "long" → (n          * 1e9 toLong),
-                             "float" → (n.toFloat  *  10),
-                            "double" → (n.toDouble * 100)
-                          )
-                      )
-                      : _*
-                    )
-                  }
-                )
-              )
-          )
-      )
-
-    val actual = tmpDir()
-    group.save(actual).!
-
     val group2 = actual.load[Group[Int]] !
 
     eqv(group, group2)
@@ -309,6 +283,9 @@ class GroupTest
   }
 }
 
+/**
+ * Sample record-types for testing IO above
+ */
 object GroupTest {
   case class I4(value: Int)
   case class Numbers(

@@ -21,9 +21,9 @@ import scala.util.Try
  * Subclasses:
  *
  * - [[Primitive]]s:
- *   - Integer types: [[byte]], [[short]], [[int]], [[long]]
- *   - Floating-point types: [[float]], [[double]]
- *   - [[string]]
+ *   - Integer types: [[I8]], [[I16]], [[I32]], [[I64]]
+ *   - Floating-point types: [[F32]], [[F64]]
+ *   - [[DataType.string string]]
  * - Structs:
  *   - [[struct "typed"]]: auto-derived for a case-class
  *   - [[struct.? "untyped"]]: "bag of fields", corresponding to [[org.lasersonlab.zarr.untyped.Struct]]
@@ -76,13 +76,15 @@ object DataType
 
   val `0` = 0.toByte
 
-  // TODO: setting the buffer's order every time seems suboptimal; some different design that streamlines that would be nice
-  case object   byte                                 extends Primitive[  Byte]( None, d.   int,    1) { @inline def apply(buf: ByteBuffer): T = {                   buf.get       }; @inline override def apply(b: ByteBuffer, t: T) = b             .put      (t) }
-  case  class  short(override val order: Endianness) extends Primitive[ Short](order, d.   int,    2) { @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getShort  }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putShort (t) }
-  case  class    int(override val order: Endianness) extends Primitive[   Int](order, d.   int,    4) { @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getInt    }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putInt   (t) }
-  case  class   long(override val order: Endianness) extends Primitive[  Long](order, d.   int,    8) { @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getLong   }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putLong  (t) }
-  case  class  float(override val order: Endianness) extends Primitive[ Float](order, d. float,    4) { @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getFloat  }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putFloat (t) }
-  case  class double(override val order: Endianness) extends Primitive[Double](order, d. float,    8) { @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getDouble }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putDouble(t) }
+  // TODO: setting the buffer's order every time seems suboptimal, but is necessary as long as structs with fields of
+  // opposing endianness are allowed; consider disallowing such structs, and keeping an eye out for this in general
+  // profiling (so far it's not been observed to matter)
+  case object    I8                                  extends Primitive[  Byte]( None, d.   int,    1) { @inline def apply(buf: ByteBuffer): T = {                   buf.get       }; @inline override def apply(b: ByteBuffer, t: T) = b             .put      (t) }
+  case  class    I16(override val order: Endianness) extends Primitive[ Short](order, d.   int,    2) { @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getShort  }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putShort (t) }
+  case  class    I32(override val order: Endianness) extends Primitive[   Int](order, d.   int,    4) { @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getInt    }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putInt   (t) }
+  case  class    I64(override val order: Endianness) extends Primitive[  Long](order, d.   int,    8) { @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getLong   }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putLong  (t) }
+  case  class    F32(override val order: Endianness) extends Primitive[ Float](order, d. float,    4) { @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getFloat  }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putFloat (t) }
+  case  class    F64(override val order: Endianness) extends Primitive[Double](order, d. float,    8) { @inline def apply(buf: ByteBuffer): T = { buf.order(order); buf.getDouble }; @inline override def apply(b: ByteBuffer, t: T) = b.order(order).putDouble(t) }
   case  class string(override val  size:        Int) extends Primitive[String]( None, d.string, size) {
     import scala.Array.fill
     val arr = fill(size)(`0`)
@@ -119,7 +121,7 @@ object DataType
     }
   }
 
-  type byte = byte.type
+  type byte = I8.type
 
   /**
    * Construct primitive data-types, in the presence of an implicit [[Endianness]], either from an un-applied reference
@@ -128,22 +130,16 @@ object DataType
 
   type <>! = Endianness
 
-  object  short { implicit def apply(v:  short.type)(implicit e: <>!): T[ Short] =  short(e) }
-  object    int { implicit def apply(v:    int.type)(implicit e: <>!): T[   Int] =    int(e) }
-  object   long { implicit def apply(v:   long.type)(implicit e: <>!): T[  Long] =   long(e) }
-  object  float { implicit def apply(v:  float.type)(implicit e: <>!): T[ Float] =  float(e) }
-  object double { implicit def apply(v: double.type)(implicit e: <>!): T[Double] = double(e) }
-
   /**
    * Expose implicit [[Primitive]] instances for derivations (assuming sufficient [[Endianness]] evidence)
    */
 
-  implicit val   _byte                               =   byte
-  implicit def  _short(implicit e: <>!): T[ Short] =  short(e)
-  implicit def    _int(implicit e: <>!): T[   Int] =    int(e)
-  implicit def   _long(implicit e: <>!): T[  Long] =   long(e)
-  implicit def  _float(implicit e: <>!): T[ Float] =  float(e)
-  implicit def _double(implicit e: <>!): T[Double] = double(e)
+  implicit val   byte                             = I8
+  implicit def  short(implicit e: <>!): T[ Short] = I16(e)
+  implicit def    int(implicit e: <>!): T[   Int] = I32(e)
+  implicit def   long(implicit e: <>!): T[  Long] = I64(e)
+  implicit def  float(implicit e: <>!): T[ Float] = F32(e)
+  implicit def double(implicit e: <>!): T[Double] = F64(e)
 
   case class StructEntry(name: String, datatype: DataType.?) {
     val size = datatype.size
@@ -244,16 +240,32 @@ object DataType
           )
       }
     }
+
+    object ? {
+      // "magnet pattern" constructor
+      case class Arg(entry: StructEntry)
+      object Arg {
+        implicit def str(t: (String, DataType.?)): Arg = Arg(StructEntry(t._1     , t._2))
+        implicit def sym(t: (Symbol, DataType.?)): Arg = Arg(StructEntry(t._1.name, t._2))
+        implicit def unwrap(arg: Arg): StructEntry = arg.entry
+      }
+      def apply(args: Arg*): ? =
+        new ?(
+          args
+            .map(_.entry)
+            .toList
+        )
+    }
   }
 
   def get(order: ByteOrder, dtype: DType, size: Int): String | DataType.? =
     (order, dtype, size) match {
-      case (  None, _: d.   int,    1) ⇒ Right(  byte      )
-      case (e: <>!, _: d.   int,    2) ⇒ Right( short(   e))
-      case (e: <>!, _: d.   int,    4) ⇒ Right(   int(   e))
-      case (e: <>!, _: d.   int,    8) ⇒ Right(  long(   e))
-      case (e: <>!, _: d. float,    4) ⇒ Right( float(   e))
-      case (e: <>!, _: d. float,    8) ⇒ Right(double(   e))
+      case (  None, _: d.   int,    1) ⇒ Right(I8      )
+      case (e: <>!, _: d.   int,    2) ⇒ Right(I16(e))
+      case (e: <>!, _: d.   int,    4) ⇒ Right(I32(e))
+      case (e: <>!, _: d.   int,    8) ⇒ Right(I64(e))
+      case (e: <>!, _: d. float,    4) ⇒ Right(F32(e))
+      case (e: <>!, _: d. float,    8) ⇒ Right(F64(e))
       case (  None, _: d.string, size) ⇒ Right(string(size))
       case _ ⇒
         Left(

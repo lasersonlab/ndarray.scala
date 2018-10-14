@@ -7,8 +7,7 @@ import org.hammerlab.paths.Path
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.io._
 import org.lasersonlab.zarr.utils.Idx
-
-import scala.util.Try
+import shapeless.the
 
 case class Group[Idx](
   arrays: Map[String, Array.*?[Idx]] =      Map.empty[String, Array.*?[Idx]],
@@ -29,6 +28,20 @@ case class Group[Idx](
 }
 
 object Group {
+
+  sealed trait Arg[Idx]
+  object Arg {
+    case class Arr[Idx](k: String, v: Array.*?[Idx]) extends Arg[Idx]
+    case class Grp[Idx](k: String, v: Group   [Idx]) extends Arg[Idx]
+    implicit def arr[Idx: Idx.T](t: (Symbol, Array.*?[Idx])): Arg[Idx] = Arr(t._1, t._2)
+    implicit def grp[Idx: Idx.T](t: (Symbol, Group   [Idx])): Arg[Idx] = Grp(t._1, t._2)
+  }
+  def apply[Idx: Idx.T](args: Arg[Idx]*): Group[Idx] =
+    new Group(
+      args.collect { case Arg.Arr(k, v) ⇒ k → v }.toMap,
+      args.collect { case Arg.Grp(k, v) ⇒ k → v }.toMap
+    )
+
   case class Metadata(
     zarr_format: Format = `2`
   )
@@ -49,19 +62,19 @@ object Group {
 
   import circe.auto._
 
-  def apply[Idx](
+  def apply(
     dir: Path
   )(
     implicit
-    idx: Idx.T[Idx]
+    idx: Idx
   ):
-    Exception | Group[Idx] =
+    Exception | Group[idx.T] =
     for {
       metadata ← dir.load[Metadata]
          attrs ← dir.load[Option[Attrs]]
 
-      arrays = Map.newBuilder[String, Array.*?[Idx]]
-      groups = Map.newBuilder[String, Group   [Idx]]
+      arrays = Map.newBuilder[String, Array.*?[idx.T]]
+      groups = Map.newBuilder[String, Group   [idx.T]]
 
       files ←
         try {
@@ -138,7 +151,7 @@ object Group {
   implicit def save[Idx: Idx.T]: Save[Group[Idx]] =
     new Save[Group[Idx]] {
       def direct(t: Group[Idx], dir: Path): Throwable | Unit = {
-        val groups =
+        def groups =
           (
             for {
               (name, group) ← t.groups.toList
@@ -147,12 +160,18 @@ object Group {
           )
           .sequence
 
-        val arrays =
+        def arrays =
           (
             for {
               (name, array) ← t.arrays.toList
-            } yield
-              array.aux.save(dir / name)
+            } yield {
+              //Save.narrow[Array.*?[Idx]]
+//              Array.save_?[List].apply(array, dir / name)
+              the[utils.Idx]
+              the[utils.Idx.T[Idx]]
+              array.save(dir / name)
+              //(array: Array.?[List, Idx]).save(dir / name)
+            }
           )
           .sequence
 

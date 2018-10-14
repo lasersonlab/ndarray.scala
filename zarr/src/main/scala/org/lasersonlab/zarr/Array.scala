@@ -3,11 +3,9 @@ package org.lasersonlab.zarr
 import cats.data.Nested
 import cats.{ Eval, Foldable, Traverse }
 import circe.Json
-import hammerlab.{ either, option }
 import hammerlab.option._
 import hammerlab.path._
 import org.lasersonlab.circe.EncoderK
-import org.lasersonlab.ndarray
 import org.lasersonlab.ndarray.{ ArrayLike, Indices, UnfoldRange, Vector }
 import org.lasersonlab.shapeless.{ Scannable, Size, Zip }
 import org.lasersonlab.zarr.Compressor.Blosc
@@ -32,9 +30,8 @@ import scala.util.Try
  * companion-object for some convenient constructors
  *
  * TODO: experiment with Breeze vector/array for 1D/2D cases
- * TODO: make this a sealed hierarchy with progressively more type-members are type-paramters in the subclasses
  */
-trait Array {
+sealed trait Array {
   /** Element type */
   type T
 
@@ -66,11 +63,11 @@ trait Array {
    *
    * - [[chunks the chunks array]] is [[Traverse traversable]]
    * - [[ShapeT the "shape" type]] is [[Traverse traversable]]
-   * - a [[Chunk]] is [[Foldable]]
+   * - [[Chunk chunks]] are [[Foldable]]
    */
-  implicit val traverseA: Traverse[A]
+  implicit val traverseA    : Traverse[     A]
   implicit val traverseShape: Traverse[ShapeT]
-  implicit val foldableChunk: Foldable[Chunk]
+  implicit val foldableChunk: Foldable[ Chunk]
 
   /**
    * Widen to an [[Array.T]], so that [[cats]] typeclasses (e.g. [[Array.foldableT]]) can be picked up, and
@@ -84,8 +81,8 @@ trait Array {
    * [[Array.Aux]], [[Array.*?]], etc.) used to specify different subsets of an [[Array]]'s dependent types' that are
    * known at a given call-site
    */
-  def t: Array.T[this.T] = this
-  def aux: Array.Aux[ShapeT, Idx, A, Chunk, T] = this
+  def t: Array.T[T] = this match { case a: Array.T[T] ⇒ a }
+  def aux: Array.Aux[ShapeT, Idx, A, Chunk, T] = this match { case a: Array.Aux[ShapeT, Idx, A, Chunk, T] ⇒ a }
 
   /**
    * Short-hand for imbuing this [[Array]] with an element type at runtime, e.g. in the case where it was loaded without
@@ -140,12 +137,25 @@ object Array {
 
   /**
    * "Aux" aliases for various subsets of [[Array]]'s type-members that might be known / required in various contexts
+   *
+   * Everything is only instantiable via [[Aux]] to users outside this class.
    */
-  type   T[                                    _T] = Array {                                                type T = _T }
-  type Aux[_ShapeT[_], _Idx, _A[_], _Chunk[_], _T] = Array { type ShapeT[U] = _ShapeT[U]; type Idx = _Idx ; type T = _T ; type A[U] = _A[U]; type Chunk[U] = _Chunk[U] }
-  type  Of[_ShapeT[_], _Idx,                   _T] = Array { type ShapeT[U] = _ShapeT[U]; type Idx = _Idx ; type T = _T }
-  type   ?[_ShapeT[_], _Idx                      ] = Array { type ShapeT[U] = _ShapeT[U]; type Idx = _Idx }  // element-type unknown
-  type  *?[            _Idx                      ] = Array { type ShapeT[U] =    List[U]; type Idx = _Idx }  // element-type and number of dimensions unknown
+  sealed trait   T[                  _T] extends Array { type T = _T }                                   // element-type known, shape unknown
+  sealed trait   ?[_ShapeT[_], _Idx    ] extends Array { type ShapeT[U] = _ShapeT[U]; type Idx = _Idx }  // element-type unknown, shape known
+  sealed trait  Of[ ShapeT[_],  Idx, _T] extends ?[ShapeT,  Idx] with T[_T]
+          type  *?[            _Idx    ] =       ?[  List, _Idx]                                         // element-type and number of dimensions unknown
+
+  abstract class Aux[
+    ShapeT[_],
+       Idx   ,
+        _A[_],
+    _Chunk[_],
+         T
+  ]
+    extends Of[ShapeT, Idx, T] {
+    type     A[U] =     _A[U]
+    type Chunk[U] = _Chunk[U]
+  }
 
   /**
    * De-structure an [[Array]] into its [[Metadata]], [[Attrs]], and [[Array.chunks]] members, preserving whatever is
@@ -167,53 +177,65 @@ object Array {
       )
     )
 
+  /**
+   * Constructor for "in-line" / in-memory creation of [[Array]]s
+   *
+   * The [[_ShapeT shape]], [[_T elements]], and an implicit [[DataType]] are the only required parameters
+   *
+   * Many other parameters can be specified, either explicitly / by-name in the first parameter list, or via implicit
+   * instances (the former overrides the latter)
+   *
+   * The second parameter (in the first parameter list), `chunkSize`, may also be used positionally; if not specified,
+   * it defaults to the `shape` (first parameter), resulting in an [[Array]] that is one chunk
+   */
   def apply[
     _ShapeT[_]
     : Scannable
     : Size
+    : Traverse
     : UnfoldRange
     : Zip,
     _T
   ](
-    _shape: _ShapeT[Int],
-    _chunkSize: Opt[_ShapeT[Int]] = None,
-    _attrs: Opt[Json] = None
+         shape:        _ShapeT[Int]        ,
+     chunkSize: Opt[   _ShapeT[Int]] = None,
+        _attrs: Opt[      Json     ] = None,
+         dtype: Opt[  DataType[ _T]] = None,
+    compressor: Opt[Compressor     ] = None,
+         order: Opt[     Order     ] = None,
+    fill_value: Opt[ FillValue[ _T]] = None
   )(
     _elems: _T*
   )(
     implicit
-      // TODO: implicitly construct the whole metadata at call-site
-       datatype:          DataType[_T],
-     compressor:        Compressor     = Blosc(),
-          order:             Order     = C,
-     fill_value:         FillValue[_T] = Null,
-    zarr_format:            Format     = `2`,
-        filters: Option[Seq[Filter]]   = None,
-      traverseShape: Traverse[_ShapeT]
+       _datatype:          DataType[_T],
+     _compressor:        Compressor     = Blosc(),
+          _order:             Order     = C,
+     _fill_value:         FillValue[_T] = Null,
+     zarr_format:            Format     = `2`,
+         filters: Option[Seq[Filter]]   = None
   ):
     Aux[
       _ShapeT,
       Int,
-      ndarray.Vector[_ShapeT, ?],
-      ndarray.Vector[_ShapeT, ?],
+      Vector[_ShapeT, ?],
+      Vector[_ShapeT, ?],
       _T
     ] = {
-    val ts = traverseShape
-    new Array {
-      type T = _T
-      type ShapeT[U] = _ShapeT[U]
-      type Idx = Int
-      type     A[U] = ndarray.Vector[ShapeT, U]
-      type Chunk[U] = ndarray.Vector[ShapeT, U]
+    val _shape = shape  // work around shadowing, but keep parameter-name nice
+    new Aux[
+      _ShapeT,
+      Int,
+      Vector[_ShapeT, ?],
+      Vector[_ShapeT, ?],
+      _T
+    ] {
 
-      implicit val traverseShape: Traverse[ShapeT] = ts
-      implicit val traverseA: Traverse[A] = ndarray.Vector.traverse
-      implicit val foldableChunk: Foldable[Chunk] = ndarray.Vector.traverse
+      val traverseShape: Traverse[ShapeT] = Traverse[_ShapeT]
+      val traverseA    : Traverse[     A] = Vector.traverse
+      val foldableChunk: Foldable[ Chunk] = Vector.traverse
 
-      val (size, strides) = _shape.scanRight(1)(_ * _)
-
-      val chunkShape = _chunkSize.getOrElse(_shape)
-      val (chunkSize, chunkStrides) = chunkShape.scanRight(1)(_ * _)
+      val chunkShape = chunkSize.getOrElse(_shape)
 
       override val shape: ShapeT[Dimension[Idx]] =
         _shape
@@ -223,17 +245,17 @@ object Array {
               Dimension.int(shape, chunk)
           }
 
-      val elems = ndarray.Vector[_ShapeT, _T](_shape, _elems: _*)
+      val elems = Vector[_ShapeT, _T](_shape, _elems: _*)
 
       override def apply(idx: Index): T = elems(idx)
 
       override val metadata: Metadata[ShapeT, Idx, T] =
         Metadata(
                 shape = shape,
-                dtype = datatype,
-           compressor = compressor,
-                order = order,
-           fill_value = fill_value,
+                dtype =      dtype.getOrElse(  _datatype),
+           compressor = compressor.getOrElse(_compressor),
+                order =      order.getOrElse(     _order),
+           fill_value = fill_value.getOrElse(_fill_value),
           zarr_format = zarr_format,
               filters = filters
         )
@@ -282,7 +304,7 @@ object Array {
            : Traverse
            : Zip
            : Scannable,
-      Idx,
+      Idx  : Idx.T,
        _T,
         A[_]
            : Traverse
@@ -291,8 +313,7 @@ object Array {
     shape: Shape[Dimension[Idx]]
   )(
    implicit
-      indices:    Indices    [A, Shape],
-          idx:        Idx.  T[     Idx],
+      indices:    Indices[A, Shape],
      datatype:   DataType[      _T],
    compressor: Compressor
   ):
@@ -304,7 +325,6 @@ object Array {
       ]
     ]
   = {
-    import idx._
     val sizeHint = shape.foldLeft(1) { _ * _.chunk }
     for {
       arr ←
@@ -324,7 +344,7 @@ object Array {
                       val start = idx * chunk
                       val end = arr min ((idx + 1) * chunk)
 
-                      int { end - start }
+                      { end - start } int
                   }
                   .sequence
 
@@ -353,22 +373,20 @@ object Array {
    * @param v provides an "N-D array"-type to store chunks in, as well as relevant evidence for using [[ShapeT]]s with
    *          it
    * @param idx "index" type to use (e.g. [[Int]] or [[Long]])
-   * @param d datatype-decoder
-   * @param dt fill-value-decoder
    * @tparam ShapeT "shape" of the [[Array]]; also of elements' indices
    * @tparam T element-type of this [[Array]]
    */
   def apply[
     ShapeT[_],
          T
+         :  DataType.Decoder
+         : FillValue.Decoder
   ](
     dir: Path
   )(
     implicit
-     _v:    VectorEvidence[ShapeT],
-      d:  DataType.Decoder[     T],
-     dt: FillValue.Decoder[     T],
-    idx:               Idx
+     _v: VectorEvidence[ShapeT],
+    idx:            Idx
   ):
     Exception |
     Aux[
@@ -419,10 +437,9 @@ object Array {
       T
     ]
   = {
-    import Idx.helpers.specify
     import ev.{ A ⇒ _, _ }
     for {
-      _metadata ←
+      metadata ←
         dir.load[
           Metadata[
             ShapeT,
@@ -430,7 +447,7 @@ object Array {
             T
           ]
         ]
-      arr ← Array(dir, _metadata)
+      arr ← Array(dir, metadata)
     } yield
       arr
   }
@@ -452,7 +469,6 @@ object Array {
     metadata.?(dir)
       .flatMap {
         metadata ⇒
-          import Idx.helpers.specify
           apply[
             List,
             idx.T,
@@ -473,7 +489,7 @@ object Array {
             : Zip
             : Traverse
             : EncoderK,
-      _Idx,
+      _Idx  : Idx.T,
         _A[_],
         _T
   ](
@@ -483,8 +499,7 @@ object Array {
     implicit
       indices:   Indices    [_A, _Shape],
     arrayLike: ArrayLike.Aux[_A, _Shape],
-     traverse:  Traverse    [_A        ],
-          idx:       Idx.  T[      _Idx]
+     traverse:  Traverse    [_A        ]
   ):
     Exception |
     Aux[
@@ -509,19 +524,12 @@ object Array {
         )
       }
     } yield
-      new Array {
-        type      T    =      _T
-        type    Idx    =    _Idx
-        type ShapeT[U] =  _Shape[U]
-        type      A[U] =      _A[U]
-        type  Chunk[U] = z.Chunk[ShapeT, U]
+      new Aux[_Shape, _Idx, _A, z.Chunk[_Shape, ?], _T] {
 
         val traverseA     = Traverse[     A]
         val traverseShape = Traverse[ShapeT]
 
         val foldableChunk = Chunk.foldable[ShapeT]
-
-        import idx._
 
         val metadata = _metadata
         val datatype =  metadata.dtype
@@ -530,9 +538,9 @@ object Array {
 
         val shape = metadata.shape
 
-        import lasersonlab.shapeless.slist._
-
         def apply(idx: Shape): T = {
+
+          import lasersonlab.shapeless.slist._
 
           // aliases for annotating the `.sequence` shenanigans below
           type E[U] = CastException | U
@@ -548,8 +556,8 @@ object Array {
                 .zip(shape)
                 .map {
                   case (idx, Dimension(_, chunk, _)) ⇒
-                    int { idx / chunk } ::
-                    int { idx % chunk } ::
+                    { idx / chunk }.int ::
+                    { idx % chunk }.int ::
                     ⊥
                 }                    : F[G[E[T]]]
             )
@@ -578,123 +586,53 @@ object Array {
       @inline def foldRight[A, B](fa: T[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.foldRight(lb)(f)
     }
 
-  // TODO: would be nice to not need multiple overloads corresponding to different "Aux" aliases
-  implicit def loadArrInt[
-    Shape[_],
-        T
-          :  DataType.Decoder
-          : FillValue.Decoder
-  ](
-    implicit
-    v: VectorEvidence[Shape]
-  ):
-    Load[
-      lasersonlab.zarr.Array[Shape, T]
-    ] =
-  {
-    implicit val int = Idx.Int
-    loadArr[Shape, T]
-  }
-
   implicit def loadArr[
-    Shape[_],
+    Shape[_]
+    : VectorEvidence,
     T
-      :  DataType.Decoder
-      : FillValue.Decoder
+    :  DataType.Decoder
+    : FillValue.Decoder
   ](
     implicit
-      v: VectorEvidence[Shape],
     idx: Idx
   ):
     Load[
       Of[Shape, idx.T, T]
     ] =
     new Load[Of[Shape, idx.T, T]] {
-      override def apply(dir: Path): Exception | Of[Shape, idx.T, T] =
-        Array[Shape, T](dir)
-    }
-
-  implicit def saveUntyped[
-    Shape[_]
-           : EncoderK
-           : Scannable
-  ](
-    implicit
-    idx: Idx
-  ):
-    Save[
-      Array.?[Shape, idx.T]
-    ] =
-    new Save[
-      Array.?[
-        Shape,
-        idx.T
-      ]
-    ] {
-      def direct(
-        a: Array.?[Shape, idx.T],
-        dir: Path
-      ):
-        Throwable |
-        Unit
-      =
-        save[
-          Shape,
-          a.A,
-          a.Chunk,
-          a.T
-        ]
-        .apply(
-          a,
-          dir
-        )
+      def apply(dir: Path): Exception | Of[Shape, idx.T, T] = Array[Shape, T](dir)
     }
 
   implicit def saveOf[
-    _Shape[_]
-            : EncoderK
-            : Scannable,
-    _T
-  ]:
+    ShapeT[_]
+    : EncoderK
+    : Scannable,
+    T
+  ](implicit idx: Idx):
     Save[
-      lasersonlab.zarr.Array[_Shape, _T]
+      Of[ShapeT, idx.T, T]
     ] =
-    new Save[
-      lasersonlab.zarr.Array[_Shape, _T]
-    ] {
-      implicit val __int = Idx.Int
-      def direct(t: zarr.Array[_Shape, _T], dir: Path): Throwable | Unit =
-        save[_Shape, t.A, t.Chunk, _T].apply(t, dir)
-    }
+    Save.as(a ⇒ a: ?[ShapeT, idx.T])
 
-  implicit def save[
-    _Shape[_]
-            : EncoderK
-            : Scannable,
-         A[_],
-     Chunk[_],
-        _T
-  ](
-    implicit
-    idx: Idx
-  ):
-    Save[
-      Aux[_Shape, idx.T, A, Chunk, _T]
-    ] =
-    new Save[Aux[_Shape, idx.T, A, Chunk, _T]] {
-      type _Idx = idx.T
+  implicit def save_?[
+    _ShapeT[_]
+    : EncoderK
+    : Scannable,
+    _Idx: Idx.T
+  ]:
+  Save[
+    Array.?[_ShapeT, _Idx]
+  ] =
+    new Save[Array.?[_ShapeT, _Idx]] {
       def direct(
-        a: Aux[_Shape, idx.T, A, Chunk, _T],
+        _a: Array.?[_ShapeT, _Idx],
         dir: Path
       ):
         Throwable |
         Unit
       = {
-        // TODO: these implicit vals shouldn't be necessary; minimize+file
-        implicit val ta: Traverse[     A] = a.traverseA
-        implicit val ts: Traverse[_Shape] = a.traverseShape
-        implicit val fc: Foldable[ Chunk] = a.foldableChunk
-
+        // work around https://github.com/scala/bug/issues/11086; method-params incorrectly considered "unstable"
+        val a = _a
         import a._
 
         def chunkResults: Throwable | Unit = {
@@ -706,7 +644,6 @@ object Array {
               }
 
           a
-            .aux
             .chunks
             .mapWithIndex {
               (chunk, int) ⇒
@@ -716,7 +653,7 @@ object Array {
                     .scanLeft_→(
                       (
                         int,  // output
-                        int
+                        int   // remaining
                       )
                     ) {
                       case (

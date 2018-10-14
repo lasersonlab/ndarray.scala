@@ -131,13 +131,13 @@ object metadata {
       _Idx,
          T
   ](
-                       shape:    _Shape[Dimension[_Idx]],
-                       dtype:      DataType[T],
-    override val  compressor:        Compressor     = Blosc(),
-    override val       order:             Order     = C,
+                       shape: _Shape[Dimension[_Idx]],
+                       dtype:          DataType[T],
+    override val  compressor:        Compressor    = Blosc(),
+    override val       order:             Order    = C,
     override val  fill_value:         FillValue[T] = Null,
-    override val zarr_format:            Format     = `2`,
-    override val     filters: Option[Seq[Filter]]   = None
+    override val zarr_format:            Format    = `2`,
+    override val     filters: Option[Seq[Filter]]  = None
   )
   extends Interface
   {
@@ -172,7 +172,6 @@ object metadata {
     =
       dir ? basename flatMap {
         path ⇒
-          import Idx.helpers.specify
           decode[
             Metadata[
               Shape,

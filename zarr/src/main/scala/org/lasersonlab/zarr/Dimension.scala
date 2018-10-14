@@ -83,7 +83,6 @@ object Dimensions {
                    _
                      .map {
                        case (shape, chunk) ⇒
-                         import Idx.helpers.specify
                          Dimension(shape, chunk)
                      }
                      .sequence

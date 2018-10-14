@@ -60,19 +60,11 @@ object Idx {
     val decoder = io.circe.Decoder.decodeLong
   }
 
-  object helpers {
-    // TODO: remove explicit imports of this, mix it in instead
-    // NOTE: this can cause implicit-resolution ambiguity if an implicit `Idx.T` is already in scope and an `Idx` (or
-    // maybe `Idx.T`) is needed
-
-  }
-
-  // TODO: would be nice to not need all these, but afaict each set is necessary depending whether an `Idx` is
-  // identified as `Idx.T` or not
   trait syntax {
     implicit def unwrapEncoder(implicit idx: Idx): Encoder[idx.T] = idx.encoder
     implicit def unwrapDecoder(implicit idx: Idx): Decoder[idx.T] = idx.decoder
-    @inline def makeIdxOps[T](t: T): Ops[T] = Ops(t)
+    implicit def unwrapArithmeticInt[T](implicit idx: Idx.T[T]): Arithmetic[T, Int] = idx.arithmeticInt
+    @inline implicit def makeIdxOps[T](t: T): Ops[T] = Ops(t)
   }
   object syntax extends syntax
 

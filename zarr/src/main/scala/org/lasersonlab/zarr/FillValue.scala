@@ -83,12 +83,12 @@ object FillValue {
       d match {
         case p: Primitive[T] ⇒
           p match {
-            case d @ DataType.  byte    ⇒ Decoder.  byte
-            case d @ DataType. short(_) ⇒ Decoder. short
-            case d @ DataType.   int(_) ⇒ Decoder.   int
-            case d @ DataType.  long(_) ⇒ Decoder.  long
-            case d @ DataType. float(_) ⇒ Decoder. float
-            case d @ DataType.double(_) ⇒ Decoder.double
+            case d @ DataType.   I8     ⇒ Decoder.byte
+            case d @ DataType.   I16(_) ⇒ Decoder.short
+            case d @ DataType.   I32(_) ⇒ Decoder.int
+            case d @ DataType.   I64(_) ⇒ Decoder.long
+            case d @ DataType.   F32(_) ⇒ Decoder.float
+            case d @ DataType.   F64(_) ⇒ Decoder.double
             case d @ DataType.string(_) ⇒ Decoder.string
           }
         case _ ⇒ base64StringDecoder
@@ -196,12 +196,12 @@ object FillValue {
       d match {
         case p: Primitive[T] ⇒
           p match {
-            case d @ DataType.  byte    ⇒ Encoder._encodeByte
-            case d @ DataType. short(_) ⇒ Encoder._encodeShort
-            case d @ DataType.   int(_) ⇒ Encoder._encodeInt
-            case d @ DataType.  long(_) ⇒ Encoder._encodeLong
-            case d @ DataType. float(_) ⇒ Encoder._encodeFloat
-            case d @ DataType.double(_) ⇒ Encoder._encodeDouble
+            case d @ DataType.   I8     ⇒ Encoder._encodeByte
+            case d @ DataType.   I16(_) ⇒ Encoder._encodeShort
+            case d @ DataType.   I32(_) ⇒ Encoder._encodeInt
+            case d @ DataType.   I64(_) ⇒ Encoder._encodeLong
+            case d @ DataType.   F32(_) ⇒ Encoder._encodeFloat
+            case d @ DataType.   F64(_) ⇒ Encoder._encodeDouble
             case d @ DataType.string(_) ⇒ Encoder._encodeString
           }
         case _ ⇒

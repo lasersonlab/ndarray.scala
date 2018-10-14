@@ -207,8 +207,8 @@ object Array {
       type Chunk[U] = ndarray.Vector[ShapeT, U]
 
       implicit val traverseShape: Traverse[ShapeT] = ts
-      implicit val traverseA: Traverse[A] = ndarray.Vector.traverse
-      implicit val foldableChunk: Foldable[Chunk] = ndarray.Vector.traverse
+      implicit val traverseA    : Traverse[     A] = ndarray.Vector.traverse
+      implicit val foldableChunk: Foldable[ Chunk] = ndarray.Vector.traverse
 
       val (size, strides) = _shape.scanRight(1)(_ * _)
 
@@ -282,7 +282,7 @@ object Array {
            : Traverse
            : Zip
            : Scannable,
-      Idx,
+      Idx  : Idx.T,
        _T,
         A[_]
            : Traverse
@@ -291,8 +291,7 @@ object Array {
     shape: Shape[Dimension[Idx]]
   )(
    implicit
-      indices:    Indices    [A, Shape],
-          idx:        Idx.  T[     Idx],
+      indices:    Indices[A, Shape],
      datatype:   DataType[      _T],
    compressor: Compressor
   ):
@@ -304,7 +303,6 @@ object Array {
       ]
     ]
   = {
-    import idx._
     val sizeHint = shape.foldLeft(1) { _ * _.chunk }
     for {
       arr ←
@@ -324,7 +322,7 @@ object Array {
                       val start = idx * chunk
                       val end = arr min ((idx + 1) * chunk)
 
-                      int { end - start }
+                      { end - start } int
                   }
                   .sequence
 
@@ -353,22 +351,20 @@ object Array {
    * @param v provides an "N-D array"-type to store chunks in, as well as relevant evidence for using [[ShapeT]]s with
    *          it
    * @param idx "index" type to use (e.g. [[Int]] or [[Long]])
-   * @param d datatype-decoder
-   * @param dt fill-value-decoder
    * @tparam ShapeT "shape" of the [[Array]]; also of elements' indices
    * @tparam T element-type of this [[Array]]
    */
   def apply[
     ShapeT[_],
          T
+         :  DataType.Decoder
+         : FillValue.Decoder
   ](
     dir: Path
   )(
     implicit
-     _v:    VectorEvidence[ShapeT],
-      d:  DataType.Decoder[     T],
-     dt: FillValue.Decoder[     T],
-    idx:               Idx
+     _v: VectorEvidence[ShapeT],
+    idx:            Idx
   ):
     Exception |
     Aux[
@@ -421,7 +417,7 @@ object Array {
   = {
     import ev.{ A ⇒ _, _ }
     for {
-      _metadata ←
+      metadata ←
         dir.load[
           Metadata[
             ShapeT,
@@ -429,7 +425,7 @@ object Array {
             T
           ]
         ]
-      arr ← Array(dir, _metadata)
+      arr ← Array(dir, metadata)
     } yield
       arr
   }
@@ -471,7 +467,7 @@ object Array {
             : Zip
             : Traverse
             : EncoderK,
-      _Idx,
+      _Idx  : Idx.T,
         _A[_],
         _T
   ](
@@ -481,8 +477,7 @@ object Array {
     implicit
       indices:   Indices    [_A, _Shape],
     arrayLike: ArrayLike.Aux[_A, _Shape],
-     traverse:  Traverse    [_A        ],
-          idx:       Idx.  T[      _Idx]
+     traverse:  Traverse    [_A        ]
   ):
     Exception |
     Aux[
@@ -519,8 +514,6 @@ object Array {
 
         val foldableChunk = Chunk.foldable[ShapeT]
 
-        import idx._
-
         val metadata = _metadata
         val datatype =  metadata.dtype
         val   chunks =   _chunks
@@ -528,9 +521,9 @@ object Array {
 
         val shape = metadata.shape
 
-        import lasersonlab.shapeless.slist._
-
         def apply(idx: Shape): T = {
+
+          import lasersonlab.shapeless.slist._
 
           // aliases for annotating the `.sequence` shenanigans below
           type E[U] = CastException | U
@@ -546,8 +539,8 @@ object Array {
                 .zip(shape)
                 .map {
                   case (idx, Dimension(_, chunk, _)) ⇒
-                    int { idx / chunk } ::
-                    int { idx % chunk } ::
+                    { idx / chunk }.int ::
+                    { idx % chunk }.int ::
                     ⊥
                 }                    : F[G[E[T]]]
             )

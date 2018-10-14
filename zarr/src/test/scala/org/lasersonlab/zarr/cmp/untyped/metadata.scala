@@ -14,12 +14,12 @@ object metadata {
   import dtype.{ DataType ⇒ dt }
   def cmpFromDatatype[T](d: DataType[T]): Cmp[T] =
     d match {
-      case d @ dt.  byte      ⇒ the[Cmp[T]]
-      case d @ dt. short  (_) ⇒ the[Cmp[T]]
-      case d @ dt.   int  (_) ⇒ the[Cmp[T]]
-      case d @ dt.  long  (_) ⇒ the[Cmp[T]]
-      case d @ dt. float  (_) ⇒ the[Cmp[T]]
-      case d @ dt.double  (_) ⇒ the[Cmp[T]]
+      case d @ dt.   I8       ⇒ the[Cmp[T]]
+      case d @ dt.   I16  (_) ⇒ the[Cmp[T]]
+      case d @ dt.   I32  (_) ⇒ the[Cmp[T]]
+      case d @ dt.   I64  (_) ⇒ the[Cmp[T]]
+      case d @ dt.   F32  (_) ⇒ the[Cmp[T]]
+      case d @ dt.   F64  (_) ⇒ the[Cmp[T]]
       case d @ dt.string  (_) ⇒ the[Cmp[T]]
       case d @ dt.struct.?(_) ⇒ Cmp { (l, r) ⇒ (l != r) ? (l, r) }
       case d @ dt.struct  (_) ⇒ Cmp { (l, r) ⇒ (l != r) ? (l, r) }

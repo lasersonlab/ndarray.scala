@@ -153,12 +153,12 @@ trait Coders
     def unapply(s: Seq[Char]): Option[Int] = Some( s.mkString.toInt )
   }
 
-  implicit val _decodeByte   : Decoder[  Byte] = make { case           '|' :: 'i' :: Int(   1) ⇒   byte       }
-  implicit val _decodeShort  : Decoder[ Short] = make { case Endianness(e) :: 'i' :: Int(   2) ⇒  short(   e) }
-  implicit val _decodeInt    : Decoder[   Int] = make { case Endianness(e) :: 'i' :: Int(   4) ⇒    int(   e) }
-  implicit val _decodeLong   : Decoder[  Long] = make { case Endianness(e) :: 'i' :: Int(   8) ⇒   long(   e) }
-  implicit val _decodeFloat  : Decoder[ Float] = make { case Endianness(e) :: 'f' :: Int(   4) ⇒  float(   e) }
-  implicit val _decodeDouble : Decoder[Double] = make { case Endianness(e) :: 'f' :: Int(   8) ⇒ double(   e) }
+  implicit val _decodeByte   : Decoder[  Byte] = make { case           '|' :: 'i' :: Int(   1) ⇒ I8       }
+  implicit val _decodeShort  : Decoder[ Short] = make { case Endianness(e) :: 'i' :: Int(   2) ⇒ I16(e) }
+  implicit val _decodeInt    : Decoder[   Int] = make { case Endianness(e) :: 'i' :: Int(   4) ⇒ I32(e) }
+  implicit val _decodeLong   : Decoder[  Long] = make { case Endianness(e) :: 'i' :: Int(   8) ⇒ I64(e) }
+  implicit val _decodeFloat  : Decoder[ Float] = make { case Endianness(e) :: 'f' :: Int(   4) ⇒ F32(e) }
+  implicit val _decodeDouble : Decoder[Double] = make { case Endianness(e) :: 'f' :: Int(   8) ⇒ F64(e) }
   implicit val _decodeString : Decoder[String] = make { case           '|' :: 'S' :: Int(size) ⇒ string(size) }
 
   import org.lasersonlab.zarr.{ untyped ⇒ u }
@@ -185,7 +185,7 @@ trait Coders
                   }
               }
               .sequence
-              .map {struct.? }
+              .map { struct.?(_) }
           }
     }
 }

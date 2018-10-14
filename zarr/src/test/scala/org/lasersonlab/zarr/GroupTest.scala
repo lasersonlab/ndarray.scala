@@ -2,12 +2,12 @@ package org.lasersonlab.zarr
 
 import java.util.Random
 
+import hammerlab.path._
 import lasersonlab.{ zarr ⇒ z }
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Load
-import org.lasersonlab.zarr.utils.Idx
 
 class GroupTest
   extends hammerlab.test.Suite
@@ -18,6 +18,8 @@ class GroupTest
      with cmp.path {
 
   import DataType._
+
+  val writeNewExpectedData = false
 
   val bytes =
     for {
@@ -36,6 +38,8 @@ class GroupTest
 
   val random = new Random(1729)
   import random.{ nextGaussian ⇒ unif }
+
+  // Generate random (log-normal) Doubles, and repeat each one ceil(χ²) number of times
   lazy val stream: Stream[Double] = {
     val a = unif
     val b = unif
@@ -65,6 +69,7 @@ class GroupTest
         strings =
           Strings(
             s2 = {
+              // TODO: add optional path for inferring string datatype size from data (requires O(n) pass)
               implicit val d = string(2)
               Array(10 :: ⊥)((1 to 10).map(_.toString): _*)
             },
@@ -108,26 +113,30 @@ class GroupTest
           )
       )
 
-    val actual = tmpDir()
+    if (writeNewExpectedData)
+      group.save(Path("zarr/src/test/resources/grouptest.zarr")) !
+    else {
+      val actual = tmpDir()
 
-    group.save(actual).!
+      group.save(actual).!
 
-    val expectedPath = resource("grouptest.zarr")
+      val expectedPath = resource("grouptest.zarr")
 
-    eqv(actual, expectedPath)
+      eqv(actual, expectedPath)
 
-    val group2 = actual.load[Foo] !
+      val group2 = actual.load[Foo] !
 
-    eqv(group, group2)
+      eqv(group, group2)
 
-    val expected = expectedPath.load[Foo] !
+      val expected = expectedPath.load[Foo] !
 
-    eqv(group, expected)
+      eqv(group, expected)
+    }
   }
 
   test("typed – mixed compressors / endianness") {
-    import GroupTest.{ == ⇒ _, _ }
-    import lasersonlab.shapeless.slist.{ == ⇒ _, _ }
+    import GroupTest._
+    import lasersonlab.shapeless.slist._
     import org.lasersonlab.zarr.Compressor.Blosc
     import org.lasersonlab.zarr.Compressor.Blosc._
 
@@ -162,8 +171,8 @@ class GroupTest
               Array(10 :: ⊥)((1 to 10).map { I4 }: _*)
             },
             numbers = {
-              implicit val short_> = short(z.order.>)
-              implicit val  long_> =  long(z.order.>)
+              implicit val short_> = I16(z.order.>)
+              implicit val  long_> = I64(z.order.>)
               import z.compress.-
               Array(
                 10 :: 10 :: ⊥,
@@ -189,21 +198,25 @@ class GroupTest
           )
       )
 
-    val actual = tmpDir()
+    if (writeNewExpectedData)
+      group.save(Path("zarr/src/test/resources/mixed.zarr")) !
+    else {
+      val actual = tmpDir()
 
-    group.save(actual).!
+      group.save(actual).!
 
-    val expectedPath = resource("mixed.zarr")
+      val expectedPath = resource("mixed.zarr")
 
-    eqv(actual, expectedPath)
+      eqv(actual, expectedPath)
 
-    val group2 = actual.load[Foo] !
+      val group2 = actual.load[Foo] !
 
-    eqv(group, group2)
+      eqv(group, group2)
 
-    val expected = expectedPath.load[Foo] !
+      val expected = expectedPath.load[Foo] !
 
-    eqv(group, expected)
+      eqv(group, expected)
+    }
   }
 
   test("untyped") {
@@ -243,10 +256,7 @@ class GroupTest
               Group(
                 Map[String, Array.*?[Int]](
                   "ints" → {
-                    implicit val datatype =
-                      struct.?(
-                        StructEntry("value", int) :: Nil
-                      )
+                    implicit val dtype = struct.?('value → int)
                     Array(10 :: Nil)(
                       (1 to 10)
                         .map {
@@ -257,15 +267,13 @@ class GroupTest
                     )
                   },
                   "numbers" → {
-                    implicit val datatype =
+                    implicit val dtype =
                       struct.?(
-                        List(
-                          StructEntry( "short",  short),
-                          StructEntry(   "int",    int),
-                          StructEntry(  "long",   long),
-                          StructEntry( "float",  float),
-                          StructEntry("double", double)
-                        )
+                         'short → short,
+                           'int → int,
+                          'long → long,
+                         'float → float,
+                        'double → double
                       )
                     Array(
                       10 :: 10 :: Nil,
@@ -307,6 +315,9 @@ class GroupTest
   }
 }
 
+/**
+ * Sample record-types for testing IO above
+ */
 object GroupTest {
   case class I4(value: Int)
   case class Numbers(

@@ -20,7 +20,7 @@ import scala.util.Try
 
 trait Save[T] {
   def apply(t: T, path: Path)(implicit atomic: Atomic): Throwable | Unit =
-    if (atomic == yes) {
+    if (atomic == yes && (path.uri.getScheme == null || path.uri.getScheme == "file")) {
       val tmp = Path(createTempDirectory(s"tmp-${path.basename}"))
       val out = tmp / 'out
       val result =
@@ -34,7 +34,7 @@ trait Save[T] {
                 path.mkdirs
 
               if (out.exists)
-                move(out, path, REPLACE_EXISTING, ATOMIC_MOVE)
+                move(out, path)
             }
             .toEither
         } yield

@@ -7,7 +7,6 @@ import org.hammerlab.paths.Path
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.io._
 import org.lasersonlab.zarr.utils.Idx
-import shapeless.the
 
 case class Group[Idx](
   arrays: Map[String, Array.*?[Idx]] =      Map.empty[String, Array.*?[Idx]],
@@ -164,14 +163,8 @@ object Group {
           (
             for {
               (name, array) ← t.arrays.toList
-            } yield {
-              //Save.narrow[Array.*?[Idx]]
-//              Array.save_?[List].apply(array, dir / name)
-              the[utils.Idx]
-              the[utils.Idx.T[Idx]]
+            } yield
               array.save(dir / name)
-              //(array: Array.?[List, Idx]).save(dir / name)
-            }
           )
           .sequence
 
@@ -183,5 +176,49 @@ object Group {
         } yield
           ()
       }
+    }
+
+  import hammerlab.option._
+  import hammerlab.lines._
+  import circe.pprint
+
+  implicit def arrayLines[Idx]: ToLines[Array.*?[Idx]] =
+    ToLines {
+      _.metadata.toString  // TODO: render as JSON
+    }
+
+  implicit def mapLines[T: ToLines]: ToLines[Map[String, T]] =
+    ToLines(
+      map ⇒
+        for {
+          (k, v) ← map
+        } yield
+          Lines(
+            k,
+            indent(v)
+          )
+    )
+
+  implicit def lines[Idx]: ToLines[Group[Idx]] =
+    ToLines {
+      case Group(
+        arrays,
+        groups,
+        attrs,
+        _
+      ) ⇒
+        Lines(
+          attrs.map {
+            attrs ⇒
+              Lines(
+                "attrs:",
+                indent(
+                  pprint(attrs.json).split("\n")
+                )
+              )
+          },
+          arrays.nonEmpty ? Lines("arrays:", indent(mapLines[Array.*?[Idx]].apply(arrays))),
+          groups.nonEmpty ? Lines("groups:", indent(groups))
+        )
     }
 }

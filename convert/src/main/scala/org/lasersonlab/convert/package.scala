@@ -5,6 +5,8 @@ import _root_.cats.{ Foldable, Traverse }
 import _root_.shapeless.the
 import com.tom_e_white.hdf5_java_cloud.NioReadOnlyRandomAccessFile
 import hammerlab.bytes._
+import hammerlab.indent.spaces2
+import hammerlab.lines._
 import hammerlab.math.utils._
 import hammerlab.path.Path
 import io.circe.Json
@@ -145,7 +147,7 @@ package object convert
         val tpe: Type =
           dtype match {
             // fixed-length strings come in as CHARs with an extra dimensions
-            case   CHAR ⇒
+            case CHAR if _shape.size > 1 ⇒
               val size = _shape.last
 
               new Type {
@@ -174,12 +176,12 @@ package object convert
                   sb.result()
                 }
               }
-            case    INT ⇒ Type.make ( dimensions(_shape,    int), fill(rank)(1),    int, 0        , { it: IndexIterator ⇒ it.getIntNext    } )
-            case   LONG ⇒ Type.make ( dimensions(_shape,   long), fill(rank)(1),   long, 0L       , { it: IndexIterator ⇒ it.getLongNext   } )
-            case  SHORT ⇒ Type.make ( dimensions(_shape,  short), fill(rank)(1),  short, 0: Short , { it: IndexIterator ⇒ it.getShortNext  } )
-            case   BYTE ⇒ Type.make ( dimensions(_shape,   byte), fill(rank)(1),   byte, 0: Byte  , { it: IndexIterator ⇒ it.getByteNext   } )
-            case  FLOAT ⇒ Type.make ( dimensions(_shape,  float), fill(rank)(1),  float, 0.0f     , { it: IndexIterator ⇒ it.getFloatNext  } )
-            case DOUBLE ⇒ Type.make ( dimensions(_shape, double), fill(rank)(1), double, 0.0      , { it: IndexIterator ⇒ it.getDoubleNext } )
+            case    INT        ⇒ Type.make ( dimensions(_shape,    int), fill(rank)(1),    int, 0        , { it: IndexIterator ⇒ it.getIntNext    } )
+            case   LONG        ⇒ Type.make ( dimensions(_shape,   long), fill(rank)(1),   long, 0L       , { it: IndexIterator ⇒ it.getLongNext   } )
+            case  SHORT        ⇒ Type.make ( dimensions(_shape,  short), fill(rank)(1),  short, 0: Short , { it: IndexIterator ⇒ it.getShortNext  } )
+            case   BYTE | CHAR ⇒ Type.make ( dimensions(_shape,   byte), fill(rank)(1),   byte, 0: Byte  , { it: IndexIterator ⇒ it.getByteNext   } )
+            case  FLOAT        ⇒ Type.make ( dimensions(_shape,  float), fill(rank)(1),  float, 0.0f     , { it: IndexIterator ⇒ it.getFloatNext  } )
+            case DOUBLE        ⇒ Type.make ( dimensions(_shape, double), fill(rank)(1), double, 0.0      , { it: IndexIterator ⇒ it.getDoubleNext } )
             case c ⇒
               throw new UnsupportedOperationException(
                 s"Unimplemented datatype: $dtype"
@@ -189,6 +191,10 @@ package object convert
         import tpe._
 
         val ndims = shape.size
+        if (ndims == 0)
+          throw new IllegalStateException(
+            s"Empty shape:\n${variable.showLines}"
+          )
 
         val elemsPerChunk = max(1, chunkSize / datatype.size)
         val numRows = shape.head.size

@@ -33,7 +33,7 @@ object Variable {
       v
     )
 
-  implicit def lines: ToLines[Variable] =
+  implicit val lines: ToLines[Variable] =
     ToLines {
       case Variable(
         name,

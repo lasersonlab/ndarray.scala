@@ -36,7 +36,6 @@ import scala.util.Try
  * TODO: experiment with Breeze vector/array for 1D/2D cases
  * TODO: auto-[[Save]] [[Vector]]s (utilizing an implicit chunk-size in bytes)
  * TODO: add a sensible toString
- * TODO: break companion object into a few files
  */
 sealed trait Array {
   /** Element type */
@@ -89,7 +88,6 @@ sealed trait Array {
    * known at a given call-site
    */
   def t: Array.T[T] = this match { case a: Array.T[T] ⇒ a }
-  def aux: Array.Aux[ShapeT, Idx, A, Chunk, T] = this match { case a: Array.Aux[ShapeT, Idx, A, Chunk, T] ⇒ a }
 
   /**
    * Short-hand for imbuing this [[Array]] with an element type at runtime, e.g. in the case where it was loaded without
@@ -140,7 +138,8 @@ sealed trait Array {
       }
 }
 
-object Array {
+object Array
+  extends array.load {
 
   /**
    * "Aux" aliases for various subsets of [[Array]]'s type-members that might be known / required in various contexts
@@ -159,7 +158,7 @@ object Array {
     _Chunk[_],
          T
   ]
-    extends Of[ShapeT, Idx, T] {
+  extends Of[ShapeT, Idx, T] {
     type     A[U] =     _A[U]
     type Chunk[U] = _Chunk[U]
   }
@@ -325,283 +324,6 @@ object Array {
       override val attrs: Option[Attrs] = _attrs.map(Attrs(_))
     }
   }
-
-  /**
-   * Load an ND-array of chunks from a [[Path directory]]
-   *
-   * Each chunk lives in a file with basename given by '.'-joined indices
-   */
-  private def chunks[
-    Shape[_]
-           : Traverse
-           : Zip
-           : Scannable,
-      Idx  : Idx.T,
-       _T,
-        A[_]
-           : Traverse
-  ](
-      dir: Path,
-    shape: Shape[Dimension[Idx]]
-  )(
-   implicit
-      indices:    Indices[A, Shape],
-     datatype:   DataType[      _T],
-   compressor: Compressor
-  ):
-    Exception |
-    A[
-      Chunk[
-        Shape,
-        _T
-      ]
-    ]
-  = {
-    val sizeHint = shape.foldLeft(1) { _ * _.chunk }
-    for {
-      arr ←
-        indices(
-          shape
-            .map { _.range }
-        )
-        .map {
-          idx ⇒
-            for {
-              chunkShape ←
-                // chunks in the last "row" of any dimension may be smaller
-                shape
-                  .zip(idx)
-                  .map {
-                    case (Dimension(arr, chunk, _), idx) ⇒
-                      val start = idx * chunk
-                      val end = arr min ((idx + 1) * chunk)
-
-                      { end - start } int
-                  }
-                  .sequence
-
-              basename = Key(idx)
-
-              chunk ←
-                Chunk(
-                  dir / basename,
-                  chunkShape,
-                  idx,
-                  compressor,
-                  sizeHint * datatype.size
-                )
-            } yield
-              chunk
-          }
-          .sequence  // A[Err | Chunk] -> Err | A[Chunk]
-    } yield
-      arr
-  }
-
-  /**
-   * Main constructor: given [[ShapeT shape]]- and [[T data]]-types, load an [[Array]] from a [[Path directory]]
-   *
-   * @param dir path to load as a Zarr [[Array]]
-   * @param v provides an "N-D array"-type to store chunks in, as well as relevant evidence for using [[ShapeT]]s with
-   *          it
-   * @param idx "index" type to use (e.g. [[Int]] or [[Long]])
-   * @tparam ShapeT "shape" of the [[Array]]; also of elements' indices
-   * @tparam T element-type of this [[Array]]
-   */
-  def apply[
-    ShapeT[_],
-         T
-         :  DataType.Decoder
-         : FillValue.Decoder
-  ](
-    dir: Path
-  )(
-    implicit
-     _v: VectorEvidence[ShapeT],
-    idx:            Idx
-  ):
-    Exception |
-    Aux[
-      ShapeT,
-      idx.T,
-      _v.A,
-      Chunk[ShapeT, ?],
-      T
-    ]
-  = {
-    // HKT-members in method parameters are considered "unstable", so we have to work around it this way (or e.g. pass
-    // all implicit params explicitly / by name); see https://github.com/scala/bug/issues/11086
-    val v = _v
-    import v._
-    implicit val ev = v.t
-    apply[ShapeT, A, T](dir)
-      .asInstanceOf[
-        Exception |
-        Aux[
-          ShapeT,
-          idx.T,
-          _v.A,  // _v.A isn't recognized as being equal to v.A, due to https://github.com/scala/bug/issues/11086
-          Chunk[ShapeT, ?],
-          T
-        ]
-      ]
-  }
-
-  def apply[
-    ShapeT[_],
-         A[_],
-         T
-         :  DataType.Decoder
-         : FillValue.Decoder
-  ](
-    dir: Path
-  )(
-    implicit
-    idx: Idx,
-     ev: VectorEvidence.make[ShapeT, A]
-  ):
-    Exception |
-    Aux[
-      ShapeT,
-      idx.T,
-      A,
-      Chunk[ShapeT, ?],
-      T
-    ]
-  = {
-    import ev.{ A ⇒ _, _ }
-    for {
-      metadata ←
-        dir.load[
-          Metadata[
-            ShapeT,
-            idx.T,
-            T
-          ]
-        ]
-      arr ← Array(dir, metadata)
-    } yield
-      arr
-  }
-
-  /**
-   * Load an [[Array]] whose element-type and number of dimensions are unknown
-   *
-   * Dimensions are loaded as a [[List]], and the element-type is loaded as a type-member ("T")
-   */
-  def ?(
-    dir: Path
-  )(
-    implicit
-    idx: Idx
-  ):
-    Exception |
-    Array.*?[idx.T]
-  =
-    metadata.?(dir)
-      .flatMap {
-        metadata ⇒
-          apply[
-            List,
-            idx.T,
-            Vector.*,
-            metadata.T
-          ](
-            dir,
-            metadata.t
-          )
-          .map {
-            arr ⇒ arr: Array.*?[idx.T]
-          }
-      }
-
-  def apply[
-    _Shape[_]
-            : Scannable
-            : Zip
-            : Traverse
-            : EncoderK,
-      _Idx  : Idx.T,
-        _A[_],
-        _T
-  ](
-    dir: Path,
-    _metadata: Metadata[_Shape, _Idx, _T]
-  )(
-    implicit
-      indices:   Indices    [_A, _Shape],
-    arrayLike: ArrayLike.Aux[_A, _Shape],
-     traverse:  Traverse    [_A        ]
-  ):
-    Exception |
-    Aux[
-      _Shape,
-      _Idx,
-      _A,
-      Chunk[
-        _Shape,
-        ?
-      ],
-      _T
-    ]
-  =
-    for {
-      _attrs ← dir.load[Option[Attrs]]
-      _chunks ← {
-        implicit val md = _metadata
-        import Metadata._
-        chunks[_Shape, _Idx, _T, _A](
-          dir,
-          _metadata.shape
-        )
-      }
-    } yield
-      new Aux[_Shape, _Idx, _A, z.Chunk[_Shape, ?], _T] {
-
-        val traverseA     = Traverse[     A]
-        val traverseShape = Traverse[ShapeT]
-
-        val foldableChunk = Chunk.foldable[ShapeT]
-
-        val metadata = _metadata
-        val datatype =  metadata.dtype
-        val   chunks =   _chunks
-        val    attrs =    _attrs
-
-        val shape = metadata.shape
-
-        def apply(idx: Shape): T = {
-
-          // aliases for annotating the `.sequence` shenanigans below
-          type E[U] = CastException | U
-          type F[U] = ShapeT[U]
-          type G[U] = `2`[U]
-          type T = Chunk.Idx
-
-          // traverse the dimensions in the requested idx, as well as this array's shape, to obtain the chunk index and
-          // the intra-chunk offset (each of which has a component along each dimension)
-          val chunkIdx :: offset ::  ⊥ =
-            Nested(
-              idx
-                .zip(shape)
-                .map {
-                  case (idx, Dimension(_, chunk, _)) ⇒
-                    { idx / chunk }.int ::
-                    { idx % chunk }.int ::
-                    ⊥
-                }                    : F[G[E[T]]]
-            )
-            .sequence               // E[F[G[T]]]
-            .map(_.value.sequence)  // E[G[F[T]]]
-            .right.get               :   G[F[T]]
-
-          chunks(
-            chunkIdx
-          ).apply(
-            offset
-          )
-        }
-      }
 
   /**
    * Implement [[Foldable]] on an [[Array]] identified only by its element type; part of working around / mitigating

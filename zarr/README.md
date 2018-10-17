@@ -17,8 +17,8 @@ case class Foo(
 // Instantiate a Foo
 val foo =
   Foo(
-       ints = Array(      1000 :: 1000 :: ⊥)( 1 to 1000000                 : _*),
-    doubles = Array(100 :: 100 ::  100 :: ⊥)((1 to 1000000).map(_.toDouble): _*)
+       ints = Array(      1000 :: 1000 :: ⊥)( 1 to 1000000                 ),
+    doubles = Array(100 :: 100 ::  100 :: ⊥)((1 to 1000000).map(_.toDouble))
   )
 
 // Save as a Zarr group: a directory containing "ints" and "doubles" subdirectories, each a Zarr array:
@@ -47,8 +47,8 @@ implicit val chunkSize: ChunkSize = 1 MB
 
 val foo =
   Foo(
-       ints = Array(      1000 :: 1000 :: ⊥)( 1 to 1000000                 : _*),
-    doubles = Array(100 :: 100 ::  100 :: ⊥)((1 to 1000000).map(_.toDouble): _*)
+       ints = Array(      1000 :: 1000 :: ⊥)( 1 to 1000000                 ),
+    doubles = Array(100 :: 100 ::  100 :: ⊥)((1 to 1000000).map(_.toDouble))
   )
 
 foo.save(Path("foo.1m"))
@@ -84,7 +84,7 @@ Array(
   1000 :: 1000 :: ⊥,
    500 ::  100 :: ⊥
 )(
-  1 to 1000000: _*
+  1 to 1000000
 )
 ```
 

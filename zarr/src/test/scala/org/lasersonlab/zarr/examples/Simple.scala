@@ -22,8 +22,8 @@ object Simple {
     // Instantiate a Foo
     val foo =
       Foo(
-           ints = Array(      1000 :: 1000 :: ⊥)( 1 to 1000000                 : _*),
-        doubles = Array(100 :: 100 ::  100 :: ⊥)((1 to 1000000).map(_.toDouble): _*)
+           ints = Array(      1000 :: 1000 :: ⊥)( 1 to 1000000                 ),
+        doubles = Array(100 :: 100 ::  100 :: ⊥)((1 to 1000000).map(_.toDouble))
       )
 
     // Save as a Zarr group: a directory containing "ints" and "doubles" subdirectories, each a Zarr array:
@@ -34,8 +34,8 @@ object Simple {
 
       val foo =
         Foo(
-             ints = Array(      1000 :: 1000 :: ⊥)( 1 to 1000000                 : _*),
-          doubles = Array(100 :: 100 ::  100 :: ⊥)((1 to 1000000).map(_.toDouble): _*)
+             ints = Array(      1000 :: 1000 :: ⊥)( 1 to 1000000                 ),
+          doubles = Array(100 :: 100 ::  100 :: ⊥)((1 to 1000000).map(_.toDouble))
         )
 
       foo.save(Path("foo.1m"))

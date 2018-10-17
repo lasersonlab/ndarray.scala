@@ -74,18 +74,18 @@ class GroupTest
   test("typed") {
     val group =
       Foo(
-          bytes = Array(       50 :: 100 :: 200 :: ⊥,      20 :: 50 :: 110 :: ⊥)(   bytes: _* ),
-         shorts = Array( 2 ::   2 ::   2 ::   2 :: ⊥, 1 ::  1 ::  1 ::   1 :: ⊥)(  shorts: _* ),
-           ints = Array(                   1000 :: ⊥                           )(    ints: _* ),
-          longs = Array(                   1000 :: ⊥,                  100 :: ⊥)(   longs: _* ),
-         floats = Array(             100 :: 100 :: ⊥,            20 :: 100 :: ⊥)(  floats: _* ),
-        doubles = Array(                     20 :: ⊥                           )( doubles: _* ),
+          bytes = Array(       50 :: 100 :: 200 :: ⊥,      20 :: 50 :: 110 :: ⊥)(   bytes ),
+         shorts = Array( 2 ::   2 ::   2 ::   2 :: ⊥, 1 ::  1 ::  1 ::   1 :: ⊥)(  shorts ),
+           ints = Array(                   1000 :: ⊥                           )(    ints ),
+          longs = Array(                   1000 :: ⊥,                  100 :: ⊥)(   longs ),
+         floats = Array(             100 :: 100 :: ⊥,            20 :: 100 :: ⊥)(  floats ),
+        doubles = Array(                     20 :: ⊥                           )( doubles ),
         strings =
           Strings(
             s2 = {
               // TODO: add optional path for inferring string datatype size from data (requires O(n) pass)
               implicit val d = string(2)
-              Array(10 :: ⊥)((1 to 10).map(_.toString): _*)
+              Array(10 :: ⊥)((1 to 10).map(_.toString))
             },
             s3 = {
               implicit val d = string(3)
@@ -93,14 +93,14 @@ class GroupTest
                 10 :: 10 :: ⊥,
                  3 ::  4 :: ⊥
               )(
-                (1 to 100).map(_.toString): _*
+                (1 to 100).map(_.toString)
               )
             }
           ),
         structs =
           Structs(
-               ints = Array(      10 :: ⊥              )(    i4s: _*),
-            numbers = Array(10 :: 10 :: ⊥, 2 ::  5 :: ⊥)(numbers: _*)
+               ints = Array(      10 :: ⊥              )(    i4s),
+            numbers = Array(10 :: 10 :: ⊥, 2 ::  5 :: ⊥)(numbers)
           )
       )
 
@@ -132,17 +132,17 @@ class GroupTest
 
     val group =
       Foo(
-          bytes = { Array(       50 :: 100 :: 200 :: ⊥,      20 :: 50 :: 110 :: ⊥,  compressor = z.compress.zlib )(   bytes: _* ) },
-         shorts = { Array( 2 ::   2 ::   2 ::   2 :: ⊥, 1 ::  1 ::  1 ::   1 :: ⊥,  compressor = z.compress.   - )(  shorts: _* ) },
-           ints = { Array(                   1000 :: ⊥,                             compressor =   Blosc( lz4hc) )(    ints: _* ) },
-          longs = { Array(                   1000 :: ⊥,                   100 :: ⊥, compressor =   Blosc(  zlib) )(   longs: _* ) },
-         floats = { Array(             100 :: 100 :: ⊥,             20 :: 100 :: ⊥, compressor =   Blosc(  zstd) )(  floats: _* ) },
-        doubles = { Array(                     20 :: ⊥,                             compressor =   Blosc(snappy) )( doubles: _* ) },
+          bytes = { Array(       50 :: 100 :: 200 :: ⊥,      20 :: 50 :: 110 :: ⊥,  compressor = z.compress.zlib )(   bytes ) },
+         shorts = { Array( 2 ::   2 ::   2 ::   2 :: ⊥, 1 ::  1 ::  1 ::   1 :: ⊥,  compressor = z.compress.   - )(  shorts ) },
+           ints = { Array(                   1000 :: ⊥,                             compressor =   Blosc( lz4hc) )(    ints ) },
+          longs = { Array(                   1000 :: ⊥,                   100 :: ⊥, compressor =   Blosc(  zlib) )(   longs ) },
+         floats = { Array(             100 :: 100 :: ⊥,             20 :: 100 :: ⊥, compressor =   Blosc(  zstd) )(  floats ) },
+        doubles = { Array(                     20 :: ⊥,                             compressor =   Blosc(snappy) )( doubles ) },
         strings =
           Strings(
             s2 = {
               implicit val d = string(2)
-              Array(10 :: ⊥)((1 to 10).map(_.toString): _*)
+              Array(10 :: ⊥)((1 to 10).map(_.toString))
             },
             s3 = {
               implicit val d = string(3)
@@ -150,7 +150,7 @@ class GroupTest
                 10 :: 10 :: ⊥,
                  3 ::  4 :: ⊥
               )(
-                (1 to 100).map(_.toString): _*
+                (1 to 100).map(_.toString)
               )
             }
           ),
@@ -158,7 +158,7 @@ class GroupTest
           Structs(
             ints = {
               implicit val > = z.order.>
-              Array(10 :: ⊥)(i4s: _*)
+              Array(10 :: ⊥)(i4s)
             },
             numbers = {
               implicit val short_> = I16(z.order.>)
@@ -168,7 +168,7 @@ class GroupTest
                 10 :: 10 :: ⊥,
                  2 ::  5 :: ⊥
               )(
-                numbers: _*
+                numbers
               )
             }
           )
@@ -198,17 +198,17 @@ class GroupTest
   test("untyped") {
     val group =
       Group(
-          'bytes → Array(       50 :: 100 :: 200 :: Nil,      20 :: 50 :: 110 :: Nil)(   bytes: _* ),
-         'shorts → Array( 2 ::   2 ::   2 ::   2 :: Nil, 1 ::  1 ::  1 ::   1 :: Nil)(  shorts: _* ),
-           'ints → Array(                   1000 :: Nil                             )(    ints: _* ),
-          'longs → Array(                   1000 :: Nil,                  100 :: Nil)(   longs: _* ),
-         'floats → Array(             100 :: 100 :: Nil,            20 :: 100 :: Nil)(  floats: _* ),
-        'doubles → Array(                     20 :: Nil                             )( doubles: _* ),
+          'bytes → Array(       50 :: 100 :: 200 :: Nil,      20 :: 50 :: 110 :: Nil)(   bytes ),
+         'shorts → Array( 2 ::   2 ::   2 ::   2 :: Nil, 1 ::  1 ::  1 ::   1 :: Nil)(  shorts ),
+           'ints → Array(                   1000 :: Nil                             )(    ints ),
+          'longs → Array(                   1000 :: Nil,                  100 :: Nil)(   longs ),
+         'floats → Array(             100 :: 100 :: Nil,            20 :: 100 :: Nil)(  floats ),
+        'doubles → Array(                     20 :: Nil                             )( doubles ),
         'strings →
           Group(
             's2 → {
               implicit val d = string(2)
-              Array(10 :: Nil)((1 to 10).map(_.toString): _*)
+              Array(10 :: Nil)((1 to 10).map(_.toString))
             },
             's3 → {
               implicit val d = string(3)
@@ -216,7 +216,7 @@ class GroupTest
                 10 :: 10 :: Nil,
                  3 ::  4 :: Nil
               )(
-                (1 to 100).map(_.toString): _*
+                (1 to 100).map(_.toString)
               )
             }
           ),
@@ -230,7 +230,7 @@ class GroupTest
                     i ⇒
                       untyped.Struct("value" → i)
                   }
-                : _*
+
               )
             },
             'numbers → {
@@ -260,7 +260,6 @@ class GroupTest
                       "double" → (n.toDouble * 100)
                     )
                 )
-                : _*
               )
             }
           )

@@ -43,7 +43,7 @@ trait make {
          order: Opt[     Order     ] = None,
     fill_value: Opt[ FillValue[ _T]] = None
   )(
-    _elems: _T*
+    _elems: Seq[_T]
   )(
     implicit
        _datatype:          DataType[_T],

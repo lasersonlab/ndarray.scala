@@ -4,8 +4,6 @@ import io.circe.generic.AutoDerivation
 import io.circe.{ Parser, ParsingFailure, Printer }
 import org.hammerlab.paths.HasPathOps
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike }
-import org.lasersonlab.slist.{ Scannable, Zip }
-import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.utils.Idx
 
 /**
@@ -81,11 +79,11 @@ package object zarr
       type Metadata = z.Group.Metadata
     }
     type Array[Shape[_], T] = z.Array.Of[Shape, Idx, T]
-    val Array = z.Array
+     val Array              = z.Array
   }
   trait  int extends api { type Idx =  Int; implicit val __idx = Idx. Int }
   trait long extends api { type Idx = Long; implicit val __idx = Idx.Long }
 
   type Metadata[Shape[_], Idx, T] = array.metadata.Metadata[Shape, Idx, T]
-  val Metadata = array.metadata.Metadata
+   val Metadata                   = array.metadata.Metadata
 }

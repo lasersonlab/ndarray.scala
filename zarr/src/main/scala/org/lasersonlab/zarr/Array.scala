@@ -149,7 +149,12 @@ object Array
         _A[_],
     _Chunk[_],
          T
-  ]
+  ](
+    implicit
+    val traverseA    : Traverse[    _A],
+    val traverseShape: Traverse[ShapeT],
+    val foldableChunk: Foldable[_Chunk]
+  )
   extends Of[ShapeT, Idx, T] {
     type     A[U] =     _A[U]
     type Chunk[U] = _Chunk[U]

@@ -208,7 +208,6 @@ trait load {
     _Shape[_]
             : Scannable
             : Zip
-            : Traverse
             : EncoderK,
       _Idx  : Idx.T,
         _A[_],
@@ -218,9 +217,10 @@ trait load {
     _metadata: Metadata[_Shape, _Idx, _T]
   )(
     implicit
-      indices:   Indices    [_A, _Shape],
-    arrayLike: ArrayLike.Aux[_A, _Shape],
-     traverse:  Traverse    [_A        ]
+          indices:   Indices    [_A, _Shape],
+        arrayLike: ArrayLike.Aux[_A, _Shape],
+         traverse:  Traverse    [_A        ],
+    traverseShape:  Traverse    [    _Shape]
   ):
     Exception |
     Aux[
@@ -246,14 +246,7 @@ trait load {
       }
     } yield
       new Aux[_Shape, _Idx, _A, z.Chunk[_Shape, ?], _T] {
-
-        val traverseA     = Traverse[     A]
-        val traverseShape = Traverse[ShapeT]
-
-        val foldableChunk = Chunk.foldable[ShapeT]
-
         val metadata = _metadata
-        val datatype =  metadata.dtype
         val   chunks =   _chunks
         val    attrs =    _attrs
 

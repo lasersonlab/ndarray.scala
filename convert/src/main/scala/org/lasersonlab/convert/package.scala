@@ -230,11 +230,7 @@ package object convert
           convert.Chunk,
           tpe.T
         ] {
-          override val metadata = _metadata
-
-          implicit val traverseA: Traverse[A] = catsStdInstancesForVector
-          implicit val foldableChunk: Foldable[Chunk] = Chunk.foldable
-          implicit val traverseShape: Traverse[ShapeT] = catsStdInstancesForList
+          val metadata = _metadata
 
           val shape: List[Dimension[Int]] = tpe.shape
 

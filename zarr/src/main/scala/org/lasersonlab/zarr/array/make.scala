@@ -30,7 +30,6 @@ trait make {
     _ShapeT[_]
     : Scannable
     : Size
-    : Traverse
     : UnfoldRange
     : Zip,
     _T
@@ -52,7 +51,8 @@ trait make {
      _fill_value:         FillValue[_T] = Null,
      zarr_format:            Format     = Format.`2`,
          filters: Option[Seq[Filter]]   = None,
-      _chunkSize:         ChunkSize     = 32 MB
+      _chunkSize:         ChunkSize     = 32 MB,
+    traverseShape: Traverse[_ShapeT]
   ):
     Aux[
       _ShapeT,
@@ -69,11 +69,6 @@ trait make {
       Vector[_ShapeT, ?],
       _T
     ] {
-
-      val traverseShape: Traverse[ShapeT] = Traverse[_ShapeT]
-      val traverseA    : Traverse[     A] = Vector.traverse
-      val foldableChunk: Foldable[ Chunk] = Vector.traverse
-
       val datatype = dtype.getOrElse(_datatype)
 
       val chunkShape =

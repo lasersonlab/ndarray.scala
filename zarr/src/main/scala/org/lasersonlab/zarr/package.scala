@@ -26,16 +26,14 @@ import org.lasersonlab.zarr.utils.Idx
 package object zarr
   extends utils.slist.Codecs
      with HasPathOps
+     with hammerlab.bytes.syntax
      with hammerlab.either
      with hammerlab.math.utils
      with lasersonlab.slist
      with Arithmetic.syntax
-     with ArrayLike.syntax
+     with  ArrayLike.syntax
      with        Idx.syntax
-     with       Load.syntax
-     with       Save.syntax
-     with  Scannable.syntax
-     with        Zip.syntax
+     with         io.syntax
      with xscala.shims
      with VectorEvidence.flat
      with cats.   syntax.AllSyntax
@@ -69,6 +67,8 @@ package object zarr
 
     val pprint = Printer.spaces4.copy(colonLeft = "").pretty _
   }
+
+  type Path = hammerlab.path.Path
 
   /**
    * Aliases that partially-apply an "index" type ([[Int]] or [[Long]]; see [[Idx]])

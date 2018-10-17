@@ -2,7 +2,7 @@
 default(
   group("org.lasersonlab"),
   versions(
-    hammerlab.          bytes → "1.2.0",
+    hammerlab.          bytes → "1.3.0",
     hammerlab.        channel → "1.5.3",
     hammerlab.       cli.base → "1.0.1",
     hammerlab.     math.utils → "2.3.0",
@@ -140,6 +140,7 @@ lazy val zarr =
         circe,
         circe.generic,
         circe.parser,
+        hammerlab.bytes,
         hammerlab.io,
         hammerlab.math.utils,
         hammerlab.paths,

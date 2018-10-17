@@ -6,8 +6,10 @@ import org.lasersonlab.{ zarr ⇒ z }
 
 object zarr
   extends z.int
-    with lasersonlab.slist
-    with utils.slist.Codecs {
+     with hammerlab.bytes.syntax
+     with lasersonlab.slist
+     with z.io.syntax
+     with utils.slist.Codecs {
   object long extends z.long
   object order {
     implicit val < = LittleEndian
@@ -21,4 +23,7 @@ object zarr
 
   type Path = hammerlab.path.Path
    val Path = hammerlab.path.Path
+
+  type ChunkSize = z.utils.ChunkSize
+   val ChunkSize = z.utils.ChunkSize
 }

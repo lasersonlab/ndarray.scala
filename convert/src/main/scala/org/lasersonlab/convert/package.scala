@@ -1,7 +1,6 @@
 package org.lasersonlab
 
 import cats.implicits._
-import cats.{ Foldable, Traverse }
 import com.tom_e_white.hdf5_java_cloud.NioReadOnlyRandomAccessFile
 import hammerlab.bytes._
 import hammerlab.indent.spaces2

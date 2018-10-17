@@ -3,7 +3,6 @@ package org.lasersonlab.zarr
 import java.io.IOException
 
 import hammerlab.str._
-import org.hammerlab.paths.Path
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.io._
 import org.lasersonlab.zarr.utils.Idx

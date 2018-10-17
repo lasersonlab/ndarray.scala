@@ -2,7 +2,7 @@ package org.lasersonlab.zarr.io
 
 import hammerlab.str._
 
-case class Basename[T](override val toString: String)
+case class Basename[-T](override val toString: String)
 
 object Basename {
   implicit def toString[T](basename: Basename[T]): String = basename.toString

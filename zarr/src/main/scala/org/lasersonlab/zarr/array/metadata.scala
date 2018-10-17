@@ -9,7 +9,6 @@ import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr._
-import org.lasersonlab.zarr.array.metadata.Metadata.basename
 import org.lasersonlab.zarr.circe.Decoder.Result
 import org.lasersonlab.zarr.circe._
 import org.lasersonlab.zarr.circe.parser._
@@ -27,35 +26,29 @@ object metadata {
    * The only implementation of this interface is [[Metadata]], and generally the interface should not be used
    * directly outside this file
    */
-  sealed trait Interface {
+  sealed abstract class ?[Shape[_], Idx] {
     val       shape: Shape[Dimension[Idx]]
-    val       dtype:           DataType.?
+    val       dtype:           DataType[T]
     val  compressor:         Compressor    = Blosc()
     val       order:              Order    =     C
     val  fill_value:          FillValue[T] =  Null
     val zarr_format:             Format    =    `2`
     val     filters:  Option[Seq[Filter]]  =  None
 
-    def d: DataType[T] = dtype.t
-    final type T = dtype.T
-    type Shape[_]
-    type Idx
+    type T
 
-    /** Narrow an [[Interface]] to its underlying [[Metadata]] */
+    /** Narrow a [[?]] to its underlying [[Metadata]] */
     def t =
       this match {
         case m: Metadata[Shape, Idx, T] ⇒ m
       }
   }
 
-  type ?[_Shape[_], _I] =
-    Interface {
-      type Shape[U] = _Shape[U]
-      type Idx = _I
-    }
+  val basename = ".zarray"
 
-  val ? = Interface
-  object Interface {
+  object ? {
+    implicit def _basename[Shape[_], Idx]: Basename[?[Shape, Idx]] = Basename(basename)
+
     /**
      * Load an [[? "untyped"]] [[Metadata]] from the path to a containing directory
      *
@@ -124,43 +117,61 @@ object metadata {
             )
             : ?[Shape, Idx]
       }
+
+    implicit def encoder[
+      Shape[_]
+             : Traverse
+             : EncoderK,
+        Idx  : Encoder
+    ]:
+      Encoder[
+        ?[
+          Shape,
+          Idx
+        ]
+      ]
+    =
+      new Encoder[
+        ?[
+          Shape,
+          Idx
+        ]
+      ] {
+        @inline def apply(m: ?[Shape, Idx]): Json =
+          Metadata.encoder[Shape, Idx, m.T].apply(m.t)
+      }
   }
 
   case class Metadata[
-    _Shape[_],
-      _Idx,
-         T
+    Shape[_],
+      Idx,
+       _T
   ](
-                       shape: _Shape[Dimension[_Idx]],
-                       dtype:          DataType[T],
+                       shape: Shape[Dimension[Idx]],
+                       dtype:          DataType[_T],
     override val  compressor:        Compressor    = Blosc(),
     override val       order:             Order    = C,
-    override val  fill_value:         FillValue[T] = Null,
+    override val  fill_value:         FillValue[_T] = Null,
     override val zarr_format:            Format    = `2`,
     override val     filters: Option[Seq[Filter]]  = None
   )
-  extends Interface
-  {
-    type Shape[U] = _Shape[U]
-    type Idx = _Idx
+  extends ?[Shape, Idx] {
+    type T = _T
   }
 
   object Metadata {
-    val basename = ".zarray"
-    implicit def _basename[Shape[_], Idx, T]: Basename[Metadata[Shape, Idx, T]] = Basename(basename)
-
     // Implicit unwrappers for some fields
     implicit def _compressor[S[_]   ](implicit md: Metadata[S, _, _]):      Compressor = md.compressor
     implicit def _datatype  [S[_], T](implicit md: Metadata[S, _, T]): DataType[T] = md.     dtype
 
     def apply[
-          T
-             :  DataType.Decoder
-             : FillValue.Decoder,
       Shape[_]
              : Traverse
              : Zip
-             : DecoderK
+             : DecoderK,
+          T
+             :  DataType.Decoder
+             : FillValue.Decoder,
     ](
       dir: Path
     )(
@@ -198,8 +209,8 @@ object metadata {
      */
     implicit def decoder[
       Shape[_]: Traverse : Zip : DecoderK,
+        Idx,
           T   : FillValue.Decoder,
-        Idx
     ](
       implicit
       datatypeDecoder: DataType.Decoder[T],
@@ -267,31 +278,6 @@ object metadata {
                         .toOption
                   )
             }
-      }
-
-    implicit def encodeShaped[
-      Shape[_]
-             : Traverse
-             : EncoderK,
-        Idx  : Encoder
-    ]:
-      Encoder[
-        ?[
-          Shape,
-          Idx
-        ]
-      ]
-    =
-      new Encoder[
-        ?[
-          Shape,
-          Idx
-        ]
-      ] {
-        @inline def apply(m: ?[Shape, Idx]): Json = {
-          implicit val d = m.d
-          encoder[Shape, Idx, m.T].apply(m.t)
-        }
       }
 
     implicit def encoder[

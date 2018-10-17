@@ -1,11 +1,13 @@
 package lasersonlab
 
-import org.lasersonlab.zarr.Compressor
+import org.lasersonlab.zarr.{ Compressor, utils }
 import org.lasersonlab.zarr.dtype.ByteOrder._
 import org.lasersonlab.{ zarr ⇒ z }
 
 object zarr
-  extends z.int {
+  extends z.int
+    with lasersonlab.slist
+    with utils.slist.Codecs {
   object long extends z.long
   object order {
     implicit val < = LittleEndian

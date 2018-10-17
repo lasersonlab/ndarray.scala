@@ -1,4 +1,4 @@
-package lasersonlab.shapeless
+package lasersonlab
 
 import org.lasersonlab.shapeless.{ SList ⇒ s }
 

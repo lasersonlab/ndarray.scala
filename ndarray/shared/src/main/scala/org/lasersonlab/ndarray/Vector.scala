@@ -2,8 +2,8 @@ package org.lasersonlab.ndarray
 
 import cats.implicits._
 import cats.{ Applicative, Eval, Foldable, Traverse }
+import lasersonlab.{ slist ⇒ s }
 import org.lasersonlab.ndarray.Vector.Idx
-import lasersonlab.shapeless.slist._
 import org.lasersonlab.shapeless.Scannable.syntax._
 import org.lasersonlab.shapeless.Zip.syntax._
 import org.lasersonlab.shapeless.{ Scannable, Size, Zip }
@@ -149,8 +149,6 @@ object Vector {
       @inline def foldRight[A, B](fa: F[A], lb: Eval[B])(f: (A, Eval[B]) ⇒ Eval[B]): Eval[B] = fa.elems.foldRight(lb)(f)
     }
   }
-
-  import lasersonlab.shapeless.{ slist ⇒ s }
 
   type `1`[T] = Vector[s.`1`, T]
   type `2`[T] = Vector[s.`2`, T]

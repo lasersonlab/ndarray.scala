@@ -1,6 +1,5 @@
 package org.lasersonlab.anndata
 
-import lasersonlab.shapeless.slist._
 import lasersonlab.zarr._
 
 case class AnnData[Obs, Var](

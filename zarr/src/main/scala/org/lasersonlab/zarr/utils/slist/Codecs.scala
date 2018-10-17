@@ -4,7 +4,7 @@ import cats.Foldable
 import cats.implicits._
 import io.circe.Decoder.Result
 import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json, Printer }
-import lasersonlab.shapeless.slist._
+import lasersonlab.slist._
 import org.lasersonlab.shapeless.SList.FromList
 import org.lasersonlab.shapeless.SList.FromList.{ TooFew, TooMany }
 import org.lasersonlab.circe.{ CodecK, DecoderK, EncoderK }

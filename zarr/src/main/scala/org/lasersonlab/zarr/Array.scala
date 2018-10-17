@@ -2,7 +2,6 @@ package org.lasersonlab.zarr
 
 import cats.data.Nested
 import cats.{ Eval, Foldable, Traverse }
-import circe.Json
 import hammerlab.option._
 import hammerlab.path._
 import org.lasersonlab.circe.EncoderK
@@ -10,16 +9,15 @@ import org.lasersonlab.ndarray.{ ArrayLike, Indices, UnfoldRange, Vector }
 import org.lasersonlab.shapeless.{ Scannable, Size, Zip }
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.FillValue.Null
-import Format.`2`
-import lasersonlab.zarr
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.array.metadata
+import org.lasersonlab.zarr.circe.Json
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.utils.Idx.Long.CastException
 import org.lasersonlab.{ zarr ⇒ z }
-import shapeless.{ Nat, the }
+import shapeless.the
 
 import scala.util.Try
 
@@ -212,7 +210,7 @@ object Array {
      _compressor:        Compressor     = Blosc(),
           _order:             Order     = C,
      _fill_value:         FillValue[_T] = Null,
-     zarr_format:            Format     = `2`,
+     zarr_format:            Format     = Format.`2`,
          filters: Option[Seq[Filter]]   = None
   ):
     Aux[
@@ -265,7 +263,6 @@ object Array {
         indices(chunkRanges)
           .map {
             chunkIdx ⇒
-              import lasersonlab.shapeless.slist._
               val start :: size :: end :: ⊥ =
                 chunkShape
                   .zip(chunkIdx, _shape)
@@ -539,8 +536,6 @@ object Array {
         val shape = metadata.shape
 
         def apply(idx: Shape): T = {
-
-          import lasersonlab.shapeless.slist._
 
           // aliases for annotating the `.sequence` shenanigans below
           type E[U] = CastException | U

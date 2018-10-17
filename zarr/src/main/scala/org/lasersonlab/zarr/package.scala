@@ -28,6 +28,7 @@ package object zarr
      with HasPathOps
      with hammerlab.either
      with hammerlab.math.utils
+     with lasersonlab.slist
      with Arithmetic.syntax
      with ArrayLike.syntax
      with        Idx.syntax
@@ -80,9 +81,7 @@ package object zarr
       type Metadata = z.Group.Metadata
     }
     type Array[Shape[_], T] = z.Array.Of[Shape, Idx, T]
-    object Array {
-      type Metadata[Shape[_], T] = z.Metadata[Shape, Idx, T]
-    }
+    val Array = z.Array
   }
   trait  int extends api { type Idx =  Int }
   trait long extends api { type Idx = Long }

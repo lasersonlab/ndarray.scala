@@ -36,7 +36,7 @@ object UnfoldRange {
         }
     }
 
-  import lasersonlab.shapeless.slist._
+  import lasersonlab.slist._
 
   implicit val unfold0: UnfoldRange[`0`] = new UnfoldRange[`0`] {
     def apply(s: `0`[Int]): scala.Vector[`0`[Int]] = scala.Vector(⊥)

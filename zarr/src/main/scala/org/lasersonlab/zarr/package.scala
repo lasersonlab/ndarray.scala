@@ -38,8 +38,8 @@ package object zarr
      with        Zip.syntax
      with xscala.shims
      with VectorEvidence.flat
-     with _root_.cats.   syntax.AllSyntax
-     with _root_.cats.instances.AllInstances
+     with cats.   syntax.AllSyntax
+     with cats.instances.AllInstances
 {
 
   /**
@@ -83,8 +83,8 @@ package object zarr
     type Array[Shape[_], T] = z.Array.Of[Shape, Idx, T]
     val Array = z.Array
   }
-  trait  int extends api { type Idx =  Int }
-  trait long extends api { type Idx = Long }
+  trait  int extends api { type Idx =  Int; implicit val __idx = Idx. Int }
+  trait long extends api { type Idx = Long; implicit val __idx = Idx.Long }
 
   type Metadata[Shape[_], Idx, T] = array.metadata.Metadata[Shape, Idx, T]
   val Metadata = array.metadata.Metadata

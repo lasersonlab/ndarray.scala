@@ -1,8 +1,7 @@
 package org.lasersonlab
 
-import _root_.cats.implicits._
-import _root_.cats.{ Foldable, Traverse }
-import _root_.shapeless.the
+import cats.implicits._
+import cats.{ Foldable, Traverse }
 import com.tom_e_white.hdf5_java_cloud.NioReadOnlyRandomAccessFile
 import hammerlab.bytes._
 import hammerlab.indent.spaces2
@@ -15,8 +14,8 @@ import org.lasersonlab.netcdf.{ Attribute, Variable }
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Save
-import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.{ Attrs, Compressor, Dimension, FillValue, Metadata }
+import shapeless.the
 import ucar.ma2.IndexIterator
 import ucar.nc2.NetcdfFile
 
@@ -34,8 +33,6 @@ package object convert
       null
     )
     .getRootGroup
-
-  implicit val __int = Idx.Int
 
   implicit def convertGroup(
     group: netcdf.Group

@@ -18,4 +18,7 @@ object zarr
     implicit val    - = Compressor.None
     implicit val zlib = Compressor.ZLib()
   }
+
+  type Path = hammerlab.path.Path
+   val Path = hammerlab.path.Path
 }

@@ -7,6 +7,9 @@ import org.lasersonlab.slist.SList.FromList.{ Err, TooFew, TooMany }
 import org.lasersonlab.slist.Scannable.syntax._
 import org.lasersonlab.slist.Zip.syntax._
 
+/**
+ * Interface for (non-empty) "List"-types whose length is known statically
+ */
 trait SList {
   type Head
   def head: Head
@@ -41,15 +44,37 @@ object SList {
       )
   }
 
+  /**
+   * Base/Empty object; not technically an [[SList]], but behaves syntactically like one
+   */
   case object `0` {
     def ::[T](h: T) = `1`(h)
     def size = 0
   }
   val   ⊥     = `0`
   type  ⊥     = `0`.type
-  type `0`[T] = `0`.type
+  type `0`[T] = `0`.type  // "Const" type-constructor
 
-  case class `1`[T](head: T              ) extends SList { type Head = T; type Tail[U] = `0`[U]; def size = 1 ; def tail: `0`[T] = `0` }
+  // Unroll instances manually 😱
+  //
+  // Implicit-derivations and unifications involving HKTs have some short-comings, making it impossible to use recursive
+  // / inductive types here.
+  //
+  // The closest I came to getting it working (depending how you measure it) is in this fiddle:
+  // https://scalafiddle.io/sf/Eh7h05z/3
+  //
+  // Inductive implicit-derivations are made to work there, but downstream cats-style syntax that requires unifying HKTs
+  // doesn't work, which is fairly deal-breaking.
+  //
+  // Also, "unapply" syntax for `::` doesn't seem workable when the types are parameters and not members, but making
+  // them members (as they are currently) makes implicit-derivations work even less well than they do in that fiddle
+  // (cf. the explicit calls to the implicit inductive-derivation function `cons` below)
+  //
+  // So, unrolling the first 10 instances (as well as 10 instances of any typeclasses) seems sadly necessary. On the
+  // bright side, it's technically "O(1)" boilerplate that should cover "99%" of use-cases.
+  //
+
+  case class `1`[T](head: T              ) extends SList { type Head = T; type Tail[U] = `0`[U]; def size = 1 ; def tail: `0`[T] = ⊥ }
   case class `2`[T](head: T, tail: `1`[T]) extends SList { type Head = T; type Tail[U] = `1`[U]; def size = 2 }
   case class `3`[T](head: T, tail: `2`[T]) extends SList { type Head = T; type Tail[U] = `2`[U]; def size = 3 }
   case class `4`[T](head: T, tail: `3`[T]) extends SList { type Head = T; type Tail[U] = `3`[U]; def size = 4 }

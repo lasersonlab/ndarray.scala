@@ -28,6 +28,7 @@ import scala.util.Try
  * companion-object for some convenient constructors
  *
  * TODO: experiment with Breeze vector/array for 1D/2D cases
+ * TODO: auto-[[Save]] [[Vector]]s (utilizing an implicit chunk-size in bytes)
  */
 sealed trait Array {
   /** Element type */

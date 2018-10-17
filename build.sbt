@@ -43,6 +43,9 @@ lazy val gcp =
       )
     )
 
+lazy val `circe-utils`   =  cross.in(new File("circe")).settings(dep(circe))
+lazy val `circe-utils-x` = `circe-utils`.x
+
 lazy val convert =
   project
     .settings(
@@ -109,6 +112,7 @@ lazy val slist = cross.settings(
     hammerlab.types
   )
 )
+lazy val `slist-x` = slist.x
 
 lazy val utils = project.settings(
   crossPaths := false,
@@ -153,18 +157,20 @@ lazy val zarr =
       excludeFilter in sbt.Test := NothingFilter
     )
     .dependsOn(
-      ndarray.jvm,
-        slist.jvm,
-       xscala.jvm
+      `circe-utils`.jvm,
+       ndarray.jvm,
+         slist.jvm,
+        xscala.jvm
     )
 
 lazy val all = root(
+  `circe-utils-x`,
    cloud,
    convert,
   `ndarray-x`,
    netcdf,
    singlecell,
-   slist,
+  `slist-x`,
    utils,
   `xscala-x`,
    zarr

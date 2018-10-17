@@ -5,7 +5,6 @@ import java.nio.ByteBuffer
 import java.nio.file.{ FileSystems, Files, Paths }
 
 import com.upplication.s3fs.S3Path
-import hammerlab.path._
 
 import scala.collection.JavaConverters._
 

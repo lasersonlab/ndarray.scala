@@ -1,11 +1,11 @@
-package org.lasersonlab.shapeless
+package org.lasersonlab.slist
 
 import cats.implicits._
 import cats.{ Applicative, Eval, Reducible, Traverse }
 import hammerlab.either._
-import org.lasersonlab.shapeless.SList.FromList.{ Err, TooFew, TooMany }
-import org.lasersonlab.shapeless.Scannable.syntax._
-import org.lasersonlab.shapeless.Zip.syntax._
+import org.lasersonlab.slist.SList.FromList.{ Err, TooFew, TooMany }
+import org.lasersonlab.slist.Scannable.syntax._
+import org.lasersonlab.slist.Zip.syntax._
 
 trait SList {
   type Head

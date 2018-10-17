@@ -1,12 +1,13 @@
 package lasersonlab
 
-import org.lasersonlab.shapeless.{ SList ⇒ s }
+import org.lasersonlab.slist.{ Scannable, Size, Zip, syntax, SList ⇒ s }
 
 /**
- * Exported interface for [[org.lasersonlab.shapeless.SList]]
+ * Exported interface for [[org.lasersonlab.slist.SList]]
  */
 trait slist
-  extends s.instances {
+  extends s.instances
+     with syntax {
 
   type SList = s
   val  SList = s

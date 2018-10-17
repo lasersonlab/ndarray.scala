@@ -3,7 +3,7 @@ package org.lasersonlab.zarr
 import cats.Traverse
 import circe._, Decoder.Result
 import org.lasersonlab.circe.DecoderK
-import org.lasersonlab.shapeless.Zip
+import org.lasersonlab.slist.Zip
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.utils.Idx.Long.CastException
 

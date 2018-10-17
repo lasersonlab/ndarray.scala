@@ -4,7 +4,7 @@ import io.circe.generic.AutoDerivation
 import io.circe.{ Parser, ParsingFailure, Printer }
 import org.hammerlab.paths.HasPathOps
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike }
-import org.lasersonlab.shapeless.{ Scannable, Zip }
+import org.lasersonlab.slist.{ Scannable, Zip }
 import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.utils.Idx
 

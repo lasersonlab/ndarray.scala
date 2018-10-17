@@ -1,4 +1,4 @@
-package org.lasersonlab.shapeless
+package org.lasersonlab.slist
 
 import cats.{ Functor, Traverse }
 import cats.implicits._
@@ -26,7 +26,7 @@ object Zip {
     def zipAndIndex[B](fb: F[B])(implicit zip: Zip[F], t: Traverse[F]) = zip.withIndex(fa, fb)
   }
   trait syntax {
-    @inline implicit def zipOps[F[_], A](fa: F[A]): Ops[F, A] = Ops(fa)
+    @inline implicit def slistZipOps[F[_], A](fa: F[A]): Ops[F, A] = Ops(fa)
   }
   object syntax extends syntax
 

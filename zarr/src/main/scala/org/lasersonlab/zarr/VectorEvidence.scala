@@ -4,7 +4,7 @@ import cats.Traverse
 import cats.implicits._
 import org.lasersonlab.circe.CodecK
 import org.lasersonlab.ndarray.{ ArrayLike, Indices, Vector }
-import org.lasersonlab.shapeless.{ Scannable, Zip }
+import org.lasersonlab.slist.{ Scannable, Zip }
 import org.lasersonlab.zarr.VectorEvidence.make
 
 /**

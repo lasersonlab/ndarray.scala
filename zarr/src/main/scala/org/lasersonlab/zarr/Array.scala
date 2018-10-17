@@ -6,7 +6,7 @@ import hammerlab.option._
 import hammerlab.path._
 import org.lasersonlab.circe.EncoderK
 import org.lasersonlab.ndarray.{ ArrayLike, Indices, UnfoldRange, Vector }
-import org.lasersonlab.shapeless.{ Scannable, Size, Zip }
+import org.lasersonlab.slist.{ Scannable, Size, Zip }
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Order.C
@@ -291,6 +291,7 @@ object Array {
       override val attrs: Option[Attrs] = _attrs.map(Attrs(_))
     }
   }
+
   /**
    * Load an ND-array of chunks from a [[Path directory]]
    *

@@ -1,13 +1,21 @@
 package org.lasersonlab.ndarray
 
 import cats.implicits._
-import cats.{ Applicative, Eval, Foldable, Traverse }
+import cats.{ Applicative, Eval, Traverse }
 import lasersonlab.{ slist ⇒ s }
 import org.lasersonlab.ndarray.Vector.Idx
-import org.lasersonlab.shapeless.Scannable.syntax._
-import org.lasersonlab.shapeless.Zip.syntax._
-import org.lasersonlab.shapeless.{ Scannable, Size, Zip }
+import org.lasersonlab.slist.{ Scannable, Size, Zip }
 
+/**
+ * N-dimensional [[Vector]] backed by a 1-dimensional [[scala.Vector]]
+ *
+ * @param shape shape of the [[Vector]]; the number of elements (cf.[[Size]] evidence) is the number of dimensions, and
+ *              also stored as the `rank` member
+ * @param elems the elements, flattened into a [[scala.Vector]] (in row-major order)
+ * @tparam ShapeT type-constructor for the "shape", e.g. [[List]] (number of dimensions not known statically,
+ *                [[lasersonlab.slist.`2`]] (2-dimensions, validated statically), etc.
+ * @tparam T element-type
+ */
 case class Vector[
   ShapeT[_]
   : Traverse
@@ -26,6 +34,12 @@ case class Vector[
       strides.zipAndIndex(shape)
     )
   }
+
+  if (elems.size != size)
+    throw new IllegalArgumentException(
+      s"Expected $size elems (shape: $shape) but found ${elems.size}: ${elems.mkString(",")}"
+    )
+
   val rank = Size(shape)
   def apply(idx: ShapeT[Idx]): T =
     elems(
@@ -49,6 +63,7 @@ case class Vector[
 }
 
 object Vector {
+  // Dimensions-sizes (and total size) must be integers, as scala.Vector's size is limited to 4-byte Ints
   type Idx = Int
 
   /**
@@ -68,19 +83,15 @@ object Vector {
     shape: Shape[Idx],
     elems: T*
   ):
-    Vector[Shape, T] = {
-    val size = shape.foldLeft(1)(_ * _ )
-    if (elems.size != size)
-      throw new IllegalArgumentException(
-        s"Expected $size elems (shape: $shape) but found ${elems.size}: ${elems.mkString(",")}"
-      )
-
+    Vector[Shape, T] =
     Vector(
       shape,
       elems.toVector
     )
-  }
 
+  /**
+   * Implement the [[ArrayLike]] (random-indexing and shape-querying) interface
+   */
   implicit def arrayLike[ShapeT[_]]
     : ArrayLike.Aux[
       Vector[ShapeT, ?],
@@ -97,13 +108,12 @@ object Vector {
 
   implicit def indices[
     ShapeT[_]
-    : Traverse
     : Scannable
     : Size
+    : Traverse
+    : UnfoldRange
     : Zip
-  ](
-    implicit u: UnfoldRange[ShapeT]
-  ):
+  ]:
     Indices[
       Vector[ShapeT, ?],
       ShapeT
@@ -112,7 +122,7 @@ object Vector {
       @inline override def apply(shape: Shape): Vector[ShapeT, Index] =
         Vector[ShapeT, Index](
           shape,
-          u(shape)
+          shape.unfoldRange
         )
     }
 
@@ -150,6 +160,7 @@ object Vector {
     }
   }
 
+  // Type-aliases for wrapping SLists
   type `1`[T] = Vector[s.`1`, T]
   type `2`[T] = Vector[s.`2`, T]
   type `3`[T] = Vector[s.`3`, T]

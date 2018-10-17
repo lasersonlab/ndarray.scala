@@ -7,7 +7,7 @@ import cats.{ Eval, Foldable, Semigroupal }
 import hammerlab.option._
 import hammerlab.path._
 import org.lasersonlab.ndarray.ArrayLike
-import org.lasersonlab.shapeless.{ Scannable, Zip }
+import org.lasersonlab.slist.{ Scannable, Zip }
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.Chunk.Idx
 

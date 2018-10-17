@@ -74,6 +74,9 @@ lazy val ndarray =
       kindProjector.settings,
       partialUnification
     )
+    .dependsOn(
+      slist
+    )
 lazy val `ndarray-x` = ndarray.x
 
 lazy val netcdf = project.settings(
@@ -89,7 +92,6 @@ lazy val netcdf = project.settings(
   utils
 )
 
-
 lazy val singlecell = project.settings(
   spark,
   spark.version := "2.2.1",
@@ -99,6 +101,13 @@ lazy val singlecell = project.settings(
   )
 ).dependsOn(
   utils
+)
+
+lazy val slist = cross.settings(
+  dep(
+    cats,
+    hammerlab.types
+  )
 )
 
 lazy val utils = project.settings(
@@ -145,6 +154,7 @@ lazy val zarr =
     )
     .dependsOn(
       ndarray.jvm,
+        slist.jvm,
        xscala.jvm
     )
 
@@ -154,6 +164,7 @@ lazy val all = root(
   `ndarray-x`,
    netcdf,
    singlecell,
+   slist,
    utils,
   `xscala-x`,
    zarr

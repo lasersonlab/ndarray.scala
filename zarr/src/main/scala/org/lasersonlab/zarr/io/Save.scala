@@ -1,7 +1,6 @@
 package org.lasersonlab.zarr.io
 
 import java.nio.file.Files.{ createTempDirectory, move }
-import java.nio.file.StandardCopyOption._
 
 import cats.implicits._
 import hammerlab.either._
@@ -28,13 +27,10 @@ trait Save[T] {
           _ ← direct(t, out)
           _ ←
             Try {
-              if (out.isDirectory)
-                (path / 'foo) mkdirs
-              else if (out.isFile)
+              if (out.exists) {
                 path.mkdirs
-
-              if (out.exists)
                 move(out, path)
+              }
             }
             .toEither
         } yield

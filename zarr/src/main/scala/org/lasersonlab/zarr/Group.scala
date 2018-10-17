@@ -172,6 +172,8 @@ object Group {
           _ ← groups
           _ ← arrays
           _ ← t.   attrs.save(dir)
+          // do this last, to maximize the chance that an incomplete write will result in an output directory that
+          // indicates that it is not a valid Zarr group
           _ ← t.metadata.save(dir)
         } yield
           ()

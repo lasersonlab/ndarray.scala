@@ -18,7 +18,7 @@ trait make {
   /**
    * Constructor for "in-line" / in-memory creation of [[Array]]s
    *
-   * The [[_ShapeT shape]], [[_T elements]], and an implicit [[DataType]] are the only required parameters
+   * The [[ShapeT shape]], [[T elements]], and an implicit [[DataType]] are the only required parameters
    *
    * Many other parameters can be specified, either explicitly / by-name in the first parameter list, or via implicit
    * instances (the former overrides the latter)
@@ -27,47 +27,47 @@ trait make {
    * it defaults to the `shape` (first parameter), resulting in an [[Array]] that is one chunk
    */
   def apply[
-    _ShapeT[_]
+    ShapeT[_]
     : Scannable
     : Size
     : UnfoldRange
     : Zip,
-    _T
+    T
   ](
-         shape:        _ShapeT[Int]        ,
-     chunkSize: Opt[   _ShapeT[Int]] = None,
+         shape:         ShapeT[Int]        ,
+     chunkSize: Opt[    ShapeT[Int]] = None,
         _attrs: Opt[      Json     ] = None,
-         dtype: Opt[  DataType[ _T]] = None,
+         dtype: Opt[  DataType[  T]] = None,
     compressor: Opt[Compressor     ] = None,
          order: Opt[     Order     ] = None,
-    fill_value: Opt[ FillValue[ _T]] = None
+    fill_value: Opt[ FillValue[  T]] = None
   )(
-    _elems: Seq[_T]
+    _elems: Seq[T]
   )(
     implicit
-       _datatype:          DataType[_T],
-     _compressor:        Compressor     = Blosc(),
-          _order:             Order     = C,
-     _fill_value:         FillValue[_T] = Null,
-     zarr_format:            Format     = Format.`2`,
-         filters: Option[Seq[Filter]]   = None,
-      _chunkSize:         ChunkSize     = 32 MB,
-    traverseShape: Traverse[_ShapeT]
+       _datatype:          DataType[T],
+     _compressor:        Compressor    = Blosc(),
+          _order:             Order    = C,
+     _fill_value:         FillValue[T] = Null,
+     zarr_format:            Format    = Format.`2`,
+         filters: Option[Seq[Filter]]  = None,
+      _chunkSize:         ChunkSize    = 32 MB,
+    traverseShape: Traverse[ShapeT]
   ):
     Aux[
-      _ShapeT,
+      ShapeT,
       Int,
-      Vector[_ShapeT, ?],
-      Vector[_ShapeT, ?],
-      _T
+      Vector[ShapeT, ?],
+      Vector[ShapeT, ?],
+      T
     ] = {
     val _shape = shape  // work around shadowing, but keep parameter-name nice
     new Aux[
-      _ShapeT,
+      ShapeT,
       Int,
-      Vector[_ShapeT, ?],
-      Vector[_ShapeT, ?],
-      _T
+      Vector[ShapeT, ?],
+      Vector[ShapeT, ?],
+      T
     ] {
       val datatype = dtype.getOrElse(_datatype)
 
@@ -103,7 +103,7 @@ trait make {
               Dimension.int(shape, chunk)
           }
 
-      val elems = Vector[_ShapeT, _T](_shape, _elems: _*)
+      val elems = Vector[ShapeT, T](_shape, _elems: _*)
 
       override def apply(idx: Index): T = elems(idx)
 

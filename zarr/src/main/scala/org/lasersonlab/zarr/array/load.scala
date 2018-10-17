@@ -21,28 +21,28 @@ trait load {
    * Each chunk lives in a file with basename given by '.'-joined indices
    */
   private def chunks[
-    Shape[_]
-           : Traverse
-           : Zip
-           : Scannable,
-      Idx  : Idx.T,
-       _T,
-        A[_]
-           : Traverse
+    ShapeT[_]
+            : Traverse
+            : Zip
+            : Scannable,
+       Idx  : Idx.T,
+         T,
+         A[_]
+            : Traverse
   ](
       dir: Path,
-    shape: Shape[Dimension[Idx]]
+    shape: ShapeT[Dimension[Idx]]
   )(
    implicit
-      indices:    Indices[A, Shape],
-     datatype:   DataType[      _T],
+      indices:    Indices[A, ShapeT],
+     datatype:   DataType[      T],
    compressor: Compressor
   ):
     Exception |
     A[
       Chunk[
-        Shape,
-        _T
+        ShapeT,
+        T
       ]
     ]
   = {
@@ -205,33 +205,33 @@ trait load {
       }
 
   def apply[
-    _Shape[_]
+    ShapeT[_]
             : Scannable
             : Zip
             : EncoderK,
-      _Idx  : Idx.T,
-        _A[_],
-        _T
+      Idx  : Idx.T,
+        A[_],
+        T
   ](
     dir: Path,
-    _metadata: Metadata[_Shape, _Idx, _T]
+    _metadata: Metadata[ShapeT, Idx, T]
   )(
     implicit
-          indices:   Indices    [_A, _Shape],
-        arrayLike: ArrayLike.Aux[_A, _Shape],
-         traverse:  Traverse    [_A        ],
-    traverseShape:  Traverse    [    _Shape]
+          indices:   Indices    [A, ShapeT],
+        arrayLike: ArrayLike.Aux[A, ShapeT],
+         traverse:  Traverse    [A        ],
+    traverseShape:  Traverse    [   ShapeT]
   ):
     Exception |
     Aux[
-      _Shape,
-      _Idx,
-      _A,
+      ShapeT,
+      Idx,
+      A,
       Chunk[
-        _Shape,
+        ShapeT,
         ?
       ],
-      _T
+      T
     ]
   =
     for {
@@ -239,13 +239,13 @@ trait load {
       _chunks ← {
         implicit val md = _metadata
         import Metadata._
-        chunks[_Shape, _Idx, _T, _A](
+        chunks[ShapeT, Idx, T, A](
           dir,
           _metadata.shape
         )
       }
     } yield
-      new Aux[_Shape, _Idx, _A, z.Chunk[_Shape, ?], _T] {
+      new Aux[ShapeT, Idx, A, z.Chunk[ShapeT, ?], T] {
         val metadata = _metadata
         val   chunks =   _chunks
         val    attrs =    _attrs

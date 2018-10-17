@@ -230,17 +230,17 @@ object Array
     Save.as(a ⇒ a: ?[ShapeT, idx.T])
 
   implicit def save_?[
-    _ShapeT[_]
+    ShapeT[_]
     : EncoderK
     : Scannable,
-    _Idx: Idx.T
+    Idx: Idx.T
   ]:
   Save[
-    Array.?[_ShapeT, _Idx]
+    Array.?[ShapeT, Idx]
   ] =
-    new Save[Array.?[_ShapeT, _Idx]] {
+    new Save[Array.?[ShapeT, Idx]] {
       def direct(
-        _a: Array.?[_ShapeT, _Idx],
+        _a: Array.?[ShapeT, Idx],
         dir: Path
       ):
         Throwable |

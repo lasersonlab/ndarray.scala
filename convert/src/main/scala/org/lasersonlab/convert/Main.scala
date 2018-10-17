@@ -2,6 +2,8 @@ package org.lasersonlab.convert
 
 import hammerlab.bytes._
 import hammerlab.cli._
+import hammerlab.indent.spaces2
+import hammerlab.lines._
 import hammerlab.path._
 import lasersonlab._
 import org.lasersonlab.netcdf
@@ -46,6 +48,8 @@ object Main
           .save(out)
           .left
           .foreach { throw _ }
+
+        printlns(outGroup)
       }
     )
 }

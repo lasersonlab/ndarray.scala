@@ -10,7 +10,8 @@ import scala.collection.JavaConverters._
 
 class MainTest
   extends hammerlab.Suite {
-  test("list bucket") {
+
+  test("read s3 file") {
     val url = "s3:///matrix-format-test-data/matrices/loom/tenx_mouse_neuron_1M/loom_tenx_mouse_neuron_1M.loom"
     val uri = new URI(url)
 

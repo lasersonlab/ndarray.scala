@@ -1,4 +1,4 @@
-package org.lasersonlab.shapeless
+package org.lasersonlab.slist
 
 import cats.implicits._
 

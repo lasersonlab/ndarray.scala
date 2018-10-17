@@ -2,24 +2,21 @@ package org.lasersonlab.zarr
 
 import cats.data.Nested
 import cats.{ Eval, Foldable, Traverse }
-import circe.Json
 import hammerlab.option._
-import hammerlab.path._
 import org.lasersonlab.circe.EncoderK
 import org.lasersonlab.ndarray.{ ArrayLike, Indices, UnfoldRange, Vector }
-import org.lasersonlab.shapeless.{ Scannable, Size, Zip }
+import org.lasersonlab.slist.{ Scannable, Size, Zip }
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.FillValue.Null
-import Format.`2`
-import lasersonlab.zarr
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.array.metadata
+import org.lasersonlab.zarr.circe.Json
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.{ Load, Save }
-import org.lasersonlab.zarr.utils.Idx
+import org.lasersonlab.zarr.utils.{ ChunkSize, Idx }
 import org.lasersonlab.zarr.utils.Idx.Long.CastException
 import org.lasersonlab.{ zarr ⇒ z }
-import shapeless.{ Nat, the }
+import shapeless.the
 
 import scala.util.Try
 
@@ -29,7 +26,17 @@ import scala.util.Try
  * Storage of the ND-array of chunks, as well as the records in each chunk, are each a configurable type-param; see
  * companion-object for some convenient constructors
  *
+ * Two constructors are provided in the companion object:
+ *
+ * - one that reads an [[Array]] from a [[Path directory path]]
+ * - one that takes the elements (as well as shape and other metadata) as arguments
+ *
+ * The `convert` module contains yet another, which loads from an HDF5 file.
+ *
  * TODO: experiment with Breeze vector/array for 1D/2D cases
+ * TODO: auto-[[Save]] [[Vector]]s (utilizing an implicit chunk-size in bytes)
+ * TODO: add a sensible toString
+ * TODO: break companion object into a few files
  */
 sealed trait Array {
   /** Element type */
@@ -212,8 +219,9 @@ object Array {
      _compressor:        Compressor     = Blosc(),
           _order:             Order     = C,
      _fill_value:         FillValue[_T] = Null,
-     zarr_format:            Format     = `2`,
-         filters: Option[Seq[Filter]]   = None
+     zarr_format:            Format     = Format.`2`,
+         filters: Option[Seq[Filter]]   = None,
+      _chunkSize:         ChunkSize     = 32 MB
   ):
     Aux[
       _ShapeT,
@@ -235,7 +243,31 @@ object Array {
       val traverseA    : Traverse[     A] = Vector.traverse
       val foldableChunk: Foldable[ Chunk] = Vector.traverse
 
-      val chunkShape = chunkSize.getOrElse(_shape)
+      val datatype = dtype.getOrElse(_datatype)
+
+      val chunkShape =
+        chunkSize
+          .getOrElse {
+            // If an explicit chunkSize isn't passed, chunk along the first axis, taking as many "rows" as still allow
+            // chunks to be ≤ the implicit `ChunkSize` value (which defaults to 32MB)
+            val bytes = _chunkSize.size
+            val rowElems = _shape.toList.tail.product
+            val rowSize = rowElems * datatype.size
+            val rowsPerChunk =
+              math.max(
+                1,
+                bytes / rowSize
+              )
+
+            _shape
+              .mapWithIndex {
+                (s, i) ⇒
+                  if (i == 0)
+                    math.min(s, rowsPerChunk)
+                  else
+                    s
+              }
+          }
 
       override val shape: ShapeT[Dimension[Idx]] =
         _shape
@@ -252,7 +284,7 @@ object Array {
       override val metadata: Metadata[ShapeT, Idx, T] =
         Metadata(
                 shape = shape,
-                dtype =      dtype.getOrElse(  _datatype),
+                dtype =   datatype,
            compressor = compressor.getOrElse(_compressor),
                 order =      order.getOrElse(     _order),
            fill_value = fill_value.getOrElse(_fill_value),
@@ -265,7 +297,6 @@ object Array {
         indices(chunkRanges)
           .map {
             chunkIdx ⇒
-              import lasersonlab.shapeless.slist._
               val start :: size :: end :: ⊥ =
                 chunkShape
                   .zip(chunkIdx, _shape)
@@ -294,6 +325,7 @@ object Array {
       override val attrs: Option[Attrs] = _attrs.map(Attrs(_))
     }
   }
+
   /**
    * Load an ND-array of chunks from a [[Path directory]]
    *
@@ -539,8 +571,6 @@ object Array {
         val shape = metadata.shape
 
         def apply(idx: Shape): T = {
-
-          import lasersonlab.shapeless.slist._
 
           // aliases for annotating the `.sequence` shenanigans below
           type E[U] = CastException | U

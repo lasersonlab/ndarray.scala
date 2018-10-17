@@ -72,8 +72,6 @@ class GroupTest
       )
 
   test("typed") {
-    import lasersonlab.shapeless.slist._
-
     val group =
       Foo(
           bytes = Array(       50 :: 100 :: 200 :: ⊥,      20 :: 50 :: 110 :: ⊥)(   bytes: _* ),
@@ -109,7 +107,7 @@ class GroupTest
     if (writeNewExpectedData)
       group.save(Path("zarr/src/test/resources/grouptest.zarr")) !
     else {
-      val actual = tmpDir()
+      val actual = tmpPath()
 
       group.save(actual).!
 
@@ -129,7 +127,6 @@ class GroupTest
 
   test("typed – mixed compressors / endianness") {
     import GroupTest._
-    import lasersonlab.shapeless.slist._
     import org.lasersonlab.zarr.Compressor.Blosc
     import org.lasersonlab.zarr.Compressor.Blosc._
 
@@ -180,7 +177,7 @@ class GroupTest
     if (writeNewExpectedData)
       group.save(Path("zarr/src/test/resources/mixed.zarr")) !
     else {
-      val actual = tmpDir()
+      val actual = tmpPath()
 
       group.save(actual).!
 
@@ -269,7 +266,7 @@ class GroupTest
           )
       )
 
-    val actual = tmpDir()
+    val actual = tmpPath()
 
     group.save(actual).!
 
@@ -295,8 +292,6 @@ object GroupTest {
      float: Float,
     double: Double
   )
-
-  import lasersonlab.shapeless.slist._
 
   case class Foo(
       bytes: z.Array[`3`,   Byte],

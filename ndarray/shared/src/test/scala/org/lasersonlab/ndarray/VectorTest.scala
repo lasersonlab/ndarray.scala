@@ -1,7 +1,7 @@
 package org.lasersonlab.ndarray
 
 import cats.implicits._
-import lasersonlab.shapeless.slist._
+import lasersonlab.slist._
 
 import scala.reflect.ClassTag
 

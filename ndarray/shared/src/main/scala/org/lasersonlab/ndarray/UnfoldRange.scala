@@ -15,7 +15,7 @@ package org.lasersonlab.ndarray
  * type Shape[T] = (T, T)
  * }}}
  *
- * Default instances are provided for [[List]] as well as [[org.lasersonlab.shapeless.SList]]s
+ * Default instances are provided for [[List]] as well as [[lasersonlab.slist.SList]]s
  */
 trait UnfoldRange[Shape[_]] {
   def apply(s: Shape[Int]): scala.Vector[Shape[Int]]
@@ -36,7 +36,15 @@ object UnfoldRange {
         }
     }
 
-  import lasersonlab.shapeless.slist._
+  import lasersonlab.slist._
+
+  implicit class Ops[Shape[_]](val s: Shape[Int]) extends AnyVal {
+    def unfoldRange(implicit u: UnfoldRange[Shape]): scala.Vector[Shape[Int]] = u(s)
+  }
+
+  trait syntax {
+    @inline implicit def ndarrayUnfoldRangeOps[S[_]](s: S[Int]): Ops[S] = Ops(s)
+  }
 
   implicit val unfold0: UnfoldRange[`0`] = new UnfoldRange[`0`] {
     def apply(s: `0`[Int]): scala.Vector[`0`[Int]] = scala.Vector(⊥)

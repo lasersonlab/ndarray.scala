@@ -4,7 +4,7 @@ import io.circe.generic.AutoDerivation
 import io.circe.{ Parser, ParsingFailure, Printer }
 import org.hammerlab.paths.HasPathOps
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike }
-import org.lasersonlab.shapeless.{ Scannable, Zip }
+import org.lasersonlab.slist.{ Scannable, Zip }
 import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.utils.Idx
 
@@ -26,19 +26,18 @@ import org.lasersonlab.zarr.utils.Idx
 package object zarr
   extends utils.slist.Codecs
      with HasPathOps
+     with hammerlab.bytes.syntax
      with hammerlab.either
      with hammerlab.math.utils
+     with lasersonlab.slist
      with Arithmetic.syntax
-     with ArrayLike.syntax
+     with  ArrayLike.syntax
      with        Idx.syntax
-     with       Load.syntax
-     with       Save.syntax
-     with  Scannable.syntax
-     with        Zip.syntax
+     with         io.syntax
      with xscala.shims
      with VectorEvidence.flat
-     with _root_.cats.   syntax.AllSyntax
-     with _root_.cats.instances.AllInstances
+     with cats.   syntax.AllSyntax
+     with cats.instances.AllInstances
 {
 
   /**
@@ -69,6 +68,8 @@ package object zarr
     val pprint = Printer.spaces4.copy(colonLeft = "").pretty _
   }
 
+  type Path = hammerlab.path.Path
+
   /**
    * Aliases that partially-apply an "index" type ([[Int]] or [[Long]]; see [[Idx]])
    */
@@ -80,12 +81,10 @@ package object zarr
       type Metadata = z.Group.Metadata
     }
     type Array[Shape[_], T] = z.Array.Of[Shape, Idx, T]
-    object Array {
-      type Metadata[Shape[_], T] = z.Metadata[Shape, Idx, T]
-    }
+    val Array = z.Array
   }
-  trait  int extends api { type Idx =  Int }
-  trait long extends api { type Idx = Long }
+  trait  int extends api { type Idx =  Int; implicit val __idx = Idx. Int }
+  trait long extends api { type Idx = Long; implicit val __idx = Idx.Long }
 
   type Metadata[Shape[_], Idx, T] = array.metadata.Metadata[Shape, Idx, T]
   val Metadata = array.metadata.Metadata

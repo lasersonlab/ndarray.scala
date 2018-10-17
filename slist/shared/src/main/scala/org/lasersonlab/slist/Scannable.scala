@@ -1,4 +1,4 @@
-package org.lasersonlab.shapeless
+package org.lasersonlab.slist
 
 trait Scannable[F[_]] {
   def scanLeft   [A, B](fa: F[A], b: B, f: (B, A) ⇒ B): (F[B],  B )
@@ -15,7 +15,7 @@ object Scannable {
   }
 
   trait syntax {
-    @inline implicit def scannableOps[F[_], A](fa: F[A]): Ops[F, A] = Ops(fa)
+    @inline implicit def slistScannableOps[F[_], A](fa: F[A]): Ops[F, A] = Ops(fa)
   }
   object syntax extends syntax
 

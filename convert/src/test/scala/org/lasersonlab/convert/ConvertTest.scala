@@ -17,8 +17,8 @@ class ConvertTest
   test("hdf5 conversion") {
     val hdf5 = resource("hgmm_100_raw_gene_bc_matrices_h5.h5")
 
-    val  `2m-path` = tmpDir()
-    val `64m-path` = tmpDir()
+    val  `2m-path` = tmpPath()
+    val `64m-path` = tmpPath()
 
     Main.main(            hdf5, `64m-path`)
     Main.main("-c", "2m", hdf5,  `2m-path`)

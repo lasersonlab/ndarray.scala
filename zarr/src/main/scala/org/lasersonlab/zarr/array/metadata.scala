@@ -3,7 +3,7 @@ package org.lasersonlab.zarr.array
 import cats.Traverse
 import hammerlab.path.Path
 import org.lasersonlab.circe.{ DecoderK, EncoderK }
-import org.lasersonlab.shapeless.Zip
+import org.lasersonlab.slist.Zip
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.FillValue.Null
 import org.lasersonlab.zarr.Format._

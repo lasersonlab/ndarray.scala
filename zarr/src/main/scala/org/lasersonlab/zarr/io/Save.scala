@@ -1,7 +1,6 @@
 package org.lasersonlab.zarr.io
 
 import java.nio.file.Files.{ createTempDirectory, move }
-import java.nio.file.StandardCopyOption._
 
 import cats.implicits._
 import hammerlab.either._
@@ -20,7 +19,7 @@ import scala.util.Try
 
 trait Save[T] {
   def apply(t: T, path: Path)(implicit atomic: Atomic): Throwable | Unit =
-    if (atomic == yes) {
+    if (atomic == yes && (path.uri.getScheme == null || path.uri.getScheme == "file")) {
       val tmp = Path(createTempDirectory(s"tmp-${path.basename}"))
       val out = tmp / 'out
       val result =
@@ -28,13 +27,10 @@ trait Save[T] {
           _ ← direct(t, out)
           _ ←
             Try {
-              if (out.isDirectory)
-                (path / 'foo) mkdirs
-              else if (out.isFile)
+              if (out.exists) {
                 path.mkdirs
-
-              if (out.exists)
-                move(out, path, REPLACE_EXISTING, ATOMIC_MOVE)
+                move(out, path)
+              }
             }
             .toEither
         } yield

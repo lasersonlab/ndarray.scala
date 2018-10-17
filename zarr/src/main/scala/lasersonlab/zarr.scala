@@ -1,11 +1,15 @@
 package lasersonlab
 
-import org.lasersonlab.zarr.Compressor
+import org.lasersonlab.zarr.{ Compressor, utils }
 import org.lasersonlab.zarr.dtype.ByteOrder._
 import org.lasersonlab.{ zarr ⇒ z }
 
 object zarr
-  extends z.int {
+  extends z.int
+     with hammerlab.bytes.syntax
+     with lasersonlab.slist
+     with z.io.syntax
+     with utils.slist.Codecs {
   object long extends z.long
   object order {
     implicit val < = LittleEndian
@@ -16,4 +20,10 @@ object zarr
     implicit val    - = Compressor.None
     implicit val zlib = Compressor.ZLib()
   }
+
+  type Path = hammerlab.path.Path
+   val Path = hammerlab.path.Path
+
+  type ChunkSize = z.utils.ChunkSize
+   val ChunkSize = z.utils.ChunkSize
 }

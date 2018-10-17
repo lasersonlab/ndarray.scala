@@ -2,7 +2,7 @@
 default(
   group("org.lasersonlab"),
   versions(
-    hammerlab.          bytes → "1.2.0",
+    hammerlab.          bytes → "1.3.0",
     hammerlab.        channel → "1.5.3",
     hammerlab.       cli.base → "1.0.1",
     hammerlab.     math.utils → "2.3.0",
@@ -43,6 +43,9 @@ lazy val gcp =
       )
     )
 
+lazy val `circe-utils`   =  cross.in(new File("circe")).settings(dep(circe))
+lazy val `circe-utils-x` = `circe-utils`.x
+
 lazy val convert =
   project
     .settings(
@@ -74,6 +77,9 @@ lazy val ndarray =
       kindProjector.settings,
       partialUnification
     )
+    .dependsOn(
+      slist
+    )
 lazy val `ndarray-x` = ndarray.x
 
 lazy val netcdf = project.settings(
@@ -89,7 +95,6 @@ lazy val netcdf = project.settings(
   utils
 )
 
-
 lazy val singlecell = project.settings(
   spark,
   spark.version := "2.2.1",
@@ -100,6 +105,14 @@ lazy val singlecell = project.settings(
 ).dependsOn(
   utils
 )
+
+lazy val slist = cross.settings(
+  dep(
+    cats,
+    hammerlab.types
+  )
+)
+lazy val `slist-x` = slist.x
 
 lazy val utils = project.settings(
   crossPaths := false,
@@ -127,6 +140,7 @@ lazy val zarr =
         circe,
         circe.generic,
         circe.parser,
+        hammerlab.bytes,
         hammerlab.io,
         hammerlab.math.utils,
         hammerlab.paths,
@@ -144,16 +158,20 @@ lazy val zarr =
       excludeFilter in sbt.Test := NothingFilter
     )
     .dependsOn(
-      ndarray.jvm,
-       xscala.jvm
+      `circe-utils`.jvm,
+       ndarray.jvm,
+         slist.jvm,
+        xscala.jvm
     )
 
 lazy val all = root(
+  `circe-utils-x`,
    cloud,
    convert,
   `ndarray-x`,
    netcdf,
    singlecell,
+  `slist-x`,
    utils,
   `xscala-x`,
    zarr

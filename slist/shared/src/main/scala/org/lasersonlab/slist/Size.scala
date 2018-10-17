@@ -1,4 +1,4 @@
-package org.lasersonlab.shapeless
+package org.lasersonlab.slist
 
 trait Size[A[_]] {
   def apply(a: A[_]): Int
@@ -12,7 +12,7 @@ object Size {
     def size(implicit size: Size[S]): Int = size(s)
   }
   trait syntax {
-    @inline implicit def sizeOps[S[_]](s: S[_]): Ops[S] = Ops(s)
+    @inline implicit def slistSizeOps[S[_]](s: S[_]): Ops[S] = Ops(s)
   }
   object syntax extends syntax
 

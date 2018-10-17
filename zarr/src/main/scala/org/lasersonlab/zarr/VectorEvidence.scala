@@ -2,10 +2,9 @@ package org.lasersonlab.zarr
 
 import cats.Traverse
 import cats.implicits._
-import lasersonlab.shapeless.slist._
 import org.lasersonlab.circe.CodecK
 import org.lasersonlab.ndarray.{ ArrayLike, Indices, Vector }
-import org.lasersonlab.shapeless.{ Scannable, Zip }
+import org.lasersonlab.slist.{ Scannable, Zip }
 import org.lasersonlab.zarr.VectorEvidence.make
 
 /**
@@ -49,8 +48,6 @@ object VectorEvidence {
   extends VectorEvidence[ShapeT] {
     type A[U] = _A[U]
   }
-
-  import lasersonlab.shapeless.slist._
 
   trait flat {
     implicit val flat1 = make[`1`, Vector.`1`]

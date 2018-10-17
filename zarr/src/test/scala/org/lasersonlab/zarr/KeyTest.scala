@@ -1,7 +1,5 @@
 package org.lasersonlab.zarr
 
-import lasersonlab.shapeless.slist._
-
 class KeyTest
   extends hammerlab.Suite {
   test("strings") {

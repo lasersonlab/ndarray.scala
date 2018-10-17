@@ -6,6 +6,11 @@ import org.lasersonlab.ndarray.Arithmetic
 import org.lasersonlab.ndarray.Arithmetic.Id
 import org.lasersonlab.zarr.utils.Idx.Long.CastException
 
+/**
+ * Type-class abstracting over dimension-sizes / indices in [[lasersonlab.zarr.Array]]s
+ *
+ * [[Int]]s are the most common path, and [[Idx.Int]] is exposed implicitly in [[lasersonlab.zarr]]
+ */
 sealed trait Idx {
   type T
 

@@ -62,7 +62,7 @@ lazy val convert =
     .dependsOn(
       cloud,
       netcdf,
-      zarr andTest
+      zarr.jvm andTest
     )
 
 lazy val ndarray =
@@ -198,9 +198,8 @@ lazy val viewerServer =
 lazy val  xscala    = cross.settings()
 lazy val `xscala-x` = xscala.x
 
-// TODO: make x-platform blosc, cross-build zarr
 lazy val zarr =
-  project
+  cross
     .settings(
       dep(
         circe,
@@ -209,26 +208,32 @@ lazy val zarr =
         hammerlab.bytes,
         hammerlab.io,
         hammerlab.math.utils,
-        hammerlab.paths,
         hammerlab.shapeless_utils,
         hammerlab.types,
 
         sourcecode,
 
         "org.typelevel" ^^ "kittens" ^ "1.1.0",
-        "org.lasersonlab" ^ "jblosc" ^ "1.0.1",
         "com.propensive" ^^ "magnolia" ^ "0.10.0"
       ),
       kindProjector,
       partialUnification,
-      excludeFilter in sbt.Test := NothingFilter
+      excludeFilter in sbt.Test := NothingFilter,
+      (unmanagedResourceDirectories in sbt.Test) += baseDirectory.value / "../shared/src/test/resources"
+    )
+    .jvmSettings(
+      dep(
+        hammerlab.paths,
+        "org.lasersonlab" ^ "jblosc" ^ "1.0.1"
+      )
     )
     .dependsOn(
-      `circe-utils`.jvm,
-       ndarray.jvm,
-         slist.jvm,
-        xscala.jvm
+      `circe-utils`,
+       ndarray,
+         slist,
+        xscala
     )
+lazy val `zarr-x` = zarr.x
 
 lazy val all = root(
   `circe-utils-x`,
@@ -240,5 +245,5 @@ lazy val all = root(
   `slist-x`,
    utils,
   `xscala-x`,
-   zarr
+  `zarr-x`
 )

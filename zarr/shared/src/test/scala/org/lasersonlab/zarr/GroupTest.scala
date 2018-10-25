@@ -105,7 +105,7 @@ class GroupTest
       )
 
     if (writeNewExpectedData)
-      group.save(Path("zarr/src/test/resources/grouptest.zarr")) !
+      group.save(Path("zarr/shared/src/test/resources/grouptest.zarr")) !
     else {
       val actual = tmpPath()
 
@@ -175,7 +175,7 @@ class GroupTest
       )
 
     if (writeNewExpectedData)
-      group.save(Path("zarr/src/test/resources/mixed.zarr")) !
+      group.save(Path("zarr/shared/src/test/resources/mixed.zarr")) !
     else {
       val actual = tmpPath()
 

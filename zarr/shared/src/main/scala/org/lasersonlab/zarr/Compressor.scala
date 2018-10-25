@@ -12,14 +12,13 @@ import circe.auto._
 import caseapp.core.Error.UnrecognizedValue
 import caseapp.core.argparser.{ ArgParser, SimpleArgParser }
 import hammerlab.option._
-import hammerlab.path._
-import org.apache.commons.io.IOUtils
 import org.blosc.JBlosc
 import org.blosc.JBlosc._
 import shapeless.the
 import Runtime.getRuntime
 
 import org.hammerlab.shapeless.instances.InstanceMap
+import org.lasersonlab.commons.IOUtils.toByteArray
 
 import scala.{ Array ⇒ Arr }
 
@@ -31,11 +30,13 @@ object Compressor {
 
   case class ZLib(level: Int = DEFAULT_COMPRESSION)
     extends Compressor {
-    def apply(path: Path, sizeHint: Opt[Int] = Non): Arr[Byte] = {
-      val baos = new ByteArrayOutputStream(sizeHint.getOrElse(1 << 20))
-      IOUtils.copy(new InflaterInputStream(path.inputStream), baos)
-      baos.toByteArray
-    }
+    def apply(path: Path, sizeHint: Opt[Int] = Non): Arr[Byte] =
+      toByteArray(
+        new InflaterInputStream(
+          path.inputStream
+        )
+      )
+
     def apply(os: OutputStream, itemsize: Int): OutputStream =
       new DeflaterOutputStream(
         os,

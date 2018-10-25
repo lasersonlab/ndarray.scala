@@ -73,6 +73,7 @@ object SList {
   // So, unrolling the first 10 instances (as well as 10 instances of any typeclasses) seems sadly necessary. On the
   // bright side, it's technically "O(1)" boilerplate that should cover "99%" of use-cases.
   //
+  // TODO: give them nice toStrings / Shows
 
   case class `1`[T](head: T              ) extends SList { type Head = T; type Tail[U] = `0`[U]; def size = 1 ; def tail: `0`[T] = ⊥ }
   case class `2`[T](head: T, tail: `1`[T]) extends SList { type Head = T; type Tail[U] = `1`[U]; def size = 2 }

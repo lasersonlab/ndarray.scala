@@ -48,13 +48,13 @@ case class Chunk[
       .fold {
         require(
           size * dtype.size <= bytes.length,
-          s"Expected at least ${size * dtype.size} bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
+          s"$path: expected at least ${size * dtype.size} bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
         )
       } {
         expected ⇒
           require(
             expected == bytes.length,
-            s"Expected $expected bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
+            s"$path: expected $expected bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
           )
       }
     bytes

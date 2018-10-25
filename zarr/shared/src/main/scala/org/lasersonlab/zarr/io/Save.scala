@@ -1,7 +1,5 @@
 package org.lasersonlab.zarr.io
 
-import java.nio.file.Files.{ createTempDirectory, move }
-
 import cats.implicits._
 import hammerlab.either._
 import hammerlab.path._
@@ -11,44 +9,16 @@ import magnolia._
 import org.lasersonlab.zarr.Group
 import org.lasersonlab.zarr.circe.auto._
 import org.lasersonlab.zarr.circe.pprint
-import org.lasersonlab.zarr.io.Save.Atomic
-import org.lasersonlab.zarr.io.Save.Atomic._
 
 import scala.language.experimental.macros
 import scala.util.Try
 
 trait Save[T] {
-  def apply(t: T, path: Path)(implicit atomic: Atomic): Throwable | Unit =
-    if (atomic == yes && (path.uri.getScheme == null || path.uri.getScheme == "file")) {
-      val tmp = Path(createTempDirectory(s"tmp-${path.basename}"))
-      val out = tmp / 'out
-      val result =
-        for {
-          _ ← direct(t, out)
-          _ ←
-            Try {
-              if (out.exists) {
-                path.mkdirs
-                move(out, path)
-              }
-            }
-            .toEither
-        } yield
-          ()
-
-      tmp.delete(recursive = true)
-
-      result
-    } else
-      direct(t, path)
-
-  implicit val atomic: Atomic = no
-
+  def apply(t: T, path: Path): Throwable | Unit = direct(t, path)
   protected def direct(t: T, dir: Path): Throwable | Unit
 }
 
 trait LowPrioritySave
-  extends Pri2
 {
   self: Save.type ⇒
 
@@ -95,26 +65,12 @@ trait LowPrioritySave
   implicit def gen[T]: Save[T] = macro Magnolia.gen[T]
 
   def apply[T](fn: (T, Path) ⇒ Throwable | Unit): Save[T] = new Save[T] { def direct(t: T, dir: Path): Throwable | Unit = fn(t, dir) }
-  def as[L, R: Save](fn: L ⇒ R): Save[L] = Save { (t, dir) ⇒ implicit val no = Atomic.no; fn(t).save(dir) }
-}
-
-trait Pri2
-//  extends LowPrioritySave
-{
-  self: Save.type ⇒
-//  implicit def narrow[U, T >: U](implicit save: Save[T], ev: U <:< T): Save[U] = ???
+  def as[L, R: Save](fn: L ⇒ R): Save[L] = Save { (t, dir) ⇒ fn(t).save(dir) }
 }
 
 object Save
   extends LowPrioritySave
-//extends Pri2
 {
-
-  sealed trait Atomic
-  object Atomic {
-    case object yes extends Atomic
-    case object  no extends Atomic
-  }
 
   implicit def withBasenameAsJSON[T](
     implicit
@@ -139,12 +95,12 @@ object Save
 
   implicit def opt[T](implicit save: Save[T]): Save[Option[T]] =
     Save {
-      case (Some(t), dir) ⇒ save(t, dir)(Atomic.no)
+      case (Some(t), dir) ⇒ save(t, dir)
       case _ ⇒ Right(())
     }
 
   implicit class Ops[T](val t: T) extends AnyVal {
-    def save(dir: Path)(implicit save: Save[T], atomic: Atomic = Atomic.yes): Throwable | Unit = save(t, dir)
+    def save(dir: Path)(implicit save: Save[T]): Throwable | Unit = save(t, dir)
   }
 
   trait syntax {

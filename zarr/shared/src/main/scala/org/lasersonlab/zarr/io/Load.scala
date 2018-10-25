@@ -2,12 +2,12 @@ package org.lasersonlab.zarr.io
 
 import cats.implicits._
 import hammerlab.either._
-import hammerlab.option._
 import hammerlab.path._
 import io.circe.Decoder
 import io.circe.parser.parse
 import magnolia._
 import scala.language.experimental.macros
+import org.hammerlab.paths.HasPathOps._
 
 import scala.collection.mutable.ArrayBuffer
 

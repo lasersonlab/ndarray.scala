@@ -2,7 +2,7 @@ package org.lasersonlab.zarr.array
 
 import cats.Traverse
 import hammerlab.path.Path
-import org.lasersonlab.circe.{ DecoderK, EncoderK }
+import org.lasersonlab.circe.DecoderK
 import org.lasersonlab.slist.Zip
 import org.lasersonlab.zarr.Compressor.Blosc
 import org.lasersonlab.zarr.FillValue.Null
@@ -15,7 +15,6 @@ import org.lasersonlab.zarr.circe.parser._
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Basename
 import org.lasersonlab.zarr.utils.Idx
-import shapeless.the
 
 object metadata {
 
@@ -119,10 +118,8 @@ object metadata {
       }
 
     implicit def encoder[
-      Shape[_]
-             : Traverse
-             : EncoderK,
-        Idx  : Encoder
+      Shape[_],
+        Idx
     ]:
       Encoder[
         ?[
@@ -137,14 +134,13 @@ object metadata {
           Idx
         ]
       ] {
-        @inline def apply(m: ?[Shape, Idx]): Json =
-          Metadata.encoder[Shape, Idx, m.T].apply(m.t)
+        @inline def apply(m: ?[Shape, Idx]): Json = encode(m.t)
       }
   }
 
   case class Metadata[
-    Shape[_],
-      Idx,
+    Shape[_]: Traverse,
+      Idx   : Idx.T,
        _T
   ](
                        shape: Shape[Dimension[Idx]],
@@ -157,6 +153,33 @@ object metadata {
   )
   extends ?[Shape, Idx] {
     type T = _T
+
+    def json: Json = {
+      val (_shape, _chunks) =
+        shape
+          .toList
+          .map {
+            s ⇒
+              (s.size, s.chunk)
+          }
+          .unzip
+
+      implicit val datatype = dtype
+      implicit val encodeIdx = implicitly[Idx.T[Idx]].encoder
+
+      Json.obj(
+              "shape" → encode(_shape),
+             "chunks" → encode(_chunks),
+         "compressor" → encode(compressor),
+              "dtype" → encode(dtype),
+              "order" → encode(order),
+         "fill_value" → encode(fill_value),
+        "zarr_format" → encode(zarr_format),
+            "filters" → encode(filters)
+      )
+    }
+
+    override def toString: String = pprint(json)
   }
 
   object Metadata {
@@ -281,8 +304,8 @@ object metadata {
       }
 
     implicit def encoder[
-      Shape[_]: Traverse : EncoderK,
-        Idx   : Encoder,
+      Shape[_],
+        Idx,
           T
     ]:
       Encoder[
@@ -294,21 +317,7 @@ object metadata {
       ]
     =
       new Encoder[Metadata[Shape, Idx, T]] {
-        def apply(m: Metadata[Shape, Idx, T]): Json = {
-          implicit val datatype = m.dtype
-          val edt = the[FillValue.Encoder[T]]
-          implicit val enc = FillValue.encoder[T](FillValue.Encoder.fromDataType, datatype)
-          Json.obj(
-                  "shape" → encode(m.shape.map(_.size)),
-                 "chunks" → encode(m.shape.map(_.chunk)),
-             "compressor" → encode(m.compressor),
-                  "dtype" → encode(m.dtype),
-                  "order" → encode(m.order),
-             "fill_value" → encode(m.fill_value),
-            "zarr_format" → encode(m.zarr_format),
-                "filters" → encode(m.filters)
-          )
-        }
+        def apply(m: Metadata[Shape, Idx, T]): Json = m.json
       }
   }
 }

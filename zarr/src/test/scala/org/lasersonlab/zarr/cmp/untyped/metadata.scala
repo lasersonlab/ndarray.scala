@@ -1,5 +1,6 @@
 package org.lasersonlab.zarr.cmp.untyped
 
+import cats.Traverse
 import cats.implicits._
 import hammerlab.either._
 import hammerlab.option._
@@ -7,6 +8,7 @@ import org.lasersonlab.zarr.FillValue.NonNull
 import org.lasersonlab.zarr.array.{ metadata ⇒ md }
 import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.dtype._
+import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.{ Dimension, FillValue, Metadata, dtype }
 import shapeless.the
 
@@ -41,8 +43,8 @@ object metadata {
 
   trait cmp {
     def baseCmp[
-      Shape[_],
-      Idx
+      Shape[_]: Traverse,
+        Idx   : Idx.T
     ](
       implicit
       dim: Cmp[Shape[Dimension[Idx]]]

@@ -1,6 +1,6 @@
 package org.lasersonlab.zarr.array
 
-import cats.{ Foldable, Traverse }
+import cats.Traverse
 import hammerlab.option._
 import org.lasersonlab.ndarray.{ Indices, UnfoldRange, Vector }
 import org.lasersonlab.slist.{ Scannable, Size, Zip }

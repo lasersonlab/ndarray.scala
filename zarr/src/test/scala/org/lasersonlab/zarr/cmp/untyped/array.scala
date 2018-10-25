@@ -1,9 +1,11 @@
 package org.lasersonlab.zarr.cmp.untyped
 
+import cats.Traverse
 import cats.implicits._
 import hammerlab.either._
 import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.cmp.untyped.array.ElemsDiff.{ Index, Sizes }
+import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.{ Array, Attrs, Dimension, Metadata }
 import shapeless.the
 
@@ -19,7 +21,7 @@ object array {
 
   trait cmp {
 
-    implicit def arrayIdxsCmp[Idx](
+    implicit def arrayIdxsCmp[Idx: Idx.T](
       implicit
       dim: Cmp[Dimension[Idx]]
     ):
@@ -31,7 +33,7 @@ object array {
     import lasersonlab.{ zarr ⇒ z }
 
     implicit def arrayCmp[
-      Shape[_],
+      Shape[_]: Traverse,
       T
     ](
       implicit
@@ -70,8 +72,8 @@ object array {
     }
 
     def arrayShapedCmp[
-      Shape[_],
-      Idx
+      Shape[_]: Traverse,
+        Idx   : Idx.T
     ](
       implicit
       dim: Cmp[Shape[Dimension[Idx]]]

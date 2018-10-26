@@ -1,10 +1,10 @@
 package org.lasersonlab.zarr.utils
 
 import hammerlab.either._
+import hammerlab.math.utils._
 import io.circe.{ Decoder, Encoder }
 import org.lasersonlab.ndarray.Arithmetic
 import org.lasersonlab.ndarray.Arithmetic.Id
-import org.lasersonlab.zarr.utils.Idx.Long.CastException
 
 /**
  * Type-class abstracting over dimension-sizes / indices in [[lasersonlab.zarr.Array]]s
@@ -43,23 +43,10 @@ object Idx {
   object Long
     extends T[scala.Long] {
 
-    case class CastException(value: Long)
-      extends RuntimeException(
-        s"Attempting to case $value to an integer"
-      )
-
     val arithmeticId : Arithmetic[Long, Long] = Arithmetic.longlong
     val arithmeticInt: Arithmetic[Long,  Int] = Arithmetic.longint
 
-    def int(t: Long): CastException | Int =
-      if (t > Integer.MAX_VALUE)
-        Left(
-          CastException(t)
-        )
-      else
-        Right(
-          t.toInt
-        )
+    def int(t: Long): CastException | Int = t.safeInt
 
     val encoder = io.circe.Encoder.encodeLong
     val decoder = io.circe.Decoder.decodeLong

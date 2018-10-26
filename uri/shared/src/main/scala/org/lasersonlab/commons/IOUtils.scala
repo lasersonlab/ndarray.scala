@@ -2,6 +2,9 @@ package org.lasersonlab.commons
 
 import java.io.{ ByteArrayOutputStream, IOException, InputStream, OutputStream }
 
+import cats.implicits._
+import hammerlab.math.utils._
+
 object IOUtils {
 
   val EOF = -1
@@ -43,10 +46,18 @@ object IOUtils {
    * @since 2.1
    */
   @throws[IOException]
-  def toByteArray(input: InputStream, size: Long): Array[Byte] = {
-    if (size > Integer.MAX_VALUE) throw new IllegalArgumentException("Size cannot be greater than Integer max value: " + size)
-    toByteArray(input, size.toInt)
-  }
+  def toByteArray(input: InputStream, size: Long): Array[Byte] =
+    toByteArray(
+      input,
+      size
+        .safeInt(
+          new IllegalArgumentException(
+            "Size cannot be greater than Integer max value: " + size,
+            _
+          )
+        )
+        fold(throw _, n ⇒ n)
+    )
 
   /**
    * Gets the contents of an <code>InputStream</code> as a <code>byte[]</code>.
@@ -99,11 +110,13 @@ object IOUtils {
    * @since 1.1
    */
   @throws[IOException]
-  def copy(input: InputStream, output: OutputStream): Int = {
-    val count = copyLarge(input, output)
-    if (count > Integer.MAX_VALUE) return -1
-    count.toInt
-  }
+  def copy(input: InputStream, output: OutputStream): Int =
+    copyLarge(
+      input,
+      output
+    )
+    .safeInt
+    .getOrElse(-1)
 
   /**
    * Copies bytes from an <code>InputStream</code> to an <code>OutputStream</code> using an internal buffer of the

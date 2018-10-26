@@ -10,7 +10,6 @@ import org.lasersonlab.slist.{ Scannable, Zip }
 import org.lasersonlab.zarr.Array
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.utils.Idx
-import org.lasersonlab.zarr.utils.Idx.Long.CastException
 import org.lasersonlab.{ zarr ⇒ z }
 
 trait load {

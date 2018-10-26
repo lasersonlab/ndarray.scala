@@ -5,9 +5,9 @@ default(
     hammerlab.          bytes → "1.3.0",
     hammerlab.        channel → "1.5.3",
     hammerlab.       cli.base → "1.0.1",
-    hammerlab.     math.utils → "2.3.0",
+    hammerlab.     math.utils → "2.4.0".snapshot,
     hammerlab.          paths → "1.6.0",
-    hammerlab.          types → "1.4.0",
+    hammerlab.          types → "1.5.0".snapshot,
     hammerlab.shapeless_utils → "1.5.1",
     hammerlab.             io → "5.2.1"
   )
@@ -114,6 +114,33 @@ lazy val slist = cross.settings(
 )
 lazy val `slist-x` = slist.x
 
+lazy val uri =
+  cross
+    .settings(
+      dep(
+        cats,
+        cats.effect,
+        fs2,
+        hammerlab.bytes,
+        hammerlab.types,
+        hammerlab.math.utils
+      )
+    )
+    .jvmSettings(
+      dep(
+        commons.io,
+        fs2.io,
+        "biz.enef" ^^ "slogging-slf4j" ^ "0.6.1",
+        "org.slf4j" ^ "slf4j-simple" ^ "1.7.25"
+      )
+    )
+    .jsSettings(
+      dep(
+        "biz.enef" ^^ "slogging" ^ "0.6.1"
+      )
+    )
+lazy val `uri-x` = uri.x
+
 lazy val utils = project.settings(
   crossPaths := false,
   dep(
@@ -140,16 +167,16 @@ lazy val viewerClient =
   project
     .settings(
       dep(
-        "me.shadaj" ^^ "slinky-core" ^ "0.5.0",
-        "me.shadaj" ^^ "slinky-web"  ^ "0.5.0",
+        slinky,
+        slinky.web,
 
         scalajs.dom,
 
-        cats % "1.4.0",
+        cats,
         circe,
         circe.generic,
         circe.parser,
-        "com.softwaremill.sttp" ^^ "core" ^ "1.3.9",
+        sttp,
         hammerlab.types,
         "io.github.cquiroz" ^^ "scala-java-time" ^ "2.0.0-M13"
       ),
@@ -157,8 +184,7 @@ lazy val viewerClient =
       kindProjector,
       partialUnification,
       scalaJSUseMainModuleInitializer := true,
-      //mainClass := Some("org.lasersonlab.ndview.Main"),
-      scalacOptions += "-P:scalajs:sjsDefinedByDefault",
+      slinky,
 
       npmDependencies in Compile ++=
         Seq(
@@ -213,8 +239,8 @@ lazy val zarr =
 
         sourcecode,
 
-        "org.typelevel" ^^ "kittens" ^ "1.1.0",
-        "com.propensive" ^^ "magnolia" ^ "0.10.0"
+        kittens,
+        magnolia
       ),
       kindProjector,
       partialUnification,
@@ -231,19 +257,22 @@ lazy val zarr =
       `circe-utils`,
        ndarray,
          slist,
+           uri,
         xscala
     )
 lazy val `zarr-x` = zarr.x
 
-lazy val all = root(
-  `circe-utils-x`,
-   cloud,
-   convert,
-  `ndarray-x`,
-   netcdf,
-   singlecell,
-  `slist-x`,
-   utils,
-  `xscala-x`,
-  `zarr-x`
-)
+lazy val all =
+  root(
+    `circe-utils-x`,
+     cloud,
+     convert,
+    `ndarray-x`,
+     netcdf,
+     singlecell,
+    `slist-x`,
+    `uri-x`,
+     utils,
+    `xscala-x`,
+    `zarr-x`
+  )

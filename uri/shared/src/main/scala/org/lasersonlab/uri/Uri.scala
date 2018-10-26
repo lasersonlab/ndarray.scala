@@ -15,6 +15,23 @@ import slogging.LazyLogging
 
 case class Config(blockSize: Int, maxBlockCacheSize: Long, maxNumBlocks: Int)
 object Config {
+  case class BlockSize(value: Int)
+  case class MaxCacheSize(value: Long)
+
+  implicit val    defaultBlockSize =    BlockSize( 2  << 20)
+  implicit val defaultMaxCacheSize = MaxCacheSize(64L << 20)
+
+  implicit def defaultConfig(
+    implicit
+    blockSize: BlockSize,
+    maxCacheSize: MaxCacheSize
+  ):
+    Config =
+    Config(
+         blockSize.value,
+      maxCacheSize.value
+    )
+
   def apply(
     blockSize: Int,
     maxBlockCacheSize: Long
@@ -41,7 +58,8 @@ abstract class Uri[F[_]: Sync]
   override def toString: String = uri.toString
 
   def  size: F[Long]
-  def bytes: F[Array[Byte]] = size.flatMap(size ⇒ bytes(0, size.toInt))
+  def read: F[Array[Byte]] = size.flatMap(size ⇒ bytes(0, size.toInt))
+
   def bytes(start: Long, size: Int): F[Array[Byte]]
 
   def stream: F[InputStream] = size.flatMap(size ⇒ stream(0, size))

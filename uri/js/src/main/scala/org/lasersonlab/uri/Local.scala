@@ -1,13 +1,38 @@
 package org.lasersonlab.uri
 
+import java.io.IOException
 import java.net.URI
 
-import cats.FlatMap
+import cats.effect.Sync
 
-case class Local[F[_]: FlatMap](uri: URI) extends Uri[F] {
-  override def size: F[Long] = ???
+import scala.scalajs.js.typedarray.Int8Array
 
-  override val config: Config = _
+case class Local[F[_]](file: String)(
+  implicit
+  F: Sync[F],
+  val config: Config
+)
+extends Uri[F] {
+  import F._
 
-  override def bytes(start: Long, size: Int): F[Array[Byte]] = ???
+  import scalajs.js.Dynamic.{ global ⇒ g }
+  val fs = g.require("fs")
+
+  lazy val stat = fs.statSync(file)
+  lazy val size = delay { stat.size.asInstanceOf[Double].toLong }
+
+  override val uri: URI = new URI(file)
+
+  override def bytes(start: Long, size: Int): F[Array[Byte]] =
+    delay {
+      val fd = fs.openSync(file, "r")
+      val arr = new Int8Array(size)
+      val bytesRead = fs.readSync(fd, arr, 0, size, 0).asInstanceOf[Int]
+      if (bytesRead < size)
+        throw new IOException(
+          s"Expected $size bytes from $file, read $bytesRead"
+        )
+
+      arr.toArray
+    }
 }

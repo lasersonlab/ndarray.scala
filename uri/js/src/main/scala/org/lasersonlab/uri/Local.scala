@@ -7,19 +7,30 @@ import cats.effect.Sync
 
 import scala.scalajs.js.typedarray.Int8Array
 
-case class Local[F[_]](file: String)(
+case class Local[F[_]: Sync](file: String)(
   implicit
-  F: Sync[F],
   val config: Config
 )
 extends Uri[F] {
-  import F._
 
   import scalajs.js.Dynamic.{ global ⇒ g }
   val fs = g.require("fs")
 
+  override def exists: F[Boolean] =
+    delay {
+      fs
+        .existsSync(file)
+        .asInstanceOf[Boolean]
+    }
+
   lazy val stat = fs.statSync(file)
-  lazy val size = delay { stat.size.asInstanceOf[Double].toLong }
+  lazy val size =
+    delay {
+      stat
+        .size
+        .asInstanceOf[Double]
+        .toLong
+    }
 
   override val uri: URI = new URI(file)
 

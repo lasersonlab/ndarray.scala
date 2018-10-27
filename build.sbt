@@ -120,23 +120,37 @@ lazy val uri =
       dep(
         cats,
         cats.effect,
+
+        circe,
+        circe.generic,
+        circe.parser,
+
         fs2,
+
         hammerlab.bytes,
         hammerlab.types,
-        hammerlab.math.utils
+        hammerlab.math.utils,
+
+        sttp,
+
+        "io.github.cquiroz" ^^ "scala-java-time" ^ "2.0.0-M13"
       )
     )
     .jvmSettings(
+      http4s.version := "0.19.0",
       dep(
         commons.io,
         fs2.io,
+        http4s. dsl,
+        http4s.`blaze-client`,
         "biz.enef" ^^ "slogging-slf4j" ^ "0.6.1",
         "org.slf4j" ^ "slf4j-simple" ^ "1.7.25"
       )
     )
     .jsSettings(
       dep(
-        "biz.enef" ^^ "slogging" ^ "0.6.1"
+        "biz.enef" ^^ "slogging" ^ "0.6.1",
+        scalajs.dom ^ "0.9.6"
       )
     )
 lazy val `uri-x` = uri.x
@@ -177,8 +191,7 @@ lazy val viewerClient =
         circe.generic,
         circe.parser,
         sttp,
-        hammerlab.types,
-        "io.github.cquiroz" ^^ "scala-java-time" ^ "2.0.0-M13"
+        hammerlab.types
       ),
       enableMacroParadise,
       kindProjector,
@@ -195,6 +208,7 @@ lazy val viewerClient =
     )
     .enablePlugins(JS, ScalaJSBundlerPlugin)
     .dependsOn(
+      uri.js,
       viewerCommon.js
     )
 

@@ -9,7 +9,8 @@ import cats.effect.Sync
 import cats.implicits._
 import hammerlab.either._
 import hammerlab.math.utils._
-import org.lasersonlab.commons.IOUtils.toByteArray
+import io.circe.{ Decoder, DecodingFailure }
+import io.circe.parser.decode
 import org.lasersonlab.java_io.{ BoundedInputStream, SequenceInputStream }
 import slogging.LazyLogging
 
@@ -50,6 +51,9 @@ abstract class Uri[F[_]: Sync]
   extends LazyLogging {
   import logger.debug
 
+  val sync = Sync[F]
+  @inline def delay[A](thunk: => A): F[A] = sync.delay(thunk)
+
   val uri: URI
 
   val config: Config
@@ -57,14 +61,27 @@ abstract class Uri[F[_]: Sync]
 
   override def toString: String = uri.toString
 
+  def exists: F[Boolean]
+
   def  size: F[Long]
-  def read: F[Array[Byte]] = size.flatMap(size ⇒ bytes(0, size.toInt))
+  def _size: F[Int] = size.flatMap { size ⇒ delay { size.safeInt.getOrThrow } }
+
+  def read: F[Array[Byte]] = _size.flatMap(size ⇒ bytes(0, size))
 
   def bytes(start: Long, size: Int): F[Array[Byte]]
 
-  def stream: F[InputStream] = size.flatMap(size ⇒ stream(0, size))
+  def string: F[String] = _size.flatMap(size ⇒ string(0, size))
+  def string(start: Long, size: Int): F[String] = bytes(start, size).map(new String(_))
 
-  def  stream(start: Long, end: Long): F[InputStream] = {
+  def json[A](implicit d: Decoder[A]): F[A] =
+    string
+      .map[Either[Throwable, A]] {
+        decode[A](_)
+      }
+      .rethrow
+
+  def stream: F[InputStream] = size.flatMap(size ⇒ stream(0, size))
+  def stream(start: Long, end: Long): F[InputStream] = {
 
     val startIdx =    start  / blockSize
     val   endIdx = (end - 1) / blockSize + 1

@@ -1,15 +1,17 @@
-package org.lasersonlab.ndview
+package org.lasersonlab.uri.gcp
 
 import java.time.Instant
 import java.time.Instant.now
 
 import hammerlab.either._
+import hammerlab.option._
 import hammerlab.str._
 
 case class Auth(
   token: String,
   expires: Instant,
-  scopes: Seq[String]
+  scopes: Seq[String],
+  project: Opt[String] = None
 )
 
 object Auth {

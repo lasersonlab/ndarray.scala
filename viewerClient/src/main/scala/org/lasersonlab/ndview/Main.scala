@@ -7,6 +7,7 @@ import cats.implicits._
 import com.softwaremill.sttp._
 import io.circe.Decoder.Result
 import io.circe.{ Decoder, DecodingFailure, HCursor }
+import org.lasersonlab.uri.gcp.Auth
 import org.scalajs.dom.document
 import org.scalajs.dom.ext.{ Ajax, AjaxException }
 import org.scalajs.dom.raw.HTMLFormElement
@@ -190,8 +191,7 @@ object Main {
         _ ⇒ signIn(),
         {
           implicit auth: Auth ⇒
-
-            Nested[Future, Either[Throwable, ?], Buckets](
+            Nested(
               googleapis
                 .storage
                 .buckets

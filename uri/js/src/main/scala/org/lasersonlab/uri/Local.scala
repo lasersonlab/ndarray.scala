@@ -23,6 +23,16 @@ extends Uri[F] {
         .asInstanceOf[Boolean]
     }
 
+  override def parentOpt: Option[Local[F]] =
+    fs
+      .realPathSync(file)
+      .asInstanceOf[String]
+      .split("/")
+      .toVector match {
+      case Vector() ⇒ None
+      case parent :+ _ ⇒ Some(Local(parent.mkString("/")))
+    }
+
   lazy val stat = fs.statSync(file)
   lazy val size =
     delay {

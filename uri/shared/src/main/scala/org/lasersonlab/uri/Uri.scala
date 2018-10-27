@@ -47,14 +47,18 @@ object Config {
     )
 }
 
-abstract class Uri[F[_]: Sync]
+abstract class Uri[F[_]](implicit val sync: Sync[F])
   extends LazyLogging {
   import logger.debug
 
-  val sync = Sync[F]
   @inline def delay[A](thunk: => A): F[A] = sync.delay(thunk)
 
   val uri: URI
+  def basename = uri.getPath.split("/").last
+  def parentOpt: Option[Uri[F]]
+  def parent   :        Uri[F]  = parentOpt.get
+
+  //def /(name: String)
 
   val config: Config
   lazy val Config(blockSize, maximumSize, maxNumBlocks) = config

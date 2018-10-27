@@ -4,7 +4,7 @@ import java.net.URI
 
 import cats.effect._
 import cats.implicits._
-import org.lasersonlab.uri.{ Config, Uri, http ⇒ h, Http }
+import org.lasersonlab.uri.{ Config, Http, Uri, http ⇒ h }
 
 case class Metadata(
   id: String,
@@ -15,14 +15,19 @@ case class Metadata(
 
 case class GCS[F[_]: ConcurrentEffect](
   bucket: String,
-  path: Vector[String],
-  uri: URI
+  path: Vector[String]
 )(
   implicit
   auth: Auth,
   val config: Config
 )
 extends Uri[F] {
+
+  val uri =
+    if (path.isEmpty)
+      new URI(s"gs://$bucket")
+    else
+      new URI(s"gs://$bucket/${path.mkString("/")}")
 
   import com.softwaremill.sttp._
 
@@ -37,6 +42,12 @@ extends Uri[F] {
 
   override def exists: F[Boolean] = metadata.attempt.map { _.isRight }
 
+  override def parentOpt: Option[GCS[F]] =
+    path match {
+      case Vector() ⇒ None
+      case parent :+ _ ⇒ Some(GCS(bucket, parent))
+    }
+
   lazy val metadata: F[Metadata] = {
     val http = Http(u.toJavaUri)
     import io.circe.generic.auto._
@@ -45,15 +56,6 @@ extends Uri[F] {
 
   lazy val size: F[Long] = metadata.map(_.size)
 
-  override def bytes(start: Long, size: Int): F[Array[Byte]] = {
-    implicit val reqConfig =
-      h.Config(
-        headers =
-          Map(
-            "Authorization" → s"Bearer: ${auth.token}",
-            "Range" → s"bytes=$start-${start+size-1}"
-          )
-      )
-    Http(u.param("alt", "media").toJavaUri).read
-  }
+  override def bytes(start: Long, size: Int): F[Array[Byte]] =
+    Http(u.param("alt", "media").toJavaUri).bytes(start, size)
 }

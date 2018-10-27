@@ -1,14 +1,15 @@
 package org.lasersonlab.uri
 
-import java.io.{ FileNotFoundException, IOException }
+import java.io.IOException
 import java.net.URI
 
 import cats.effect.Sync
 import cats.implicits._
 import org.scalajs.dom.ext.Ajax
+import org.scalajs.dom.raw.XMLHttpRequest
 
-import scala.concurrent.{ Await, ExecutionContext, Future }
-import scala.util.Try
+import scala.concurrent.{ Await, ExecutionContext }
+import scala.util.{ Failure, Try }
 
 case class Http[F[_]: Sync](uri: URI)(
   implicit
@@ -16,55 +17,49 @@ case class Http[F[_]: Sync](uri: URI)(
   reqConfig: http.Config,
   ec: ExecutionContext
 )
-extends Uri[F] {
+extends Uri[F]
+   with http.Base[F] {
 
-  require(uri.getScheme == "http" || uri.getScheme == "https")
+  type Self = Http[F]
 
-  override def exists: F[Boolean] = sizeOpt.map { _.isSuccess }
+  def make(uri: URI): Http[F] = Http(uri)
 
-  override def size: F[Long] =
-    sizeOpt
-      .map {
-        _
-          .toEither
-          .leftMap(
-            e ⇒
-              new FileNotFoundException(
-                s"Path not found: $uri"
-              )
-              .initCause(e)
-          )
-      }
-      .rethrow
+  import com.softwaremill.sttp._
+  val u = uri"$uri".params(reqConfig.query)
 
   lazy val sizeOpt =
-    delay {
-      import com.softwaremill.sttp._
-      val u = uri"$uri".params(reqConfig.query)
-      Try {
-        Await.result(
-          Ajax(
-            "HEAD",
-            uri"$uri"
-              .params(reqConfig.query)
-              .toString,
-            data = null,
-            timeout = 0,
-            headers = reqConfig.headers,
-            withCredentials = false,
-            responseType = ""
-          )
-          .flatMap {
-            req ⇒
-              req.getResponseHeader("Content-Length") match {
-                case null | "" ⇒ Future.failed(new IOException(s"No Content-Length header found in HEAD response for $u"))
-                case s ⇒ Future.successful(s.toLong)
-              }
-          },
-          reqConfig.timeout
-        )
-      }
+    request[Try[Long]]("HEAD") {
+      _
+        .getResponseHeader("Content-Length") match {
+          case null | "" ⇒ Failure(new IOException(s"No Content-Length header found in HEAD response for $u"))
+          case s ⇒ Try { s.toLong }
+        }
     }
 
-  override def bytes(start: Long, size: Int): F[Array[Byte]] = ???
+  def request[A](method: String, headers: (String, String)*)(fn: XMLHttpRequest ⇒ A): F[A] =
+    delay {
+      Await.result(
+        Ajax(
+          method,
+          uri"$uri"
+            .params(reqConfig.query)
+            .toString,
+          data = null,
+          timeout = 0,
+          headers = reqConfig.headers ++ headers,
+          withCredentials = false,
+          responseType = ""
+        ),
+        reqConfig.timeout
+      )
+    }
+    .map(fn)
+
+  override def bytes(start: Long, size: Int): F[Array[Byte]] =
+    request(
+      "GET",
+      "Range" → s"bytes=$start-${start+size-1}"
+    ) {
+      _.response.asInstanceOf[Array[Byte]]
+    }
 }

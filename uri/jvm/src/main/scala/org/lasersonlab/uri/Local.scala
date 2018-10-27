@@ -13,11 +13,13 @@ case class Local[F[_]: Sync](file: String)(
   val config: Config
 )
 extends Uri[F] {
-  val f = new File(file)
+  val f = new File(file).getCanonicalFile
   val path = f.toPath
   val  uri = f.toURI
 
   override def exists: F[Boolean] = delay { Files.exists(path) }
+
+  override def parentOpt: Option[Local[F]] = Option(f.getParent).map(Local[F](_))
 
   override def bytes(start: Long, size: Int): F[Array[Byte]] =
     delay {

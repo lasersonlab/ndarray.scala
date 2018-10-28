@@ -8,9 +8,8 @@ import java.io.InputStream
  * Re-/Alternate implementation of [[java.io.SequenceInputStream]]; works on JVM and JS, has a more Scala-y / cleaner
  * constructor
  */
-case class SequenceInputStream(streams: List[InputStream])
+case class SequenceInputStream(var remaining: List[InputStream])
   extends InputStream {
-  var remaining = streams
   var stream: InputStream = _
 
   private def nextStream(): Unit =

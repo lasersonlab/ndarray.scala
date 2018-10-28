@@ -1,24 +1,31 @@
 package org.lasersonlab.ndview
 
-import java.net.URLDecoder
+import java.net.{ URI, URLDecoder }
 
 import cats.data.Nested
+import cats.effect.internals.IOContextShift
+import cats.effect.{ ConcurrentEffect, ExitCode, IO, IOApp }
 import cats.implicits._
 import com.softwaremill.sttp._
 import io.circe.Decoder.Result
 import io.circe.{ Decoder, DecodingFailure, HCursor }
-import org.lasersonlab.uri.gcp.Auth
-import org.scalajs.dom.document
+import org.lasersonlab.uri.Http
+import org.lasersonlab.uri.gcp.{ Auth, GCS }
+import org.scalajs.dom
+import org.scalajs.dom.{ Event, document }
 import org.scalajs.dom.ext.{ Ajax, AjaxException }
 import org.scalajs.dom.raw.HTMLFormElement
 import slinky.web.ReactDOM
 import slinky.web.html._
+import org.scalajs.dom.window.localStorage
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.matching.Regex.Groups
 import scala.util.{ Failure, Success }
 
-object Main {
+object Main
+  extends IOApp
+{
 
   val CLIENT_ID = "1084141145491-i3sg6em7m7f8olghidnt7a0kc11n3dr8.apps.googleusercontent.com"
   val REDIRECT_URL = "http://localhost:8080/uri"
@@ -59,18 +66,17 @@ object Main {
     }
 
     document.body.appendChild(form)
+    localStorage.removeItem(credentialsKey)
     form.submit()
   }
-
-  def decode(s: String): String = URLDecoder.decode(s, "UTF-8")
 
   def fragmentMap: Map[String, String] =
     fragmentRegex
       .findAllMatchIn(fragment)
       .map {
         case Groups(k, v) ⇒
-          decode(k) →
-          decode(v)
+          URLDecoder.decode(k, "UTF-8") →
+          URLDecoder.decode(v, "UTF-8")
       }
       .toMap
 
@@ -152,72 +158,167 @@ object Main {
           implicit
           auth: Auth
         ) = {
-          Ajax.get(
-            uri"${buckets.base}?project=$project&userProject=$userProject".toString,
+          Ajax(
+            "HEAD",
+            "https://www.googleapis.com/storage/v1/b/ll-sc-data/o/test.txt?userProject=hca-scale",
+            data = null,
+            timeout = 0,
+            withCredentials = false,
+            responseType = "",
             headers =
               Map(
                 "Authorization" → s"Bearer ${auth.token}"
-              )
+              ),
+
           )
+//          Ajax.get(
+//            uri"${buckets.base}?project=$project&userProject=$userProject".toString,
+//            headers =
+//              Map(
+//                "Authorization" → s"Bearer ${auth.token}"
+//              )
+//          )
           .transformWith {
             case Failure(e) ⇒
               Future(
                 e match {
                   case AjaxException(xhr) ⇒
                     xhr.status match {
-                      case  401 ⇒ signIn(); ???
+                      case  401 ⇒
+                        println("received 401; sign in again…")
+                        Left(e)
                       case code ⇒ Left(e)
                     }
                   case _ ⇒ Left(e)
                 }
               )
             case Success(r) ⇒
-              import io.circe.parser
-              Future(parser.decode[Buckets](r.responseText))
+              println(s"response: ${r.responseText} ${r.response} ${r.getResponseHeader("Content-Length")}")
+              Future(Right(Buckets(Nil)))
+//              import io.circe.parser
+//              Future(parser.decode[Buckets](r.responseText))
           }
         }
       }
     }
   }
 
-  def main(args: Array[String]): Unit = {
-    val map = fragmentMap
+  val credentialsKey = "gcp-credentials"
+
+  implicit val ctx = IOContextShift.global
+
+  override def run(args: List[String]): IO[ExitCode] = {
 
     println("client main")
 
-    Auth
-      .fromFragment(map)
-      .fold(
-        _ ⇒ signIn(),
-        {
-          implicit auth: Auth ⇒
-            Nested(
-              googleapis
-                .storage
-                .buckets
-                .list(
-                  "hca-scale",
-                  Some("hca-scale")
-                )
-            )
-            .map {
-              buckets ⇒
+    import io.circe.generic.auto._
+    import io.circe.syntax._
+    import io.circe.parser.decode
 
-                ReactDOM.render(
-                  div(
-                    for {
-                      Bucket(id, requesterPays) ← buckets.value
-                    } yield
-                      p(
-                        key := id
-                      )(
-                        s"$id $requesterPays"
-                      )
-                  ),
-                  document.getElementById("root")
-                )
-            }
+    ReactDOM.render(
+      button(
+        onClick := {
+          _ ⇒ signIn()
         }
-      )
+      )(
+        "sign in"
+      ),
+      document.getElementById("button")
+    )
+
+    Option(
+      localStorage.getItem(credentialsKey)
+    )
+    .fold {
+      Auth
+        .fromFragment(fragmentMap)
+        .map {
+          auth ⇒
+            val json = auth.asJson.noSpaces
+            println(s"setting localstorage: $json")
+            localStorage.setItem(credentialsKey, json)
+            auth
+        }
+        .leftMap(new Exception(_))
+    } {
+      decode[Auth](_)
+    }
+    .fold(
+      e ⇒ {
+        println(s"no creds; sign in again")
+        println(e)
+        IO.pure(ExitCode.Success)
+      },
+      {
+        auth: Auth ⇒
+          implicit val _auth = auth.copy(project = Some("hca-scale"))
+
+          implicit val reqConfig =
+            org.lasersonlab.uri.http.Config(
+              headers = Map("Authorization" → s"Bearer ${auth.token}")
+            )
+
+          println(s"doing http req…")
+
+          GCS[IO]("ll-sc-data", Vector("test.txt"))
+            .string
+            .attempt
+            .map {
+              case Right(text) ⇒
+                println(s"test gcs req: $text")
+                ExitCode.Success
+              case Left(e) ⇒
+                println("gcs err")
+                println(e)
+                e.getCause
+                e.printStackTrace()
+                ExitCode.Error
+            }
+            .flatMap {
+              exit ⇒
+                GCS[IO]("ll-sc-data", Vector("hca", "immune-cell-census", "ica_cord_blood.10x.64m.zarr3", "GRCh38", "barcodes", "0"))
+                  .bytes(0, 2000)
+                  .attempt
+                  .map {
+                    case Right(bytes) ⇒
+                      println(s"test gcs req: ${bytes.take(100).mkString(" ")}")
+                      ExitCode.Success
+                    case Left(e) ⇒
+                      println("gcs err:")
+                      println(e)
+                      e.printStackTrace()
+                      ExitCode.Error
+                  }
+            }
+
+//          Nested(
+//            googleapis
+//              .storage
+//              .buckets
+//              .list(
+////                "1084141145491"
+//                "hca-scale",
+//                Some("hca-scale")
+//              )
+//          )
+//          .map {
+//            buckets ⇒
+//
+//              ReactDOM.render(
+//                div(
+//                  for {
+//                    Bucket(id, requesterPays) ← buckets.value
+//                  } yield
+//                    p(
+//                      key := id
+//                    )(
+//                      s"$id $requesterPays"
+//                    )
+//                ),
+//                document.getElementById("root")
+//              )
+//          }
+      }
+    )
   }
 }

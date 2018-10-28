@@ -25,6 +25,8 @@ extends Uri[F]
    with Http4sDsl[F]
    with Http4sClientDsl[F] {
 
+  require(uri.getScheme == "http" || uri.getScheme == "https")
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val client = BlazeClientBuilder[F](global).resource.use { sync.pure }
@@ -38,7 +40,11 @@ extends Uri[F]
       response ⇒
         delay {
           if (response.status.isSuccess)
-            Failure(new IOException(s"Error (${response.status.code}) from HEAD response for $uri: ${response.status.reason}"))
+            Failure(
+              new IOException(
+                s"Error (${response.status.code}) from HEAD response for $uri: ${response.status.reason}"
+              )
+            )
           else
             response
               .headers

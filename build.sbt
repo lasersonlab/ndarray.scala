@@ -9,8 +9,9 @@ default(
     hammerlab.          paths → "1.6.0",
     hammerlab.          types → "1.5.0".snapshot,
     hammerlab.shapeless_utils → "1.5.1",
-    hammerlab.             io → "5.2.1"
-  )
+    hammerlab.             io → "5.2.1",
+  ),
+  http4s.version := "0.20.0-M1"
 )
 
 lazy val cloud =
@@ -150,7 +151,8 @@ lazy val uri =
     .jsSettings(
       dep(
         "biz.enef" ^^ "slogging" ^ "0.6.1",
-        scalajs.dom ^ "0.9.6"
+        scalajs.dom ^ "0.9.6",
+        "io.scalajs.npm" ^^ "request" ^ "0.4.2"
       )
     )
 lazy val `uri-x` = uri.x

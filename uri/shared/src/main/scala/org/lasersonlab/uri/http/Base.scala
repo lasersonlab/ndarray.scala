@@ -12,8 +12,6 @@ trait Base[F[_]] {
 
   type Self <: Uri[F]
 
-  require(uri.getScheme == "http" || uri.getScheme == "https")
-
   def make(uri: URI): Self
 
   override def exists: F[Boolean] = sizeOpt.map { _.isSuccess }

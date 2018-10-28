@@ -9,9 +9,9 @@ import hammerlab.str._
 
 case class Auth(
   token: String,
-  expires: Instant,
+  expires: Long,
   scopes: Seq[String],
-  project: Opt[String] = None
+  project: Option[String] = None
 )
 
 object Auth {
@@ -34,7 +34,7 @@ object Auth {
     } yield
       Auth(
         token,
-        expires,
+        expires.getEpochSecond,
         scopes
       )
   }

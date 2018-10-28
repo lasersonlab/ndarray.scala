@@ -1,10 +1,10 @@
 package org.lasersonlab.uri.gcp
 
-import java.net.URI
+import java.net.{ URI, URLEncoder }
 
 import cats.effect._
 import cats.implicits._
-import org.lasersonlab.uri.{ Config, Http, Uri, http ⇒ h }
+import org.lasersonlab.uri.{ Config, encode, Http, Uri, http ⇒ h }
 
 case class Metadata(
   id: String,
@@ -23,6 +23,8 @@ case class GCS[F[_]: ConcurrentEffect](
 )
 extends Uri[F] {
 
+  //val encPath = encode(path.mkString("/"))
+
   val uri =
     if (path.isEmpty)
       new URI(s"gs://$bucket")
@@ -33,12 +35,12 @@ extends Uri[F] {
 
   implicit val reqConfig =
     h.Config(
-      headers = Map("Authorization" → s"Bearer: ${auth.token}")
+      headers = Map("Authorization" → s"Bearer ${auth.token}")
     )
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+//  import scala.concurrent.ExecutionContext.Implicits.global
 
-  val u = uri"https://www.googleapis.com/storage/v1/b/$bucket/o/$path?userProject=${auth.project}"
+  val u = uri"https://www.googleapis.com/storage/v1/b/$bucket/o/${path.mkString("/")}?userProject=${auth.project}"
 
   override def exists: F[Boolean] = metadata.attempt.map { _.isRight }
 

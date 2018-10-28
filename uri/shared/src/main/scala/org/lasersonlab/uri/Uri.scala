@@ -1,6 +1,6 @@
 package org.lasersonlab.uri
 
-import java.io.{ ByteArrayInputStream, InputStream }
+import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, InputStream }
 import java.net.URI
 import java.nio.ByteBuffer
 import java.util
@@ -13,6 +13,8 @@ import io.circe.{ Decoder, DecodingFailure }
 import io.circe.parser.decode
 import org.lasersonlab.java_io.{ BoundedInputStream, SequenceInputStream }
 import slogging.LazyLogging
+
+import scala.collection.mutable.ArrayBuffer
 
 case class Config(blockSize: Int, maxBlockCacheSize: Long, maxNumBlocks: Int)
 object Config {
@@ -49,7 +51,7 @@ object Config {
 
 abstract class Uri[F[_]](implicit val sync: Sync[F])
   extends LazyLogging {
-  import logger.debug
+  import logger._
 
   @inline def delay[A](thunk: => A): F[A] = sync.delay(thunk)
 
@@ -67,14 +69,31 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
 
   def exists: F[Boolean]
 
-  def  size: F[Long]
-  def _size: F[Int] = size.flatMap { size ⇒ delay { size.safeInt.getOrThrow } }
+  def size: F[Long]
+  //def _size: F[Int] = size.flatMap { size ⇒ delay { size.safeInt.getOrThrow } }
 
-  def read: F[Array[Byte]] = _size.flatMap(size ⇒ bytes(0, size))
+  def blocks(from: Int = 0): F[List[Array[Byte]]] = {
+    getBlock(from)
+      .flatMap {
+        head ⇒
+          if (head.length == blockSize)
+            getBlock(from + 1).map { head :: _ :: Nil }
+          else
+            sync.pure(head :: Nil)
+      }
+  }
+
+  def read: F[Array[Byte]] =
+    blocks().map {
+      blocks ⇒
+        val bytes = Array.newBuilder[Byte]
+        blocks.foreach { bytes ++= _ }
+        bytes.result()
+    }
 
   def bytes(start: Long, size: Int): F[Array[Byte]]
 
-  def string: F[String] = _size.flatMap(size ⇒ string(0, size))
+  def string: F[String] = read.map(new String(_))
   def string(start: Long, size: Int): F[String] = bytes(start, size).map(new String(_))
 
   def json[A](implicit d: Decoder[A]): F[A] =
@@ -84,7 +103,32 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
       }
       .rethrow
 
-  def stream: F[InputStream] = size.flatMap(size ⇒ stream(0, size))
+  // Stream from a starting point to the end of the file; continuously fetches+buffers blocks until the end fo the file,
+  // whether or not previous blocks have been read / consumed
+  //
+  // TODO: make fetching behavior configurable: lazily load next block, or fetch when some portion of the existing block
+  // as been consumed, etc.
+  def stream(start: Long = 0): F[InputStream] =
+  {
+    val size = 2 * blockSize - (start % blockSize).toInt
+    val end = start + size
+    bytes(start, size)
+      .flatMap {
+        bytes ⇒
+          val head = new ByteArrayInputStream(bytes)
+          if (bytes.length == size)
+            stream(end)
+              .map {
+                tail ⇒
+                  SequenceInputStream(
+                    head :: tail :: Nil
+                  )
+              }
+          else
+            sync.pure(head)
+      }
+  }
+
   def stream(start: Long, end: Long): F[InputStream] = {
 
     val startIdx =    start  / blockSize
@@ -104,18 +148,16 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
               .mapWithIndex {
                 case (chunk, idx) ⇒
                   val stream = new ByteArrayInputStream(chunk)
-                  if (idx + 1 == endIdx) {
-                    BoundedInputStream(stream, endBlockOffset)
-                  } else {
-                    val stream = new ByteArrayInputStream(chunk)
-                    if (idx == 0)
-                      stream.skip(startBlockOffset)
 
-                    stream
-                  }
+                  if (idx == 0)
+                    stream.skip(startBlockOffset)
+
+                  if (idx + 1 == endIdx)
+                    BoundedInputStream(stream, endBlockOffset)
+
+                  stream
               }
           )
-
       }
   }
 
@@ -129,7 +171,7 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
     ) {
       override def removeEldestEntry(eldest: util.Map.Entry[Long, F[Array[Byte]]]): Boolean =
         if (size() >= maxNumBlocks) {
-          debug(s"Size ${size()} > max num blocks $maxNumBlocks (total size $maximumSize)")
+          println(s"Size ${size()} > max num blocks $maxNumBlocks (total size $maximumSize)")
           true
         } else
           false
@@ -137,22 +179,17 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
 
   def getBlock(idx: Long): F[Array[Byte]] =
     if (!blocks.containsKey(idx)) {
-      for {
-        size ← size
-        start = idx * blockSize
-        fetchSize = min(blockSize, size - start)
-        bytes ←
-          blocks
-            .put(
-              idx,
-              bytes(
-                start,
-                fetchSize
-              )
-            )
-        _ = debug(s"Fetched block $idx: [$start,${start + size})")
-      } yield
-        bytes
+      val start = idx * blockSize
+      val fetchSize = blockSize
+      println(s"fetching block $idx")
+      val block =
+        bytes(
+          start,
+          fetchSize
+        )
+
+      blocks.put(idx, block)
+      block
     } else
       blocks.get(idx)
 }

@@ -5,10 +5,12 @@ import cats.effect._
 import cats.implicits._
 import fs2._
 import org.http4s.CacheDirective.`no-cache`
-import org.http4s.MediaType.`text/html`
-import org.http4s.dsl.Http4sDsl
+import org.http4s.{ Header, HttpRoutes, MediaType }
+import org.http4s.server.blaze.BlazeServerBuilder
+//import org.http4s.MediaType.`text/html`
+import org.http4s.dsl.io._
 import org.http4s.headers.{ `Cache-Control`, `Content-Type` }
-import org.http4s.server.blaze.BlazeBuilder
+import org.http4s.server.blaze._
 import org.http4s.{ Charset, HttpService, StaticFile }
 import scalatags.Text.TypedTag
 import scalatags.Text.all.Modifier
@@ -16,18 +18,27 @@ import scalatags.Text.all.Modifier
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Properties.envOrNone
 
-object Main extends StreamApp[IO] {
+object Main extends IOApp {
 
   val ip: String = "0.0.0.0"
 
-  override def stream(args: List[String], requestShutdown: IO[Unit]): Stream[IO, StreamApp.ExitCode] =
-    for {
-      port <- Stream.eval(IO(envOrNone("HTTP_PORT").map(_.toInt).getOrElse(8080)))
-      exitCode <- BlazeBuilder[IO]
-        .bindHttp(port, ip)
-        .mountService(service)
-        .serve
-    } yield exitCode
+//  override def stream(args: List[String], requestShutdown: IO[Unit]): Stream[IO, StreamApp.ExitCode] =
+//    for {
+//      port <- Stream.eval(IO(envOrNone("HTTP_PORT").map(_.toInt).getOrElse(8080)))
+//      exitCode <- BlazeBuilder[IO]
+//        .bindHttp(port, ip)
+//        .mountService(service)
+//        .serve
+//    } yield exitCode
+
+  override def run(args: List[String]): IO[ExitCode] =
+    BlazeServerBuilder[IO]
+      .bindHttp(8080, "localhost")
+      .withHttpApp(service)
+      .serve
+      .compile
+      .drain
+      .as(ExitCode.Success)
 
   def template(
     headContent: Seq[Modifier] = Nil,
@@ -65,6 +76,9 @@ object Main extends StreamApp[IO] {
       div(
         id:="root"
       ),
+      div(
+        id:="button"
+      ),
       h1(
         style:= "align: center;",
         "Http4s Scala-js Example App"
@@ -77,18 +91,17 @@ object Main extends StreamApp[IO] {
   val supportedStaticExtensions =
     List(".html", ".js", ".map", ".css", ".png", ".ico")
 
-  def service[F[_]](implicit F: Effect[F]) = {
-    def getResource(pathInfo: String) = F.delay(getClass.getResource(pathInfo))
+  val text = "ab⊥"
 
-    object dsl extends Http4sDsl[F]
-    import dsl._
+  def service = {
+    def getResource(pathInfo: String) = IO.delay(getClass.getResource(pathInfo))
 
-    HttpService[F] {
+    HttpRoutes.of[IO] {
 
       case GET -> Root =>
         Ok(template(Seq(), index, jsScripts).render)
           .map(
-            _.withContentType(`Content-Type`(`text/html`, Charset.`UTF-8`))
+            _.withContentType(`Content-Type`(MediaType.text.html, Charset.`UTF-8`))
               .putHeaders(`Cache-Control`(NonEmptyList.of(`no-cache`())))
           )
 
@@ -104,23 +117,28 @@ object Main extends StreamApp[IO] {
         println(s"*** Headers:\n\t${req.headers.toList.mkString("\n\t")}")
         Ok(template(Seq(), index, jsScripts).render)
           .map(
-            _.withContentType(`Content-Type`(`text/html`, Charset.`UTF-8`))
+            _.withContentType(`Content-Type`(MediaType.text.html, Charset.`UTF-8`))
              .putHeaders(`Cache-Control`(NonEmptyList.of(`no-cache`())))
           )
-//        Ok("")
-//          .map(
-//            _.withContentType(`Content-Type`(`text/html`, Charset.`UTF-8`))
-//              .putHeaders(`Cache-Control`(NonEmptyList.of(`no-cache`())))
-//          )
+
+      case req @ HEAD -> Root / "ajax" ⇒
+        println("ajax…")
+        NoContent().putHeaders(Header("Content-Length", (text.length + 1).toString))
+        //Ok("yay")
+
+      case req @ GET -> Root / "ajax" ⇒
+        println("ajax…")
+        Ok.apply(text)
 
       case req if supportedStaticExtensions.exists(req.pathInfo.endsWith) =>
         println(req.pathInfo)
-        StaticFile.fromResource[F](req.pathInfo, req.some)
-          .orElse(OptionT.liftF(getResource(req.pathInfo)).flatMap(StaticFile.fromURL[F](_, req.some)))
+        StaticFile.fromResource[IO](req.pathInfo, global, req.some)
+          .orElse(OptionT.liftF(getResource(req.pathInfo)).flatMap(StaticFile.fromURL(_, global, req.some)))
           .map(_.putHeaders(`Cache-Control`(NonEmptyList.of(`no-cache`()))))
-          .fold(NotFound())(_.pure[F])
+          .fold(NotFound())(_.pure[IO])
           .flatten
 
     }
+    .orNotFound
   }
 }

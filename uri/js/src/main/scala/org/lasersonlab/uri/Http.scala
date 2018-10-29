@@ -5,25 +5,18 @@ import java.net.URI
 
 import cats.effect._
 import cats.implicits._
-import io.scalajs.nodejs.http.IncomingMessage
 import org.scalajs.dom
-import org.scalajs.dom.ext.{ Ajax, AjaxException }
+import org.scalajs.dom.ext.AjaxException
 import org.scalajs.dom.raw.XMLHttpRequest
-import io.scalajs.npm.request.{ RequestBody, _ }
-import org.lasersonlab.uri.gcp.Auth
 
-import scala.concurrent.{ Await, ExecutionContext, Promise }
 import scala.scalajs.js
-import scala.scalajs.js.typedarray.Int8Array
+import scala.scalajs.js.typedarray.{ ArrayBuffer, TypedArrayBuffer }
 import scala.util.{ Failure, Try }
-
-case class Options(url: String, headers: js.Object)
 
 case class Http[F[_]: ConcurrentEffect](uri: URI)(
   implicit
   val config: Config,
-  reqConfig: http.Config/*,
-  ec: ExecutionContext*/
+  reqConfig: http.Config
 )
 extends Uri[F]
    with http.Base[F] {
@@ -48,6 +41,7 @@ extends Uri[F]
 //        }
     }
 
+  // Attempt at using Node `request` module
 //  def request[A](method: String, headers: (String, String)*)(f: (IncomingMessage, Array[Byte]) ⇒ A): F[A] = {
 //    val url = uri.toString
 //    val hdrs = reqConfig.headers ++ headers
@@ -57,7 +51,6 @@ extends Uri[F]
 //
 //    F.async[A] {
 //      fn ⇒
-//        println("in async")
 //        req(
 //          js.Dictionary(
 //            "url" → url,
@@ -72,7 +65,6 @@ extends Uri[F]
 //              response: IncomingMessage,
 //              body: RequestBody
 //            ) ⇒
-//              println("in callback")
 //              fn(
 //                if (error == null)
 //                  Right(
@@ -94,37 +86,32 @@ extends Uri[F]
     val timeout = 0
     val hdrs = reqConfig.headers ++ headers
     val withCredentials = false
-    val responseType = ""
+    val responseType = "arraybuffer"
 
-    println(s"sending $method to $url (${hdrs.map { case (k, v) ⇒ s"$k: $v" }.mkString(", ")})")
+    logger.debug(s"sending $method to $url (${hdrs.map { case (k, v) ⇒ s"$k: $v" }.mkString(", ")})")
 
-    val r =
-      F.async[A] {
-        fn ⇒
-          val req = new dom.XMLHttpRequest()
+    F.async[A] {
+      fn ⇒
+        val req = new dom.XMLHttpRequest()
 
-          req.onreadystatechange = {
-            e: dom.Event ⇒
-              if (req.readyState == 4)
-                fn(
-                  if ((req.status >= 200 && req.status < 300) || req.status == 304)
-                    Right(f(req))
-                  else
-                    Left(AjaxException(req))
-                )
-          }
-          req.open(method, url)
-          req.responseType = responseType
-          req.timeout = timeout
-          req.withCredentials = withCredentials
-          hdrs.foreach(x => req.setRequestHeader(x._1, x._2))
-          println("sending")
-          req.send()
-          println("sent…")
-      }
-
-    println("returning async object…")
-    r
+        req.onreadystatechange = {
+          e: dom.Event ⇒
+            if (req.readyState == 4)
+              fn(
+                if ((req.status >= 200 && req.status < 300) || req.status == 304)
+                  Right(f(req))
+                else {
+                  Left(AjaxException(req))
+                }
+              )
+        }
+        req.open(method, url)
+        req.responseType = responseType
+        req.timeout = timeout
+        req.withCredentials = withCredentials
+        hdrs.foreach(x => req.setRequestHeader(x._1, x._2))
+        req.send()
+    }
   }
 
   override def bytes(start: Long, size: Int): F[Array[Byte]] =
@@ -134,10 +121,20 @@ extends Uri[F]
     ) {
       //(_, body) ⇒ body
       req ⇒
-        println(s"response: ${req.response} ${req.response.getClass}")
-        req
-        .response
-        .asInstanceOf[Int8Array]
-        .toArray
+        val arraybuffer =
+          req
+            .response
+            .asInstanceOf[ArrayBuffer]
+        val size = arraybuffer.byteLength
+
+        val bytes = Array.fill[Byte](size)(0)
+
+        TypedArrayBuffer
+          .wrap(arraybuffer)
+          .get(bytes)
+
+        logger.debug(s"uri response for $uri ($start + $size; resp type ${req.responseType}, class ${req.response.getClass}): ${arraybuffer.byteLength} (${bytes.length}) bytes, type ${req.getResponseHeader("Content-Type")}")
+
+        bytes
     }
 }

@@ -1,6 +1,6 @@
 package org.lasersonlab.uri
 
-import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, InputStream }
+import java.io.{ ByteArrayInputStream, InputStream }
 import java.net.URI
 import java.nio.ByteBuffer
 import java.util
@@ -9,12 +9,11 @@ import cats.effect.Sync
 import cats.implicits._
 import hammerlab.either._
 import hammerlab.math.utils._
-import io.circe.{ Decoder, DecodingFailure }
+import io.circe.Decoder
 import io.circe.parser.decode
 import org.lasersonlab.java_io.{ BoundedInputStream, SequenceInputStream }
+import org.lasersonlab.uri.Uri.Segment
 import slogging.LazyLogging
-
-import scala.collection.mutable.ArrayBuffer
 
 case class Config(blockSize: Int, maxBlockCacheSize: Long, maxNumBlocks: Int)
 object Config {
@@ -51,16 +50,18 @@ object Config {
 
 abstract class Uri[F[_]](implicit val sync: Sync[F])
   extends LazyLogging {
-  import logger._
+
+  type Self <: Uri[F]
 
   @inline def delay[A](thunk: => A): F[A] = sync.delay(thunk)
 
   val uri: URI
   def basename = uri.getPath.split("/").last
-  def parentOpt: Option[Uri[F]]
-  def parent   :        Uri[F]  = parentOpt.get
+  def parentOpt: Option[Self]
+  def parent   :        Self  = parentOpt.get
 
-  //def /(name: String)
+  def /(name: String): Self
+  def /[T](name: T)(implicit s: Segment[T]): Self = /(s(name))
 
   val config: Config
   lazy val Config(blockSize, maximumSize, maxNumBlocks) = config
@@ -72,7 +73,9 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
   def size: F[Long]
   //def _size: F[Int] = size.flatMap { size ⇒ delay { size.safeInt.getOrThrow } }
 
-  def blocks(from: Int = 0): F[List[Array[Byte]]] = {
+  def list: F[List[Self]]
+
+  def blocks(from: Int = 0): F[List[Array[Byte]]] =
     getBlock(from)
       .flatMap {
         head ⇒
@@ -81,7 +84,6 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
           else
             sync.pure(head :: Nil)
       }
-  }
 
   def read: F[Array[Byte]] =
     blocks().map {
@@ -163,6 +165,7 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
 
   private val _buffer = ByteBuffer.allocate(blockSize)
 
+  // TODO: this is probably just re-fetching blocks every time / not how you do caching with referential transparency
   val blocks =
     new util.LinkedHashMap[Long, F[Array[Byte]]](
       (maximumSize / blockSize).toInt,
@@ -171,7 +174,7 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
     ) {
       override def removeEldestEntry(eldest: util.Map.Entry[Long, F[Array[Byte]]]): Boolean =
         if (size() >= maxNumBlocks) {
-          println(s"Size ${size()} > max num blocks $maxNumBlocks (total size $maximumSize)")
+          logger.debug(s"Size ${size()} > max num blocks $maxNumBlocks (total size $maximumSize)")
           true
         } else
           false
@@ -181,7 +184,7 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
     if (!blocks.containsKey(idx)) {
       val start = idx * blockSize
       val fetchSize = blockSize
-      println(s"fetching block $idx")
+      logger.debug(s"fetching block $idx")
       val block =
         bytes(
           start,
@@ -192,4 +195,15 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
       block
     } else
       blocks.get(idx)
+}
+
+object Uri {
+  trait Segment[T] {
+    def apply(t: T): String
+  }
+  object Segment {
+    implicit val str: Segment[String] = (s: String) ⇒ s
+    implicit val sym: Segment[Symbol] = _.name
+    implicit val int: Segment[   Int] = _.toString
+  }
 }

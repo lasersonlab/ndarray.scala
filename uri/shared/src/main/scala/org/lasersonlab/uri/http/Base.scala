@@ -10,8 +10,6 @@ import scala.util.Try
 trait Base[F[_]] {
   self: Uri[F] ⇒
 
-  type Self <: Uri[F]
-
   def make(uri: URI): Self
 
   override def exists: F[Boolean] = sizeOpt.map { _.isSuccess }
@@ -21,4 +19,8 @@ trait Base[F[_]] {
   override def size: F[Long] = sizeOpt.map { _.toEither }.rethrow
 
   def sizeOpt: F[Try[Long]]
+
+  override def /(name: String): Self = make(uri.resolve(name))
+
+  override def list: F[List[Http[F]]] = throw new UnsupportedOperationException(s"Can't list HTTP URIs")
 }

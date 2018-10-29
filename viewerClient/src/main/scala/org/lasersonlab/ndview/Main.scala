@@ -82,127 +82,6 @@ object Main
 
   implicit val ec = ExecutionContext.global
 
-  case class Kind(override val toString: String)
-  object Kind {
-    def apply(c: HCursor)(implicit expected: Kind): Decoder.Result[Unit] =
-      c
-        .downField("kind")
-        .as[String]
-          .flatMap {
-            case k if k == expected.toString ⇒ Right(k)
-            case kind ⇒
-              Left(
-                DecodingFailure(
-                  s"Expected kind '$expected', found '$kind'",
-                  c.history
-                )
-              )
-          }
-  }
-
-  case class Bucket(
-    id: String,
-    requesterPays: Boolean
-  )
-  object Bucket {
-    implicit val kind = Kind("storage#bucket")
-    implicit val decoder: Decoder[Bucket] =
-      new Decoder[Bucket] {
-        override def apply(c: HCursor): Result[Bucket] =
-          for {
-            _ ← Kind(c)
-            id ←
-              c
-                .downField("id")
-                .as[String]
-            requesterPays =
-              c
-                .downField("billing")
-                .downField("requesterPays")
-                .as[Boolean]
-                .getOrElse(false)
-          } yield
-            Bucket(
-              id,
-              requesterPays
-            )
-      }
-  }
-  case class Response[T](items: Seq[T])
-  case class Buckets(value: Seq[Bucket])
-  object Buckets {
-    implicit val kind = Kind("storage#buckets")
-    implicit val decoder: Decoder[Buckets] =
-      new Decoder[Buckets] {
-        override def apply(c: HCursor): Result[Buckets] =
-          for {
-            _ ← Kind(c)
-            buckets ← c.downField("items").as[Seq[Bucket]]
-          } yield
-            Buckets(
-              buckets
-            )
-      }
-  }
-
-  object googleapis {
-    val base = uri"https://www.googleapis.com"
-    object storage {
-      val base = s"${googleapis.base}/storage/v1"
-      object buckets {
-        val base = s"${storage.base}/b"
-        def list(
-          project: String,
-          userProject: Option[String] = None
-        )(
-          implicit
-          auth: Auth
-        ) = {
-          Ajax(
-            "HEAD",
-            "https://www.googleapis.com/storage/v1/b/ll-sc-data/o/test.txt?userProject=hca-scale",
-            data = null,
-            timeout = 0,
-            withCredentials = false,
-            responseType = "",
-            headers =
-              Map(
-                "Authorization" → s"Bearer ${auth.token}"
-              ),
-
-          )
-//          Ajax.get(
-//            uri"${buckets.base}?project=$project&userProject=$userProject".toString,
-//            headers =
-//              Map(
-//                "Authorization" → s"Bearer ${auth.token}"
-//              )
-//          )
-          .transformWith {
-            case Failure(e) ⇒
-              Future(
-                e match {
-                  case AjaxException(xhr) ⇒
-                    xhr.status match {
-                      case  401 ⇒
-                        println("received 401; sign in again…")
-                        Left(e)
-                      case code ⇒ Left(e)
-                    }
-                  case _ ⇒ Left(e)
-                }
-              )
-            case Success(r) ⇒
-              println(s"response: ${r.responseText} ${r.response} ${r.getResponseHeader("Content-Length")}")
-              Future(Right(Buckets(Nil)))
-//              import io.circe.parser
-//              Future(parser.decode[Buckets](r.responseText))
-          }
-        }
-      }
-    }
-  }
-
   val credentialsKey = "gcp-credentials"
 
   implicit val ctx = IOContextShift.global
@@ -247,6 +126,7 @@ object Main
       e ⇒ {
         println(s"no creds; sign in again")
         println(e)
+        signIn()
         IO.pure(ExitCode.Success)
       },
       {
@@ -267,16 +147,19 @@ object Main
               case Right(text) ⇒
                 println(s"test gcs req: $text")
                 ExitCode.Success
+              case Left(AjaxException(xhr)) if xhr.status == 401 ⇒
+                println("caught 401, sign in again…")
+                signIn()
+                ???
               case Left(e) ⇒
-                println("gcs err")
+                println("gcs text err")
                 println(e)
-                e.getCause
                 e.printStackTrace()
                 ExitCode.Error
             }
             .flatMap {
-              exit ⇒
-                GCS[IO]("ll-sc-data", Vector("hca", "immune-cell-census", "ica_cord_blood.10x.64m.zarr3", "GRCh38", "barcodes", "0"))
+              _ ⇒
+                (GCS[IO]("ll-sc-data") / 'hca / "immune-cell-census" / "ica_cord_blood.10x.64m.zarr3" / 'GRCh38 / 'barcodes / 0)
                   .bytes(0, 2000)
                   .attempt
                   .map {
@@ -284,40 +167,24 @@ object Main
                       println(s"test gcs req: ${bytes.take(100).mkString(" ")}")
                       ExitCode.Success
                     case Left(e) ⇒
-                      println("gcs err:")
+                      println("gcs bytes err:")
                       println(e)
                       e.printStackTrace()
                       ExitCode.Error
                   }
             }
-
-//          Nested(
-//            googleapis
-//              .storage
-//              .buckets
-//              .list(
-////                "1084141145491"
-//                "hca-scale",
-//                Some("hca-scale")
-//              )
-//          )
-//          .map {
-//            buckets ⇒
-//
-//              ReactDOM.render(
-//                div(
-//                  for {
-//                    Bucket(id, requesterPays) ← buckets.value
-//                  } yield
-//                    p(
-//                      key := id
-//                    )(
-//                      s"$id $requesterPays"
-//                    )
-//                ),
-//                document.getElementById("root")
-//              )
-//          }
+            .flatMap {
+              _ ⇒
+                (GCS[IO]("ll-sc-data") / 'hca / "immune-cell-census" / "ica_cord_blood.10x.64m.zarr3" / 'GRCh38)
+                  .list
+            }.map {
+              files ⇒
+                files.foreach {
+                  f ⇒
+                    println(s"found file: $f")
+                }
+                ExitCode.Success
+            }
       }
     )
   }

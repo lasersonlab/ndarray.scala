@@ -79,8 +79,8 @@ extends Uri[F]
   def request[A](method: Method with Safe with NoBody, headers: (String, String)*)(fn: Response[F] ⇒ F[A]): F[A] =
     for {
       uri ←
-        delay[Either[Throwable,org.http4s.Uri]] {
-          Uri.fromString(uri.toString)
+        delay[Either[Throwable, org.http4s.Uri]] {
+          org.http4s.Uri.fromString(uri.toString)
         }
         .rethrow
       request ←

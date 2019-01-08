@@ -5,6 +5,7 @@ import java.net.URI
 import cats.effect._
 import cats.implicits._
 import org.lasersonlab.uri.Uri.Segment
+import org.lasersonlab.uri.gcp.googleapis.storage.Buckets
 import org.lasersonlab.uri.{ Config, Http, Uri, http ⇒ h }
 
 case class Metadata(
@@ -24,6 +25,7 @@ case class GCS[F[_]: ConcurrentEffect](
 )(
   implicit
   auth: Auth,
+  val project: Option[Project],
   val config: Config
 )
 extends Uri[F] {
@@ -37,15 +39,9 @@ extends Uri[F] {
       new URI(s"gs://$bucket/${path.mkString("/")}")
 
   import com.softwaremill.sttp._
-
-  implicit val reqConfig =
-    h.Config(
-      headers = Map("Authorization" → s"Bearer ${auth.token}")
-    )
-
-
-  val objectUrl = uri"https://www.googleapis.com/storage/v1/b/$bucket/o/${path.mkString("/")}?userProject=${auth.project}"
-  def listUri = uri"https://www.googleapis.com/storage/v1/b/$bucket/o?delimiter=${"/"}&prefix=${path.mkString("", "/", "/")}&userProject=${auth.project}"
+  
+  def objectUrl = uri"https://www.googleapis.com/storage/v1/b/$bucket/o/${path.mkString("/")}?userProject=$project"
+  def listUri = uri"https://www.googleapis.com/storage/v1/b/$bucket/o?delimiter=${"/"}&prefix=${path.mkString("", "/", "/")}&userProject=$project"
 
   override def /(name: String): GCS[F] = GCS(bucket, path :+ name)
 
@@ -109,6 +105,7 @@ object GCS {
   )(
     implicit
     auth: Auth,
+    project: Option[Project],
     config: Config
   ):
     GCS[F] =

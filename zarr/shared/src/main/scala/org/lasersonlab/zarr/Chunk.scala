@@ -3,9 +3,9 @@ package org.lasersonlab.zarr
 import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 
-import cats.{ Eval, Foldable, Semigroupal }
+import cats.{ Eval, FlatMap, Foldable, Functor, Semigroupal }
+import cats.implicits._
 import hammerlab.option._
-import hammerlab.path._
 import org.lasersonlab.ndarray.ArrayLike
 import org.lasersonlab.slist.{ Scannable, Zip }
 import org.lasersonlab.zarr.dtype.DataType
@@ -14,7 +14,7 @@ import org.lasersonlab.zarr.Chunk.Idx
 /**
  * A Zarr "chunk" file, represented as a [[Path]] that bytes are lazily loaded from
  *
- * @param path path to chunk file
+ * @param bytes path to chunk file
  * @param shape shape of this chunk
  * @param idx index of this chunk inside larger Zarr [[Array]]
  * @param size number of elements in this chunk (product of elements of shape)
@@ -25,10 +25,12 @@ import org.lasersonlab.zarr.Chunk.Idx
  * @tparam T element type
  */
 case class Chunk[
-  ShapeT[_] : Foldable : Zip,
+  ShapeT[_]
+  : Foldable
+  : Zip,
   T
 ](
-        path:       Path     ,
+       bytes:       Arr[Byte],
        shape:     ShapeT[Idx],
          idx:     ShapeT[Idx],
         size:        Int     ,
@@ -42,23 +44,25 @@ case class Chunk[
 
   type Shape = ShapeT[Idx]
 
-  lazy val bytes = {
-    val bytes = compressor(path, size * dtype.size)
-    sizeHint
-      .fold {
-        require(
-          size * dtype.size <= bytes.length,
-          s"$path: expected at least ${size * dtype.size} bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
-        )
-      } {
-        expected ⇒
-          require(
-            expected == bytes.length,
-            s"$path: expected $expected bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
-          )
-      }
-    bytes
-  }
+//  lazy val bytes =
+//    compressor(path, size * dtype.size)
+//      .map {
+//        bytes ⇒
+//          sizeHint
+//            .fold {
+//              require(
+//                size * dtype.size <= bytes.length,
+//                s"$path: expected at least ${size * dtype.size} bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
+//              )
+//            } {
+//              expected ⇒
+//                require(
+//                  expected == bytes.length,
+//                  s"$path: expected $expected bytes in chunk $idx ($shape = $size records of type $dtype, size ${dtype.size}), found ${bytes.length}"
+//                )
+//            }
+//        bytes
+//      }
 
   lazy val buff = ByteBuffer.wrap(bytes)
 
@@ -113,47 +117,50 @@ object Chunk {
             : Foldable
             : Scannable
             : Zip,
+         F[_]: FlatMap,
          T
             : DataType
   ](
-          path: Path,
+          path: Path[F],
          shape: ShapeT[Idx],
            idx: ShapeT[Idx],
     compressor: Compressor,
       sizeHint: Opt[Int] = None
   ):
-    Exception |
-    Chunk[ShapeT, T]
+    F[Chunk[ShapeT, T]]
   =
-    if (!path.exists)
-      Left(
-        new FileNotFoundException(
-          path.toString
-        )
-      )
-    else {
-      val (size, sizeProducts) = shape.scanRight(1) { _ * _ }
-      Right(
-        Chunk(
-          path,
-          shape,
-          idx,
-          size,
-          sizeProducts,
-          compressor,
-          sizeHint
-        )
-      )
-    }
+    path
+      .exists
+      .flatMap {
+        exists ⇒
+          if (!exists)
+            throw new FileNotFoundException(path.toString)
+          else {
+            val (size, sizeProducts) = shape.scanRight(1) { _ * _ }
+            path
+              .read
+              .map {
+                Chunk(
+                  _,
+                  shape,
+                  idx,
+                  size,
+                  sizeProducts,
+                  compressor,
+                  sizeHint
+                )
+              }
+          }
+      }
 
-  implicit def arrayLike[S[_]]: ArrayLike.Aux[Chunk[S, ?], S] =
+  implicit def arrayLike[S[_], F[_]]: ArrayLike.Aux[Chunk[S, ?], S] =
     new ArrayLike[Chunk[S, ?]] {
       type Shape[U] = S[U]
       @inline def shape   (chunk: Chunk[Shape, _]): Shape[Int] = chunk.shape
       @inline def apply[T](chunk: Chunk[Shape, T], idx: S[Int]): T = chunk(idx)
     }
 
-  implicit def foldable[Shape[_]]: Foldable[Chunk[Shape, ?]] =
+  implicit def foldable[Shape[_], F[_]]: Foldable[Chunk[Shape, ?]] =
     new Foldable[Chunk[Shape, ?]] {
       type F[A] = Chunk[Shape, A]
       def foldLeft [A, B](fa: F[A],  b:      B )(f: (B,      A ) ⇒      B ):      B  = fa.foldLeft ( b)(f)

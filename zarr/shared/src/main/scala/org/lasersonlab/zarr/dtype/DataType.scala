@@ -43,7 +43,7 @@ object DataType
     def size: Int
     type T
     def apply(buff: ByteBuffer): T
-    def  read(buff: ByteBuffer, idx: Int): T = {
+    def read(buff: ByteBuffer, idx: Int): T = {
       buff.position(size * idx)
       apply(buff)
     }

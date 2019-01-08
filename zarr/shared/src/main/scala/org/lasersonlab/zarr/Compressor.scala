@@ -6,6 +6,7 @@ import java.nio.ByteBuffer._
 import java.util.zip.Deflater.DEFAULT_COMPRESSION
 import java.util.zip.{ Deflater, DeflaterOutputStream, InflaterInputStream }
 
+import cats.implicits._
 import circe.Decoder.Result
 import circe._
 import circe.auto._
@@ -17,25 +18,23 @@ import org.blosc.JBlosc._
 import shapeless.the
 import Runtime.getRuntime
 
+import cats.Functor
 import org.hammerlab.shapeless.instances.InstanceMap
 import org.lasersonlab.commons.IOUtils.toByteArray
 
-import scala.{ Array ⇒ Arr }
-
 sealed trait Compressor {
-  def apply(path: Path, sizeHint: Opt[Int] = Non): Arr[Byte]
+  def apply[F[_]: Functor](path: Path[F], sizeHint: Opt[Int] = Non): F[Arr[Byte]]
   def apply(os: OutputStream, itemsize: Int): OutputStream
 }
 object Compressor {
 
   case class ZLib(level: Int = DEFAULT_COMPRESSION)
     extends Compressor {
-    def apply(path: Path, sizeHint: Opt[Int] = Non): Arr[Byte] =
-      toByteArray(
-        new InflaterInputStream(
-          path.inputStream
-        )
-      )
+    def apply[F[_]: Functor](path: Path[F], sizeHint: Opt[Int] = Non): F[Arr[Byte]] =
+      path
+        .stream()
+        .map(new InflaterInputStream(_))
+        .map(toByteArray(_))
 
     def apply(os: OutputStream, itemsize: Int): OutputStream =
       new DeflaterOutputStream(
@@ -58,7 +57,7 @@ object Compressor {
 
   case object None
     extends Compressor {
-    def apply(path: Path, sizeHint: Opt[Int] = Non): Arr[Byte] = path.readBytes
+    def apply[F[_]: Functor](path: Path[F], sizeHint: Opt[Int] = Non): F[Arr[Byte]] = path.read
     def apply(os: OutputStream, itemsize: Int): OutputStream = os
   }
 
@@ -87,48 +86,53 @@ object Compressor {
 
     val MAX_BUFFER_SIZE = (1 << 31) - 1
 
-    def apply(path: Path, sizeHint: Opt[Int] = Non): Arr[Byte] = {
+    def apply[F[_]: Functor](path: Path[F], sizeHint: Opt[Int] = Non): F[Arr[Byte]] = {
 
-      val arr = path.readBytes
-      val size = arr.length
-      val src = ByteBuffer.wrap(arr)
+      path.read.map {
+        arr ⇒
+          val size = arr.length
+          val src = ByteBuffer.wrap(arr)
 
-      var expansions = 0
-      var bufferSize = sizeHint.getOrElse(1 << 21)  // 2 MB
+          var expansions = 0
+          var bufferSize = sizeHint.getOrElse(1 << 21)  // 2 MB
 
-      while (true) {
-        val buffer = allocate(bufferSize)
+          var break = false
+          var ret: Arr[Byte] = null
+          while (!break) {
+            val buffer = allocate(bufferSize)
 
-        buffer.clear()
-        val decompressed = JBlosc.decompressCtx(src, buffer, bufferSize, numThreads)
-        if (decompressed <= 0) {
-          if (bufferSize == MAX_BUFFER_SIZE) {
-            throw new IOException(
-              s"Blosc decompression failed ($decompressed) on path $path with maximum buffer-size 2GB"
-            )
+            buffer.clear()
+            val decompressed = JBlosc.decompressCtx(src, buffer, bufferSize, numThreads)
+            if (decompressed <= 0) {
+              if (bufferSize == MAX_BUFFER_SIZE) {
+                throw new IOException(
+                  s"Blosc decompression failed ($decompressed) on path $path with maximum buffer-size 2GB"
+                )
+              }
+              val newBufferSize =
+                min(
+                  MAX_BUFFER_SIZE,
+                  4L * bufferSize
+                )
+
+              println(
+                s"WARN: increasing buffer from $bufferSize to $newBufferSize while decompressing $path"
+              )
+              bufferSize = newBufferSize
+              expansions += 1
+            } else if (expansions == 0) {
+              ret = buffer.array()
+              break = true
+            } else {
+              val arr = new Arr[Byte](decompressed)
+              buffer.get(arr)
+              ret = arr
+              break = true
+            }
           }
-          val newBufferSize =
-            min(
-              MAX_BUFFER_SIZE,
-              4L * bufferSize
-            )
 
-          println(
-            s"WARN: increasing buffer from $bufferSize to $newBufferSize while decompressing $path"
-          )
-          bufferSize = newBufferSize
-          expansions += 1
-        } else
-          if (expansions == 0)
-            return buffer.array()
-          else {
-            val arr = new Arr[Byte](decompressed)
-            buffer.get(arr)
-            return arr
-          }
+          ret
       }
-
-      ???  // unreachable
     }
 
     def apply(os: OutputStream, itemsize: Int): OutputStream =

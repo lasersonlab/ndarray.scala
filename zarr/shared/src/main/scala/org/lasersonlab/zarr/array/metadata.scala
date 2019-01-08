@@ -1,7 +1,6 @@
 package org.lasersonlab.zarr.array
 
 import cats.Traverse
-import hammerlab.path.Path
 import org.lasersonlab.circe.DecoderK
 import org.lasersonlab.slist.Zip
 import org.lasersonlab.zarr.Compressor.Blosc
@@ -17,6 +16,8 @@ import org.lasersonlab.zarr.io.Basename
 import org.lasersonlab.zarr.utils.Idx
 
 object metadata {
+
+  val basename = ".zarray"
 
   /**
    * Base-trait for [[Metadata]] where type-params are type-members, allowing for construction in situations where
@@ -43,8 +44,6 @@ object metadata {
       }
   }
 
-  val basename = ".zarray"
-
   object ? {
     implicit def _basename[Shape[_], Idx]: Basename[?[Shape, Idx]] = Basename(basename)
 
@@ -54,18 +53,16 @@ object metadata {
      * @param dir directory containing `.zarray` metadata file
      * @param idx "index" type to use for dimensions' coordinates
      */
-    def apply(dir: Path)(implicit idx: Idx): Exception | ?[List, idx.T] =
-      dir ? basename flatMap {
-        path ⇒
-          decode[
-            ?[
-              List,
-              idx.T
-            ]
-          ](
-            path.read
-          )
+    def apply[F[_]: MonadErr](dir: Path[F])(implicit idx: Idx): F[?[List, idx.T]] =
+      (dir ? basename).flatMap {
+        _
+          .string
+          .map {
+            str ⇒
+            decode[metadata.?[List, idx.T]](str): Exception | metadata.?[List, idx.T]
+          }
       }
+      .rethrow
 
     implicit def decoder[
       Shape[_]
@@ -192,30 +189,32 @@ object metadata {
              : Traverse
              : Zip
              : DecoderK,
+         F[_]: MonadErr,
           T
              :  DataType.Decoder
              : FillValue.Decoder,
     ](
-      dir: Path
+      dir: Path[F]
     )(
       implicit
       idx: Idx
     ):
-      Exception |
-      Metadata[Shape, idx.T, T]
+      F[Metadata[Shape, idx.T, T]]
     =
-      dir ? basename flatMap {
-        path ⇒
-          decode[
-            Metadata[
-              Shape,
-              idx.T,
-              T
-            ]
-          ](
-            path.read
-          )
+      (dir ? basename).flatMap {
+        _
+          .string
+          .map {
+            decode[
+              Metadata[
+                Shape,
+                idx.T,
+                T
+              ]
+            ](_): Exception | Metadata[Shape, idx.T, T]
+          }
       }
+      .rethrow
 
     /**
      * To JSON-decode a [[Metadata]], we can mostly use [[circe.auto]], however there is one wrinkle:

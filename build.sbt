@@ -44,7 +44,13 @@ lazy val gcp =
       )
     )
 
-lazy val `circe-utils`   =  cross.in(new File("circe")).settings(dep(circe))
+lazy val `circe-utils` =
+  cross
+    .in(new File("circe"))
+    .settings(
+      dep(circe),
+      buildInfoPackage := "org.lasersonlab.circe_utils"
+    )
 lazy val `circe-utils-x` = `circe-utils`.x
 
 lazy val convert =
@@ -206,7 +212,8 @@ lazy val viewerClient =
           "react"       → "16.5.2",
           "react-dom"   → "16.5.2",
           "react-proxy" →  "1.1.8"
-        )
+        ),
+      //scalacOptions += "-Xlog-implicits"
     )
     .enablePlugins(JS, ScalaJSBundlerPlugin)
     .dependsOn(
@@ -261,11 +268,11 @@ lazy val zarr =
       kindProjector,
       partialUnification,
       excludeFilter in sbt.Test := NothingFilter,
-      (unmanagedResourceDirectories in sbt.Test) += baseDirectory.value / "../shared/src/test/resources"
+      //(unmanagedResourceDirectories in sbt.Test) += baseDirectory.value / "../shared/src/test/resources"
     )
     .jvmSettings(
       dep(
-        hammerlab.paths,
+        //hammerlab.paths,
         "org.lasersonlab" ^ "jblosc" ^ "1.0.1"
       )
     )

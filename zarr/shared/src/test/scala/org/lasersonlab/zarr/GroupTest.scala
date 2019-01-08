@@ -11,7 +11,7 @@ import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Load
 
 class GroupTest
-  extends hammerlab.test.Suite
+  extends hammerlab.Suite
      with HasGetOps
      with Load.syntax
      with zarr.cmp.all

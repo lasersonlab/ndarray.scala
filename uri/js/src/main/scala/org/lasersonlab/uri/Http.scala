@@ -13,7 +13,7 @@ import scala.scalajs.js
 import scala.scalajs.js.typedarray.{ ArrayBuffer, TypedArrayBuffer }
 import scala.util.{ Failure, Try }
 
-case class Http[F[_]: ConcurrentEffect](uri: URI)(
+case class Http[F[_]: Async](uri: URI)(
   implicit
   val config: Config,
   reqConfig: http.Config
@@ -21,7 +21,7 @@ case class Http[F[_]: ConcurrentEffect](uri: URI)(
 extends Uri[F]
    with http.Base[F] {
 
-  val F = ConcurrentEffect[F]
+  val F = Async[F]
 
   type Self = Http[F]
 

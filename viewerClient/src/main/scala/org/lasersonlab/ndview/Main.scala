@@ -1,27 +1,22 @@
 package org.lasersonlab.ndview
 
-import java.net.{ URI, URLDecoder }
+import java.net.URLDecoder
 
-import cats.data.Nested
 import cats.effect.internals.IOContextShift
-import cats.effect.{ ConcurrentEffect, ExitCode, IO, IOApp }
+import cats.effect.{ Async, ExitCode, IO, IOApp }
 import cats.implicits._
-import com.softwaremill.sttp._
-import io.circe.Decoder.Result
-import io.circe.{ Decoder, DecodingFailure, HCursor }
-import org.lasersonlab.uri.Http
-import org.lasersonlab.uri.gcp.{ Auth, GCS }
-import org.scalajs.dom
-import org.scalajs.dom.{ Event, document }
-import org.scalajs.dom.ext.{ Ajax, AjaxException }
-import org.scalajs.dom.raw.HTMLFormElement
+import org.lasersonlab.uri.gcp.{ Auth, GCS, Project, googleapis }
+import org.scalajs.dom.document
+import org.scalajs.dom.ext.AjaxException
+import org.scalajs.dom.raw.{ Event, HTMLFormElement, HTMLInputElement }
+import org.scalajs.dom.window.localStorage
+import slinky.core._
+import slinky.core.annotations.react
 import slinky.web.ReactDOM
 import slinky.web.html._
-import org.scalajs.dom.window.localStorage
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.matching.Regex.Groups
-import scala.util.{ Failure, Success }
 
 object Main
   extends IOApp
@@ -83,28 +78,153 @@ object Main
   implicit val ec = ExecutionContext.global
 
   val credentialsKey = "gcp-credentials"
+  val stateKey = "app-state"
 
   implicit val ctx = IOContextShift.global
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  import io.circe.generic.auto._
+  import io.circe.parser.decode
+  import io.circe.syntax._
 
-    println("client main")
+//  @react class Buckets extends Component {
+//    case
+//  }
 
-    import io.circe.generic.auto._
-    import io.circe.syntax._
-    import io.circe.parser.decode
+  @react class Page extends Component {
+    type Props = Unit
 
-    ReactDOM.render(
-      button(
-        onClick := {
-          _ ⇒ signIn()
-        }
-      )(
-        "sign in"
-      ),
-      document.getElementById("button")
-    )
+    case class State(
+      auth: Auth,
+      project: Option[Project]
+    ) {
+      def projectDisplay = project.fold("")(_.toString)
+    }
 
+    def initialState = State(getAuth, None)
+
+    implicit def auth: Auth = state.auth
+    implicit def projectOpt: Option[Project] = state.project
+
+    override def shouldComponentUpdate(nextProps: Props, nextState: State): Boolean =
+      props != nextProps ||
+      state != nextState
+
+    override def componentWillUpdate(nextProps: Props, nextState: State) = {
+      if (state.project != nextState.project) {
+
+      }
+    }
+
+    def render = {
+      println("render")
+
+//      def readBinary() =
+//        (GCS[IO]("ll-sc-data") / 'hca / "immune-cell-census" / "ica_cord_blood.10x.64m.zarr3" / 'GRCh38 / 'barcodes / 0)
+//          .bytes(0, 2000)
+//          .attempt
+//          .map {
+//            case Right(bytes) ⇒
+//              println(s"test gcs req: ${bytes.take(100).mkString(" ")}")
+//              ExitCode.Success
+//            case Left(e) ⇒
+//              println("gcs bytes err:")
+//              println(e)
+//              e.printStackTrace()
+//              ExitCode.Error
+//          }
+//
+//      def listDir() =
+//        (GCS[IO]("ll-sc-data") / 'hca / "immune-cell-census" / "ica_cord_blood.10x.64m.zarr3" / 'GRCh38)
+//          .list
+//          .map {
+//            files ⇒
+//              files.foreach {
+//                f ⇒
+//                  println(s"found file: $f")
+//              }
+//              ExitCode.Success
+//          }
+
+      div(
+        button(
+          onClick := {
+            _ ⇒ signIn()
+          }
+        )(
+          "sign in"
+        ),
+        input(
+          `type` := "text",
+          placeholder := "project",
+          onBlur := {
+            e: Event ⇒
+              val value =
+                e
+                  .target
+                  .asInstanceOf[HTMLInputElement]
+                  .value
+
+              val project =
+                if (value.nonEmpty)
+                  Some(Project(value))
+                else
+                  None
+
+              println(s"setting project: $project")
+              setState(
+                _.copy(
+                  project = project
+                )
+              )
+          }
+        )
+      )
+    }
+
+//    implicit def reqConfig =
+//      org.lasersonlab.uri.http.Config(
+//        headers = Map("Authorization" → s"Bearer ${auth.token}")
+//      )
+
+//    def buckets: IO[List[Metadata]] =
+//      GCS[IO]("ll-sc-data", Vector("test.txt"))
+
+    override def componentDidMount() = {
+      println("did mount…")
+
+      def readText() =
+        GCS[IO]("ll-sc-data", Vector("test.txt"))
+          .string
+          .attempt
+          .map {
+            case Left(AjaxException(xhr)) if xhr.status == 401 ⇒
+              println("caught 401, sign in again…")
+              signIn()
+              ???
+            case e ⇒ e
+          }
+          .rethrow
+
+      projectOpt.fold {
+        println("no project set…")
+      } {
+        implicit project ⇒
+          googleapis.storage.buckets[IO].unsafeRunAsync {
+            case  Left(e) ⇒ println(s"buckets error: $e")
+            case Right(e) ⇒ println(s"buckets success: $e")
+          }
+      }
+
+//      println("running")
+//      readText().unsafeRunAsync {
+//        case Left(e) ⇒ println(s"run error: $e")
+//        case Right(e) ⇒ println(s"run success: $e")
+//      }
+//      println("ran")
+    }
+  }
+
+  def getAuth: Auth =
     Option(
       localStorage.getItem(credentialsKey)
     )
@@ -127,65 +247,21 @@ object Main
         println(s"no creds; sign in again")
         println(e)
         signIn()
-        IO.pure(ExitCode.Success)
+        ???
       },
-      {
-        auth: Auth ⇒
-          implicit val _auth = auth.copy(project = Some("hca-scale"))
-
-          implicit val reqConfig =
-            org.lasersonlab.uri.http.Config(
-              headers = Map("Authorization" → s"Bearer ${auth.token}")
-            )
-
-          println(s"doing http req…")
-
-          GCS[IO]("ll-sc-data", Vector("test.txt"))
-            .string
-            .attempt
-            .map {
-              case Right(text) ⇒
-                println(s"test gcs req: $text")
-                ExitCode.Success
-              case Left(AjaxException(xhr)) if xhr.status == 401 ⇒
-                println("caught 401, sign in again…")
-                signIn()
-                ???
-              case Left(e) ⇒
-                println("gcs text err")
-                println(e)
-                e.printStackTrace()
-                ExitCode.Error
-            }
-            .flatMap {
-              _ ⇒
-                (GCS[IO]("ll-sc-data") / 'hca / "immune-cell-census" / "ica_cord_blood.10x.64m.zarr3" / 'GRCh38 / 'barcodes / 0)
-                  .bytes(0, 2000)
-                  .attempt
-                  .map {
-                    case Right(bytes) ⇒
-                      println(s"test gcs req: ${bytes.take(100).mkString(" ")}")
-                      ExitCode.Success
-                    case Left(e) ⇒
-                      println("gcs bytes err:")
-                      println(e)
-                      e.printStackTrace()
-                      ExitCode.Error
-                  }
-            }
-            .flatMap {
-              _ ⇒
-                (GCS[IO]("ll-sc-data") / 'hca / "immune-cell-census" / "ica_cord_blood.10x.64m.zarr3" / 'GRCh38)
-                  .list
-            }.map {
-              files ⇒
-                files.foreach {
-                  f ⇒
-                    println(s"found file: $f")
-                }
-                ExitCode.Success
-            }
-      }
+      r ⇒ r
+      //_.copy(project = Some("hca-scale"))
     )
+
+  override def run(args: List[String]): IO[ExitCode] = {
+
+    println("client main")
+
+    ReactDOM.render(
+      Page(()),
+      document.getElementById("root")
+    )
+
+    IO.pure(ExitCode.Success)
   }
 }

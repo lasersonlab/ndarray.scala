@@ -1,7 +1,5 @@
 package org.lasersonlab.zarr
 
-import java.io.IOException
-
 import hammerlab.str._
 import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.io._
@@ -48,8 +46,8 @@ object Group {
     implicit val _basename = Basename[Metadata](basename)
   }
 
-  case class InvalidChild(
-    path: Path,
+  case class InvalidChild[F[_]](
+    path: Path[F],
     arrayError: Exception,
     groupError: Exception
   )
@@ -60,13 +58,13 @@ object Group {
 
   import circe.auto._
 
-  def apply(
-    dir: Path
+  def apply[F[_]: MonadErr](
+    dir: Path[F]
   )(
     implicit
     idx: Idx
   ):
-    Exception | Group[idx.T] =
+    F[Group[idx.T]] =
     for {
       metadata ← dir.load[Metadata]
          attrs ← dir.load[Option[Attrs]]
@@ -75,80 +73,101 @@ object Group {
       groups = Map.newBuilder[String, Group   [idx.T]]
 
       files ←
-        try {
-          Right(
-            dir
-              .list
+        dir
+          .list
+          .map {
+            _
               .filter {
                 _.basename match {
                   case
-                    Metadata.basename |
-                    Attrs.basename ⇒ false
+                    Metadata.basename
+                    |  Attrs.basename ⇒ false
                   case _ ⇒ true
                 }
               }
-          )
-        } catch {
-          case e: IOException ⇒ Left(e)
-        }
+          }
 
-      group ←
+      results ←
         files
           .map {
-            path: Path ⇒
+            path: Path[F] ⇒
               /** First, try to parse as an [[Array]] */
-              Array.?(path)
-              .fold(
-                  arrayError ⇒
-                    /** If that failed, parse as a [[Group]] */
-                    Group(path)
-                      .map {
-                        groups +=
-                          path.basename → _
-                      }
-                    .left
-                    .map {
-                      groupError ⇒
-                        /** [[Array]]- and [[Group]]-parsing both failed */
-                        InvalidChild(
-                          path,
-                          arrayError,
-                          groupError
-                        )
-                    },
-                  array ⇒
-                    Right(
-                      arrays +=
-                        path.basename → array
-                    )
-                )
-          }
-          .toList
-          /**
-           * transpose the per-child [[Either]]s out; the elements themselves were type-less; we accreted [[Group]]s
-           * and [[Array]]s into the builders ([[arrays]], [[groups]]) along the way
-           */
-          .sequence
-          .map {
-            a ⇒
-              Group(
-                arrays.result,
-                groups.result,
-                attrs
+              (
+                path,
+                Array
+                  .?(path)
+                  .attempt
               )
           }
+          .foldLeft(
+            (
+              List[(String, Array.*?[idx.T])](),
+              List[(String, Group   [idx.T])]()
+            )
+            .pure[F]
+          ) {
+            case (results, (path, attempt)) ⇒
+              attempt
+                .flatMap {
+                  attempt ⇒
+                    results
+                      .flatMap {
+                        case (arrays, groups) ⇒
+                          (attempt: Exception | Array.*?[idx.T])
+                            .fold(
+                              (arrayError: Exception) ⇒
+                                /** If parsing as an [[Array]] failed, try parsing as a [[Group]] */
+                                Group(path)
+                                  .map {
+                                    group ⇒
+                                      (
+                                        arrays,
+                                        (path.basename, group) :: groups
+                                      )
+                                  }
+                                  .attempt
+                                  .map {
+                                    _
+                                      .left
+                                      .map[Exception] {
+                                        groupError ⇒
+                                          /** [[Array]]- and [[Group]]-parsing both failed */
+                                          InvalidChild(
+                                            path,
+                                            arrayError,
+                                            groupError
+                                          ): Exception
+                                      }
+                                  }
+                                  .rethrow,
+                              array ⇒
+                                (
+                                  (path.basename, array) :: arrays,
+                                  groups
+                                )
+                                .pure[F]
+                            )
+                      }
+                }
+          }
+
+      (arrays, groups) = results
     } yield
-      group
+      Group(
+        arrays.toMap,
+        groups.toMap,
+        attrs
+      )
 
   implicit def group[Idx](implicit idx: Idx.T[Idx]): Load[Group[Idx]] =
     new Load[Group[Idx]] {
-      def apply(dir: Path): Exception | Group[Idx] =
+      def apply[F[_]: MonadErr](dir: Path[F]): F[Group[Idx]] =
         Group(dir)
     }
 
   implicit def save[Idx: Idx.T]: Save[Group[Idx]] =
     new Save[Group[Idx]] {
-      def direct(t: Group[Idx], dir: Path): Throwable | Unit = {
+      def direct[F[_]: MonadErr](t: Group[Idx], dir: Path[F]): F[Unit] = {
         def groups =
           (
             for {

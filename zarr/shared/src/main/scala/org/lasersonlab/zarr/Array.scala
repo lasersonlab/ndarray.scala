@@ -207,7 +207,7 @@ object Array
       Of[Shape, idx.T, T]
     ] =
     new Load[Of[Shape, idx.T, T]] {
-      def apply(dir: Path): Exception | Of[Shape, idx.T, T] = Array[Shape, T](dir)
+      def apply[F[_]: MonadErr](dir: Path[F]): F[Of[Shape, idx.T, T]] = Array[Shape, F, T](dir).map(a ⇒ a: Of[Shape, idx.T, T])
     }
 
   /**
@@ -239,18 +239,17 @@ object Array
     Array.?[ShapeT, Idx]
   ] =
     new Save[Array.?[ShapeT, Idx]] {
-      def direct(
+      def direct[F[_]: MonadErr](
         _a: Array.?[ShapeT, Idx],
-        dir: Path
+        dir: Path[F]
       ):
-        Throwable |
-        Unit
+        F[Unit]
       = {
         // work around https://github.com/scala/bug/issues/11086; method-params incorrectly considered "unstable"
         val a = _a
         import a._
 
-        def chunkResults: Throwable | Unit = {
+        def chunkResults: F[Unit] = {
           val (_, chunkStrides) = chunkRanges.scanRight(1)(_ * _)
           val chunkSize =
             shape
@@ -286,28 +285,29 @@ object Array
                     .map { _._1 }
 
                 val path = dir / Key(idx)
-                Try {
-                  import java.nio.ByteBuffer._
-                  val datatype = a.metadata.dtype
-                  val buffer = allocate(datatype.size * chunkSize)
-                  chunk
-                    .foldLeft(()) {
-                      (_, elem) ⇒
-                        datatype(buffer, elem)
+                import java.nio.ByteBuffer._
+                val datatype = a.metadata.dtype
+                val buffer = allocate(datatype.size * chunkSize)
+                chunk
+                  .foldLeft(()) {
+                    (_, elem) ⇒
+                      datatype(buffer, elem)
 
-                        ()
-                    }
+                      ()
+                  }
 
-                  val os =
-                    a.metadata.compressor(
-                      path.outputStream(mkdirs = true),
-                      datatype.size
-                    )
+                path
+                  .outputStream
+                  .map {
+                    os ⇒
+                      a.metadata.compressor(
+                        os,
+                        datatype.size
+                      )
 
-                  os.write(buffer.array())
-                  os.close()
-                }
-                .toEither
+                      os.write(buffer.array())
+                      os.close()
+                  }
             }
             .sequence
             .map { _ ⇒ () }

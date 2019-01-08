@@ -1,20 +1,24 @@
 package org.lasersonlab.uri.gcp
 
-import java.time.Instant
 import java.time.Instant.now
 
 import hammerlab.either._
-import hammerlab.option._
 import hammerlab.str._
 
 case class Auth(
   token: String,
   expires: Long,
-  scopes: Seq[String],
-  project: Option[String] = None
+  scopes: Seq[String]
 )
 
 object Auth {
+
+//  case class Response(
+//    access_token: String,
+//    expires: String,
+//    scope: String
+//  )
+
   def fromFragment(map: Map[String, String]): String | Auth = {
     def get(key: String) =
       map
@@ -38,4 +42,9 @@ object Auth {
         scopes
       )
   }
+}
+
+case class Project(token: String) { override def toString: String = token }
+object Project {
+  implicit def unwrap(project: Project): String = project.toString
 }

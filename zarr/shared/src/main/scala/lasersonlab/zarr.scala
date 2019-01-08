@@ -1,5 +1,7 @@
 package lasersonlab
 
+import cats.effect.IO
+import org.lasersonlab.uri.Uri
 import org.lasersonlab.zarr.{ Compressor, utils }
 import org.lasersonlab.zarr.dtype.ByteOrder._
 import org.lasersonlab.{ zarr ⇒ z }
@@ -21,8 +23,8 @@ object zarr
     implicit val zlib = Compressor.ZLib()
   }
 
-  type Path = hammerlab.path.Path
-   val Path = hammerlab.path.Path
+  type Path[F[_]] = Uri[F]
+   val Path    = Uri
 
   type ChunkSize = z.utils.ChunkSize
    val ChunkSize = z.utils.ChunkSize

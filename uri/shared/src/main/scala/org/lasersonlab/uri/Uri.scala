@@ -1,6 +1,6 @@
 package org.lasersonlab.uri
 
-import java.io.{ ByteArrayInputStream, InputStream }
+import java.io.{ ByteArrayInputStream, FileNotFoundException, InputStream, OutputStream }
 import java.net.URI
 import java.nio.ByteBuffer
 import java.util
@@ -63,12 +63,28 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
   def /(name: String): Self
   def /[T](name: T)(implicit s: Segment[T]): Self = /(s(name))
 
+  def ?[T](basename: T)(implicit s: Segment[T]): F[Self] = {
+    val path = this / basename
+    path
+      .exists
+      .map {
+        exists ⇒
+          if (!exists)
+            throw new FileNotFoundException(path.toString)
+          else
+            path
+      }
+  }
+
   val config: Config
   lazy val Config(blockSize, maximumSize, maxNumBlocks) = config
 
   override def toString: String = uri.toString
 
   def exists: F[Boolean]
+
+  def write(s: String): F[Unit] = ???
+  def outputStream: F[OutputStream] = ???
 
   def size: F[Long]
   //def _size: F[Int] = size.flatMap { size ⇒ delay { size.safeInt.getOrThrow } }
@@ -86,12 +102,13 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
       }
 
   def read: F[Array[Byte]] =
-    blocks().map {
-      blocks ⇒
-        val bytes = Array.newBuilder[Byte]
-        blocks.foreach { bytes ++= _ }
-        bytes.result()
-    }
+    blocks()
+      .map {
+        blocks ⇒
+          val bytes = Array.newBuilder[Byte]
+          blocks.foreach { bytes ++= _ }
+          bytes.result()
+      }
 
   def bytes(start: Long, size: Int): F[Array[Byte]]
 
@@ -186,10 +203,12 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
       val fetchSize = blockSize
       logger.debug(s"fetching block $idx")
       val block =
-        bytes(
-          start,
-          fetchSize
-        )
+        size
+          .flatMap {
+            size ⇒
+              val length = math.min(fetchSize, (size - start) toInt)
+              bytes(start, length)
+          }
 
       blocks.put(idx, block)
       block

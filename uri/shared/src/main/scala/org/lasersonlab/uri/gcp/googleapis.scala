@@ -1,10 +1,13 @@
 package org.lasersonlab.uri.gcp
 
+import cats.effect._
+import cats.implicits._
 import com.softwaremill.sttp._
 import io.circe.Decoder.Result
 import io.circe.generic.decoding.DerivedDecoder
-import io.circe.generic.semiauto._
+import io.circe.generic.auto._
 import io.circe.{ Decoder, DecodingFailure, HCursor }
+import org.lasersonlab.uri.Http
 import shapeless.Lazy
 
 object googleapis {
@@ -34,9 +37,12 @@ object googleapis {
       implicit val decoder = kindDecoder[Objects]("storage#objects")
     }
 
+    case class Billing(requesterPays: Boolean = false)
     case class Bucket(
       id: String,
-      requesterPays: Boolean
+      name: String,
+      projectNumber: Long,
+      billing: Billing
     )
     object Bucket {
       implicit val decoder = kindDecoder[Bucket]("storage#bucket")
@@ -46,7 +52,19 @@ object googleapis {
       implicit val decoder = kindDecoder[Buckets]("storage#buckets")
     }
 
-//    object buckets {
+    def buckets[F[_]: ConcurrentEffect](implicit auth: Auth, project: Project) =
+      Http(uri"https://www.googleapis.com/storage/v1/b?project=$project&userProject=$project".toJavaUri)
+        .json[Buckets]
+        .map {
+          case Buckets(items) ⇒
+            items
+            .toList
+            .map {
+              b ⇒
+                GCS[F](b.name)
+            }
+        }
+    //    object buckets {
 //      val base = s"${storage.base}/b"
 //      def list(
 //        project: String,

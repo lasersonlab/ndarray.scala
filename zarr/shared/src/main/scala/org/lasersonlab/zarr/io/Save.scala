@@ -1,21 +1,19 @@
 package org.lasersonlab.zarr.io
 
 import cats.implicits._
-import hammerlab.either._
-import hammerlab.path._
 import io.circe.Encoder
 import lasersonlab.xscala._
+import lasersonlab.zarr.Path
 import magnolia._
-import org.lasersonlab.zarr.Group
+import org.lasersonlab.zarr.{ Group, MonadErr }
 import org.lasersonlab.zarr.circe.auto._
 import org.lasersonlab.zarr.circe.pprint
 
 import scala.language.experimental.macros
-import scala.util.Try
 
 trait Save[T] {
-  def apply(t: T, path: Path): Throwable | Unit = direct(t, path)
-  protected def direct(t: T, dir: Path): Throwable | Unit
+  def apply[F[_]: MonadErr](t: T, path: Path[F]): F[Unit] = direct(t, path)
+  protected def direct[F[_]: MonadErr](t: T, dir: Path[F]): F[Unit]
 }
 
 trait LowPrioritySave
@@ -27,7 +25,7 @@ trait LowPrioritySave
   /** defines equality for this case class in terms of equality for all its parameters */
   def combine[T](ctx: CaseClass[Save, T]): Save[T] =
     new Save[T] {
-      def direct(t: T, dir: Path): Throwable | Unit =
+      def direct[F[_]: MonadErr](t: T, dir: Path[F]): F[Unit] =
         (
           Group.Metadata().save(dir) ::
           ctx
@@ -51,7 +49,7 @@ trait LowPrioritySave
    *  method, we check that the second parameter is the same type. */
   def dispatch[T](ctx: SealedTrait[Save, T]): Save[T] =
     new Save[T] {
-      def direct(t: T, dir: Path): Throwable | Unit =
+      def direct[F[_]: MonadErr](t: T, dir: Path[F]): F[Unit] =
         ctx.dispatch(t) {
           sub ⇒
             sub.typeclass(
@@ -64,8 +62,12 @@ trait LowPrioritySave
   /** binds the Magnolia macro to the `gen` method */
   implicit def gen[T]: Save[T] = macro Magnolia.gen[T]
 
-  def apply[T](fn: (T, Path) ⇒ Throwable | Unit): Save[T] = new Save[T] { def direct(t: T, dir: Path): Throwable | Unit = fn(t, dir) }
-  def as[L, R: Save](fn: L ⇒ R): Save[L] = Save { (t, dir) ⇒ fn(t).save(dir) }
+  //def apply[F[_]: MonadErr, T](fn: (T, Path[F]) ⇒ F[Unit]): Save[T] = new Save[T] { def direct[F[_]: MonadErr](t: T, dir: Path[F]): F[Unit] = fn(t, dir) }
+  def as[F[_]: MonadErr, L, R: Save](fn: L ⇒ R): Save[L] =
+    new Save[L] {
+      def direct[F[_] : MonadErr](t: L, dir: Path[F]): F[Unit] =
+        fn(t).save(dir)
+    }
 }
 
 object Save
@@ -78,29 +80,31 @@ object Save
     encoder: Encoder[T]
   ):
     Save[T] =
-    Save {
-      (t, dir) ⇒
-        Try {
-          val path = dir / basename
-          path.mkdirs
-          path
-            .write(
-              pprint(
-                encoder(t)
-              )
+    new Save[T] {
+      def direct[F[_] : MonadErr](t: T, dir: Path[F]): F[Unit] = {
+        val path = dir / basename
+        path
+          .write(
+            pprint(
+              encoder(t)
             )
-        }
-        .toEither
+          )
+      }
     }
 
   implicit def opt[T](implicit save: Save[T]): Save[Option[T]] =
-    Save {
-      case (Some(t), dir) ⇒ save(t, dir)
-      case _ ⇒ Right(())
+    new Save[Option[T]] {
+      def direct[F[_] : MonadErr](t: Option[T], dir: Path[F]): F[Unit] =
+        t
+          .fold {
+            (()).pure[F]
+          } {
+            save(_, dir)
+          }
     }
 
   implicit class Ops[T](val t: T) extends AnyVal {
-    def save(dir: Path)(implicit save: Save[T]): Throwable | Unit = save(t, dir)
+    def save[F[_]: MonadErr](dir: Path[F])(implicit save: Save[T]): F[Unit] = save(t, dir)
   }
 
   trait syntax {

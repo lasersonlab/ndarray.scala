@@ -3,7 +3,7 @@ package org.lasersonlab.zarr.array
 import org.lasersonlab.zarr._
 import cats.Traverse
 import cats.data.Nested
-import hammerlab.path._
+import lasersonlab.zarr.Path
 import org.lasersonlab.circe.EncoderK
 import org.lasersonlab.ndarray.{ ArrayLike, Indices, Vector }
 import org.lasersonlab.slist.{ Scannable, Zip }
@@ -24,12 +24,13 @@ trait load {
             : Traverse
             : Zip
             : Scannable,
+         F[_]: MonadErr,
        Idx  : Idx.T,
          T,
          A[_]
             : Traverse
   ](
-      dir: Path,
+      dir: Path[F],
     shape: ShapeT[Dimension[Idx]]
   )(
    implicit
@@ -37,53 +38,49 @@ trait load {
      datatype:   DataType[      T],
    compressor: Compressor
   ):
-    Exception |
-    A[
-      Chunk[
-        ShapeT,
-        T
+    F[
+      A[
+        Chunk[
+          ShapeT,
+          T
+        ]
       ]
     ]
   = {
     val sizeHint = shape.foldLeft(1) { _ * _.chunk }
-    for {
-      arr ←
-        indices(
-          shape
-            .map { _.range }
-        )
+    indices(
+      shape
         .map {
-          idx ⇒
-            for {
-              chunkShape ←
-                // chunks in the last "row" of any dimension may be smaller
-                shape
-                  .zip(idx)
-                  .map {
-                    case (Dimension(arr, chunk, _), idx) ⇒
-                      val start = idx * chunk
-                      val end = arr min ((idx + 1) * chunk)
+          _.range
+        }
+    )
+    .map {
+      idx ⇒
+        val chunkShape =
+          // chunks in the last "row" of any dimension may be smaller
+          shape
+            .zip(idx)
+            .map {
+              case (Dimension(arr, chunk, _), idx) ⇒
+                val start = idx * chunk
+                val end = arr min ((idx + 1) * chunk)
 
-                      { end - start } int
-                  }
-                  .sequence
+                { end - start } int
+            }
+            .sequence
+            .fold(throw _, x ⇒ x)
 
-              basename = Key(idx)
+        val basename = Key(idx)
 
-              chunk ←
-                Chunk(
-                  dir / basename,
-                  chunkShape,
-                  idx,
-                  compressor,
-                  sizeHint * datatype.size
-                )
-            } yield
-              chunk
-          }
-          .sequence  // A[Err | Chunk] -> Err | A[Chunk]
-    } yield
-      arr
+        Chunk(
+          dir / basename,
+          chunkShape,
+          idx,
+          compressor,
+          sizeHint * datatype.size
+        )
+    }
+    .sequence  // A[F[Chunk]] -> F[A[Chunk]]
   }
 
   /**
@@ -98,23 +95,25 @@ trait load {
    */
   def apply[
     ShapeT[_],
+         F[_]: MonadErr,
          T
          :  DataType.Decoder
          : FillValue.Decoder
   ](
-    dir: Path
+    dir: Path[F]
   )(
     implicit
      _v: VectorEvidence[ShapeT],
     idx:            Idx
   ):
-    Exception |
-    Aux[
-      ShapeT,
-      idx.T,
-      _v.A,
-      Chunk[ShapeT, ?],
-      T
+    F[
+      Aux[
+        ShapeT,
+        idx.T,
+        _v.A,
+        Chunk[ShapeT, ?],
+        T
+      ]
     ]
   = {
     // HKT-members in method parameters are considered "unstable", so we have to work around it this way (or e.g. pass
@@ -122,39 +121,42 @@ trait load {
     val v = _v
     import v._
     implicit val ev = v.t
-    apply[ShapeT, A, T](dir)
-      .asInstanceOf[
-        Exception |
-        Aux[
-          ShapeT,
-          idx.T,
-          _v.A,  // _v.A isn't recognized as being equal to v.A, due to https://github.com/scala/bug/issues/11086
-          Chunk[ShapeT, ?],
-          T
+    apply[ShapeT, F, A, T](dir)
+      .map {
+        _.asInstanceOf[
+          Aux[
+            ShapeT,
+            idx.T,
+            _v.A,  // _v.A isn't recognized as being equal to v.A, due to https://github.com/scala/bug/issues/11086
+            Chunk[ShapeT, ?],
+            T
+          ]
         ]
-      ]
+      }
   }
 
   def apply[
     ShapeT[_],
+         F[_]: MonadErr,
          A[_],
          T
          :  DataType.Decoder
          : FillValue.Decoder
   ](
-    dir: Path
+    dir: Path[F]
   )(
     implicit
     idx: Idx,
      ev: VectorEvidence.make[ShapeT, A]
   ):
-    Exception |
-    Aux[
-      ShapeT,
-      idx.T,
-      A,
-      Chunk[ShapeT, ?],
-      T
+    F[
+      Aux[
+        ShapeT,
+        idx.T,
+        A,
+        Chunk[ShapeT, ?],
+        T
+      ]
     ]
   = {
     import ev.{ A ⇒ _, _ }
@@ -177,20 +179,21 @@ trait load {
    *
    * Dimensions are loaded as a [[List]], and the element-type is loaded as a type-member ("T")
    */
-  def ?(
-    dir: Path
+  def ?[F[_]: MonadErr](
+    dir: Path[F]
   )(
     implicit
     idx: Idx
   ):
-    Exception |
-    Array.*?[idx.T]
+    F[Array.*?[idx.T]]
   =
-    metadata.?(dir)
+    metadata
+      .?(dir)
       .flatMap {
         metadata ⇒
           apply[
             List,
+            F,
             idx.T,
             Vector.*,
             metadata.T
@@ -208,11 +211,12 @@ trait load {
             : Scannable
             : Zip
             : EncoderK,
+        F[_]: MonadErr,
       Idx  : Idx.T,
         A[_],
         T
   ](
-    dir: Path,
+    dir: Path[F],
     _metadata: Metadata[ShapeT, Idx, T]
   )(
     implicit
@@ -221,16 +225,17 @@ trait load {
          traverse:  Traverse    [A        ],
     traverseShape:  Traverse    [   ShapeT]
   ):
-    Exception |
-    Aux[
-      ShapeT,
-      Idx,
-      A,
-      Chunk[
+    F[
+      Aux[
         ShapeT,
-        ?
-      ],
-      T
+        Idx,
+        A,
+        Chunk[
+          ShapeT,
+          ?
+        ],
+        T
+      ]
     ]
   =
     for {
@@ -238,7 +243,7 @@ trait load {
       _chunks ← {
         implicit val md = _metadata
         import Metadata._
-        chunks[ShapeT, Idx, T, A](
+        chunks[ShapeT, F, Idx, T, A](
           dir,
           _metadata.shape
         )

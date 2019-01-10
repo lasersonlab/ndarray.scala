@@ -3,28 +3,30 @@ package org.lasersonlab
 import java.nio.ByteBuffer
 
 import cats.effect.IO
-import org.lasersonlab.uri.Local
+//import org.lasersonlab.uri.{ FutureCanEq, Local }
 
 import scala.scalajs.js.typedarray.{ ArrayBuffer, Int8Array, Uint8Array }
-import org.scalatest.FunSuite
+//import org.scalatest.FunSuite
 
 import scala.collection.mutable
 import scala.scalajs.js
 
-class Test
-  extends hammerlab.Suite {
-  test("fs") {
-    ==(
-      new String(Local[IO](".gitignore").read.unsafeRunSync()),
-      """*.log
-        |10x_parquet
-        |dependency-reduced-pom.xml
-        |files
-        |metastore_db
-        |target"""
-        .stripMargin
-    )
-//    import scalajs.js.Dynamic.{ global ⇒ g }
+//class Test
+//  extends hammerlab.Suite
+//     with FutureCanEq {
+//  test("fs") {
+//    ==(
+//      Local(".gitignore").string,
+//      """*.log
+//        |10x_parquet
+//        |dependency-reduced-pom.xml
+//        |files
+//        |metastore_db
+//        |target"""
+//        .stripMargin
+//    )
+
+  //    import scalajs.js.Dynamic.{ global ⇒ g }
 //    val fs = g.require("fs")
 //    val f = ".gitignore"
 //    val stat = fs.statSync(f)
@@ -35,5 +37,5 @@ class Test
 //
 //    println(new String(arr.toArray))
     //buffer.asCharBuffer()
-  }
-}
+//  }
+//}

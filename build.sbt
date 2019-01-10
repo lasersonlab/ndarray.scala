@@ -140,12 +140,18 @@ lazy val uri =
 
         sttp,
 
-        "io.github.cquiroz" ^^ "scala-java-time" ^ "2.0.0-M13"
-      )
+        "io.github.cquiroz" ^^ "scala-java-time" ^ "2.0.0-M13",
+        "com.lihaoyi" ^^ "utest" ^ "0.6.6" tests
+      ),
+      testFrameworks += new TestFramework("utest.runner.Framework")
     )
     .jvmSettings(
       http4s.version := "0.19.0",
       dep(
+        "com.typesafe.akka" ^^ "akka-actor" ^ "2.5.19",
+        "com.typesafe.akka" ^^ "akka-stream" ^ "2.5.19",
+        "com.typesafe.akka" ^^ "akka-http" ^ "10.1.7",
+        "com.typesafe.akka" ^^ "akka-http-core" ^ "10.1.7",
         commons.io,
         fs2.io,
         http4s. dsl,
@@ -159,7 +165,7 @@ lazy val uri =
         "biz.enef" ^^ "slogging" ^ "0.6.1",
         scalajs.dom ^ "0.9.6",
         "io.scalajs.npm" ^^ "request" ^ "0.4.2"
-      )
+      ),
     )
 lazy val `uri-x` = uri.x
 

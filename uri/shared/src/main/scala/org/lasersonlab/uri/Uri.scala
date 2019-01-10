@@ -5,7 +5,6 @@ import java.net.URI
 import java.nio.ByteBuffer
 import java.util
 
-import cats.effect.Sync
 import cats.implicits._
 import hammerlab.either._
 import hammerlab.math.utils._
@@ -14,6 +13,9 @@ import io.circe.parser.decode
 import org.lasersonlab.java_io.{ BoundedInputStream, SequenceInputStream }
 import org.lasersonlab.uri.Uri.Segment
 import slogging.LazyLogging
+
+import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.util.Success
 
 case class Config(blockSize: Int, maxBlockCacheSize: Long, maxNumBlocks: Int)
 object Config {
@@ -48,12 +50,13 @@ object Config {
     )
 }
 
-abstract class Uri[F[_]](implicit val sync: Sync[F])
+abstract class Uri()(implicit val ec: ExecutionContext)
   extends LazyLogging {
 
-  type Self <: Uri[F]
+  type F[+T] = Future[T]
+  val F = Future
 
-  @inline def delay[A](thunk: => A): F[A] = sync.delay(thunk)
+  type Self <: Uri
 
   val uri: URI
   def basename = uri.getPath.split("/").last
@@ -87,7 +90,6 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
   def outputStream: F[OutputStream] = ???
 
   def size: F[Long]
-  //def _size: F[Int] = size.flatMap { size ⇒ delay { size.safeInt.getOrThrow } }
 
   def list: F[List[Self]]
 
@@ -96,15 +98,18 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
       .flatMap {
         head ⇒
           if (head.length == blockSize)
-            getBlock(from + 1).map { head :: _ :: Nil }
-          else
-            sync.pure(head :: Nil)
+            blocks(from + 1).map { head :: _ }
+          else {
+            logger.debug(s"$uri: got last block ($from; ${head.length})")
+            (head :: Nil).pure[F]
+          }
       }
 
   def read: F[Array[Byte]] =
     blocks()
       .map {
-        blocks ⇒
+        case block :: Nil ⇒ block
+        case blocks ⇒
           val bytes = Array.newBuilder[Byte]
           blocks.foreach { bytes ++= _ }
           bytes.result()
@@ -144,7 +149,7 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
                   )
               }
           else
-            sync.pure(head)
+            (head: InputStream).pure[F]
       }
   }
 
@@ -182,7 +187,7 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
 
   private val _buffer = ByteBuffer.allocate(blockSize)
 
-  // TODO: this is probably just re-fetching blocks every time / not how you do caching with referential transparency
+  // TODO: this is just re-fetching blocks on every access / not how you do caching with referential transparency
   val blocks =
     new util.LinkedHashMap[Long, F[Array[Byte]]](
       (maximumSize / blockSize).toInt,
@@ -198,22 +203,15 @@ abstract class Uri[F[_]](implicit val sync: Sync[F])
     }
 
   def getBlock(idx: Long): F[Array[Byte]] =
-    if (!blocks.containsKey(idx)) {
-      val start = idx * blockSize
-      val fetchSize = blockSize
-      logger.debug(s"fetching block $idx")
-      val block =
-        size
-          .flatMap {
-            size ⇒
-              val length = math.min(fetchSize, (size - start) toInt)
-              bytes(start, length)
-          }
-
-      blocks.put(idx, block)
-      block
-    } else
-      blocks.get(idx)
+    blocks.get(idx) match {
+      case null ⇒
+        val start = idx * blockSize
+        logger.debug(s"fetching block $idx")
+        val block = bytes(start, blockSize)
+        blocks.put(idx, block)
+        block
+      case block ⇒ block
+    }
 }
 
 object Uri {

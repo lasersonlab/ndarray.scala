@@ -5,28 +5,31 @@ import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Files.newDirectoryStream
 
-import cats.effect.Sync
 import cats.implicits._
 import org.apache.commons.io.IOUtils
 
-case class Local[F[_]: Sync](file: String)(
+import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContext
+import math.min
+
+case class Local(file: String)(
   implicit
-  val config: Config
+  val config: Config,
+  override val ec: ExecutionContext
 )
-extends Uri[F] {
+extends Uri {
   val f = new File(file).getCanonicalFile
   val path = f.toPath
   val  uri = f.toURI
 
-  type Self = Local[F]
+  type Self = Local
 
-  override def /(name: String): Local[F] = Local(s"$file/$name")
+  override def /(name: String): Self = Local(s"$file/$name")
 
-  override def exists: F[Boolean] = delay { Files.exists(path) }
+  override def exists: F[Boolean] = F { Files.exists(path) }
 
-  import scala.collection.JavaConverters._
-  override def list: F[List[Local[F]]] =
-    delay {
+  override def list: F[List[Local]] =
+    F {
       newDirectoryStream(path)
         .asScala
         .map {
@@ -40,20 +43,17 @@ extends Uri[F] {
         .toList
     }
 
-  override def parentOpt: Option[Local[F]] = Option(f.getParent).map(Local[F](_))
+  override def parentOpt: Option[Self] = Option(f.getParent).map(Local(_))
 
   override def bytes(start: Long, size: Int): F[Array[Byte]] =
-    delay {
+    F {
       val ch = Files.newByteChannel(path)
       ch.position(start)
-      val buffer = ByteBuffer.allocate(size)
+      val remaining = min(size, ch.size() - start toInt)
+      val buffer = ByteBuffer.allocate(remaining)
       IOUtils.readFully(ch, buffer)
       buffer.array()
     }
 
-  override def size: F[Long] = delay { new File(uri).length() }
-}
-
-object Local {
-
+  override lazy val size: F[Long] = F { new File(uri).length() }
 }

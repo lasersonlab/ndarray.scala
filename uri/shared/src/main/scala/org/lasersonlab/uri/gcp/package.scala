@@ -2,7 +2,7 @@ package org.lasersonlab.uri
 
 package object gcp {
   implicit def reqConfig(implicit auth: Auth) =
-    http.Config(
+    http.Defaults(
       headers = Map("Authorization" → s"Bearer ${auth.token}")
     )
 

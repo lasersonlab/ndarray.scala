@@ -2,11 +2,11 @@ package org.lasersonlab.uri.gcp
 
 import java.net.URI
 
-import cats.effect._
 import cats.implicits._
 import org.lasersonlab.uri.Uri.Segment
-import org.lasersonlab.uri.gcp.googleapis.storage.Buckets
 import org.lasersonlab.uri.{ Config, Http, Uri, http ⇒ h }
+
+import scala.concurrent.ExecutionContext
 
 case class Metadata(
   id: String,
@@ -19,18 +19,19 @@ object Metadata {
   implicit val decoder = deriveDecoder[Metadata]
 }
 
-case class GCS[F[_]: ConcurrentEffect](
+case class GCS(
   bucket: String,
   path: Vector[String]
 )(
   implicit
   auth: Auth,
   val project: Option[Project],
-  val config: Config
+  val config: Config,
+  httpConfig: h.Config
 )
-extends Uri[F] {
+extends Uri()(httpConfig) {
 
-  type Self = GCS[F]
+  type Self = GCS
 
   val uri =
     if (path.isEmpty)
@@ -43,12 +44,12 @@ extends Uri[F] {
   def objectUrl = uri"https://www.googleapis.com/storage/v1/b/$bucket/o/${path.mkString("/")}?userProject=$project"
   def listUri = uri"https://www.googleapis.com/storage/v1/b/$bucket/o?delimiter=${"/"}&prefix=${path.mkString("", "/", "/")}&userProject=$project"
 
-  override def /(name: String): GCS[F] = GCS(bucket, path :+ name)
+  override def /(name: String): Self = GCS(bucket, path :+ name)
 
   override def exists: F[Boolean] = metadata.attempt.map { _.isRight }
 
   import googleapis.storage
-  override def list: F[List[GCS[F]]] = {
+  override def list: F[List[Self]] = {
     Http(listUri.toJavaUri)
       .json[storage.Objects]
       .map {
@@ -73,7 +74,7 @@ extends Uri[F] {
       }
   }
 
-  override def parentOpt: Option[GCS[F]] =
+  override def parentOpt: Option[Self] =
     path match {
       case Vector() ⇒ None
       case parent :+ _ ⇒ Some(GCS(bucket, parent))
@@ -85,7 +86,7 @@ extends Uri[F] {
     http.json[Metadata]
   }
 
-  lazy val size: F[Long] = metadata.map(_.size)
+  override lazy val size: F[Long] = metadata.map(_.size)
 
   override def bytes(start: Long, size: Int): F[Array[Byte]] =
     Http(objectUrl.param("alt", "media").toJavaUri).bytes(start, size)
@@ -97,18 +98,17 @@ object GCS {
     implicit def fromSegment[T](t: T)(implicit s: Segment[T]): Arg = Arg(s(t))
     implicit def unwrap(arg: Arg): String = arg.toString
   }
-  def apply[
-    F[_]: ConcurrentEffect
-  ](
+  def apply(
     bucket: Arg,
     path: Arg*
   )(
     implicit
     auth: Auth,
     project: Option[Project],
-    config: Config
+    config: Config,
+    httpConfig: h.Config
   ):
-    GCS[F] =
+    GCS =
     GCS(
       bucket,
       path

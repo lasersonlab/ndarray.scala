@@ -209,7 +209,7 @@ object Main
         println("no project set…")
       } {
         implicit project ⇒
-          googleapis.storage.buckets[IO].unsafeRunAsync {
+          googleapis.storage.buckets[IO].map {
             case  Left(e) ⇒ println(s"buckets error: $e")
             case Right(e) ⇒ println(s"buckets success: $e")
           }

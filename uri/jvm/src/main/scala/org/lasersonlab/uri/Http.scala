@@ -3,52 +3,50 @@ package org.lasersonlab.uri
 import java.io.IOException
 import java.net.URI
 
-import cats.effect._
+import akka.http.javadsl.model.headers.ContentLength
+import akka.http.scaladsl.model.HttpHeader.ParsingResult
+import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
+import akka.http.scaladsl.model.HttpMethods.{ GET, HEAD }
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.unmarshalling.Unmarshal
 import cats.implicits._
-import org.http4s.Method.NoBody
-import org.http4s.Method.Semantics.Safe
-import org.http4s._
-import org.http4s.client.blaze._
-import org.http4s.client.dsl.Http4sClientDsl
-import org.http4s.dsl.Http4sDsl
-import org.http4s.headers._
+import org.lasersonlab.uri.http.{ Base, Defaults }
+import org.lasersonlab.{ uri ⇒ u }
 
+import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 
-case class Http[F[_]: ConcurrentEffect](uri: URI)(
+case class Http(uri: URI)(
   implicit
-  val config: Config,
-  reqConfig: http.Config
+  val config: u.Config,
+  defaults: Defaults,
+  httpConfig: http.Config
 )
-extends Uri[F]
-   with http.Base[F]
-   with Http4sDsl[F]
-   with Http4sClientDsl[F] {
+extends Uri()(httpConfig.ec)
+   with Base {
 
   require(uri.getScheme == "http" || uri.getScheme == "https")
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  type Self = Http
 
-  val client = BlazeClientBuilder[F](global).resource.use { sync.pure }
+  implicit val u.http.Config(_, http, mat) = httpConfig
+  implicit override val u.http.Config(ec, _, _) = httpConfig
 
-  type Self = Http[F]
-
-  def make(uri: URI): Http[F] = Http(uri)
+  override def make(uri: URI): Http = Http(uri)
 
   lazy val sizeOpt: F[Try[Long]] =
     request(HEAD) {
       response ⇒
-        delay {
+        F {
           if (response.status.isSuccess)
             Failure(
               new IOException(
-                s"Error (${response.status.code}) from HEAD response for $uri: ${response.status.reason}"
+                s"Error (${response.status.intValue()}) from HEAD response for $uri: ${response.status.reason}"
               )
             )
           else
             response
-              .headers
-              .get(`Content-Length`)
+              .header[ContentLength]
               .fold[Try[Long]](
                 Failure(
                   new IOException(
@@ -69,35 +67,44 @@ extends Uri[F]
       GET,
       "Range" → s"bytes=$start-${start+size-1}"
     ) {
-      _
-        .body
-        .bufferAll
-        .compile
-        .to[Array]
+      response ⇒
+        Unmarshal(response.entity).to[Array[Byte]]
     }
 
-  def request[A](method: Method with Safe with NoBody, headers: (String, String)*)(fn: Response[F] ⇒ F[A]): F[A] =
-    for {
-      uri ←
-        delay[Either[Throwable, org.http4s.Uri]] {
-          org.http4s.Uri.fromString(uri.toString)
-        }
-        .rethrow
-      request ←
-        method(
-          uri,
-          (
-            headers ++ reqConfig.headers
-          )
-          .toList
-          .map {
-            case (k, v) ⇒
-           Header(k, v)
-          }
-          : _*
+  def request[A](method: HttpMethod, headers: (String, String)*)(fn: HttpResponse ⇒ F[A]): F[A] = {
+    headers
+      .map {
+        case (k, v) ⇒
+          HttpHeader.parse(k, v)
+      }
+      .foldRight(
+        (
+          List[HttpHeader](),
+          List[ParsingResult]()
         )
-        client ← client
-      response ← client.fetch[A](request) { fn }
-    } yield
-      response
+      ) {
+        case (result, (headers, errors)) ⇒
+          result match {
+            case Ok(header, Nil) ⇒ (header :: headers, errors)
+            case error ⇒ (headers, error :: errors)
+          }
+      } match {
+      case (_, errors @ error :: _) ⇒
+        Future.failed(
+          new IllegalArgumentException(
+            s"Errors parsing HTTP headers: ${errors.mkString(",")}"
+          )
+        )
+      case (headers, Nil) ⇒
+        val request =
+          HttpRequest(
+            uri = uri.toString,
+            headers = headers
+          )
+
+        http
+          .singleRequest(request)
+          .flatMap(fn)
+    }
+  }
 }

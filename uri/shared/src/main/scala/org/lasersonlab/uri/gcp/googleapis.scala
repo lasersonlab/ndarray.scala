@@ -7,7 +7,7 @@ import io.circe.Decoder.Result
 import io.circe.generic.decoding.DerivedDecoder
 import io.circe.generic.auto._
 import io.circe.{ Decoder, DecodingFailure, HCursor }
-import org.lasersonlab.uri.Http
+import org.lasersonlab.uri.{ http, Http }
 import shapeless.Lazy
 
 object googleapis {
@@ -52,7 +52,7 @@ object googleapis {
       implicit val decoder = kindDecoder[Buckets]("storage#buckets")
     }
 
-    def buckets[F[_]: ConcurrentEffect](implicit auth: Auth, project: Project) =
+    def buckets(implicit auth: Auth, project: Project, httpConfig: http.Config) =
       Http(uri"https://www.googleapis.com/storage/v1/b?project=$project&userProject=$project".toJavaUri)
         .json[Buckets]
         .map {
@@ -61,9 +61,9 @@ object googleapis {
             .toList
             .map {
               b ⇒
-                GCS[F](b.name)
+                GCS(b.name)
             }
-        }
+        }(httpConfig)
     //    object buckets {
 //      val base = s"${storage.base}/b"
 //      def list(

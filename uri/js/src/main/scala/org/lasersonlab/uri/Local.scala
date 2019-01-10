@@ -3,48 +3,51 @@ package org.lasersonlab.uri
 import java.io.IOException
 import java.net.URI
 
-import cats.effect.Sync
+import Local.fs
 
 import scala.collection.generic.CanBuildFrom
+import scala.collection.mutable
+import scala.concurrent.ExecutionContext
 import scala.scalajs.js.typedarray.Int8Array
 
-case class Local[F[_]: Sync](file: String)(
+case class Local(file: String)(
   implicit
-  val config: Config
+  val config: Config,
+  override val ec: ExecutionContext
 )
-extends Uri[F] {
+extends Uri {
 
-  type Self = Local[F]
+  type Self = Local
 
-  import scalajs.js.Dynamic.{ global ⇒ g }
-  val fs = g.require("fs")
-
-  override def /(name: String): Local[F] = Local(s"$file/$name")
+  override def /(name: String): Self = Local(s"$file/$name")
 
   override def exists: F[Boolean] =
-    delay {
+    F {
       fs
         .existsSync(file)
         .asInstanceOf[Boolean]
     }
 
-  implicit def cbfList[From, To]: CanBuildFrom[From, To, List[To]] = ???
+  implicit def cbfList[From, To]: CanBuildFrom[From, To, List[To]] =
+    new CanBuildFrom[From, To, List[To]] {
+      def apply(from: From): mutable.Builder[To, List[To]] = List.newBuilder
+      def apply(): mutable.Builder[To, List[To]] = List.newBuilder
+    }
 
-//  import hammerlab.collection._
-  override def list: F[List[Local[F]]] =
-    delay {
+  override def list: F[List[Self]] =
+    F {
       fs
         .readdirSync
         .asInstanceOf[Array[String]]
         .map[
-          Local[F],
-          List[Local[F]]
+          Self,
+          List[Self]
         ](
           Local(_)
         )
     }
 
-  override def parentOpt: Option[Local[F]] =
+  override def parentOpt: Option[Self] =
     fs
       .realPathSync(file)
       .asInstanceOf[String]
@@ -55,8 +58,9 @@ extends Uri[F] {
     }
 
   lazy val stat = fs.statSync(file)
-  lazy val size =
-    delay {
+
+  override lazy val size =
+    F {
       stat
         .size
         .asInstanceOf[Double]
@@ -66,15 +70,20 @@ extends Uri[F] {
   override val uri: URI = new URI(file)
 
   override def bytes(start: Long, size: Int): F[Array[Byte]] =
-    delay {
+    F {
       val fd = fs.openSync(file, "r")
       val arr = new Int8Array(size)
       val bytesRead = fs.readSync(fd, arr, 0, size, 0).asInstanceOf[Int]
-      if (bytesRead < size)
-        throw new IOException(
-          s"Expected $size bytes from $file, read $bytesRead"
-        )
-
-      arr.toArray
+//      if (bytesRead < size)
+//        throw new IOException(
+//          s"Expected $size bytes from $file, read $bytesRead"
+//        )
+//
+      arr.take(bytesRead).toArray
     }
+}
+
+object Local {
+  import scalajs.js.Dynamic.{ global ⇒ g }
+  val fs = g.require("fs")
 }

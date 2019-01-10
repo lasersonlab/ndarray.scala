@@ -1,10 +1,10 @@
 package org.lasersonlab.uri.http
 
 import scala.concurrent.duration._
-case class Config(
+case class Defaults(
   headers: Map[String, String] = Map.empty,
   timeout: Duration = 30 seconds
 )
-object Config {
-  implicit val default = Config()
+object Defaults {
+  implicit val default = Defaults()
 }

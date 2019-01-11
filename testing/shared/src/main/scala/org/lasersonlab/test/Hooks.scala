@@ -94,5 +94,5 @@ object Hooks {
 }
 
 trait FuturizeHook {
-  implicit def _futurizeHook(fn: () ⇒ Unit)(implicit ec: ExecutionContext): () ⇒ F[Unit] = () ⇒ F { fn }
+  implicit def _futurizeHook(fn: () ⇒ Unit)(implicit ec: ExecutionContext): () ⇒ F[Unit] = () ⇒ F { fn() }
 }

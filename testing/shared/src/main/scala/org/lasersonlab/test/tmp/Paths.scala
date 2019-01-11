@@ -1,7 +1,5 @@
 package org.lasersonlab.test.tmp
 
-import java.nio.file.Files.{ createTempDirectory, createTempFile }
-
 import cats.implicits._
 import org.lasersonlab.test.Hooks.F
 import org.lasersonlab.test.{ AfterAlls, FuturizeHook }
@@ -11,7 +9,8 @@ import utest._
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
-trait Paths {
+trait Paths
+  extends Dirs {
   self: TestSuite with AfterAlls with FuturizeHook ⇒
 
   type Path = Local
@@ -19,21 +18,6 @@ trait Paths {
 
   val files = ArrayBuffer[Path]()
   val  dirs = ArrayBuffer[Path]()
-
-  /**
-   * Create a temporary file and return a [[Path]] to it.
-   */
-  def tmpFile(prefix: String = this.getClass.getSimpleName, suffix: String = ""): Path = {
-    val f = Local(createTempFile(prefix, suffix).toFile)
-    files += f
-    f
-  }
-
-  def tmpDir(prefix: String = this.getClass.getSimpleName): Path = {
-    val f = Local(createTempDirectory(prefix).toFile)
-    dirs += f
-    f
-  }
 
   /**
    * Return a [[Path]] to a temporary file that has not yet been created.

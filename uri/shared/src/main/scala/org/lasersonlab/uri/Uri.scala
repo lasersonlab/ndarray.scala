@@ -88,6 +88,24 @@ abstract class Uri()(implicit val ec: ExecutionContext)
   def write(s: String): F[Unit] = ???
   def outputStream: F[OutputStream] = ???
 
+  def delete: F[Unit] = ???
+  def delete(recursive: Boolean = false): F[Unit] =
+    if (recursive) {
+      list
+        .flatMap {
+          _
+            .map {
+              _.delete(recursive = true)
+            }
+            .toList
+            .sequence
+        }
+        .map {
+          _ ⇒ delete()
+        }
+    } else
+      delete
+
   def size: F[Long]
 
   def list: F[Iterator[Self]]

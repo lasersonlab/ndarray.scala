@@ -1,6 +1,5 @@
 package org.lasersonlab.uri
 
-import java.io.File
 import java.net.URI
 
 import org.lasersonlab.uri.Local.fs
@@ -31,6 +30,8 @@ extends Uri {
       .asInstanceOf[Array[String]]
       .iterator
       .map(Local(_))
+
+  override def delete: F[Unit] = F { fs.deleteSync(str) }
 
   override def parentOpt: Option[Self] =
     fs
@@ -66,6 +67,5 @@ extends Uri {
 object Local {
   import scalajs.js.Dynamic.{ global ⇒ g }
   val fs = g.require("fs")
-  lazy val cwd = g.process.cwd()
-  println(s"cwd: $cwd")
+  lazy val cwd = g.process.cwd().asInstanceOf[String]
 }

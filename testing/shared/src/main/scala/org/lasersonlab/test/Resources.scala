@@ -6,30 +6,8 @@ import java.util.MissingResourceException
 import org.lasersonlab.uri.Local
 
 trait Resources
- extends HasExecutionContext {
-  def resourceDirs(
-    dir: Local = Local(new File(".").getCanonicalFile),
-    maxDepth: Int = 2
-  ):
-    List[Local] =
-    (
-      if (dir / "src" / "test" / "resources" existsSync)
-        List(dir)
-      else
-        Nil
-    ) ++ (
-      if (maxDepth > 0)
-        dir
-          .listSync
-          .flatMap {
-            child ⇒
-              resourceDirs(child, maxDepth - 1)
-          }
-          .toList
-      else
-        Nil
-    )
-
+ extends HasExecutionContext
+    with ResourceDirs {
   /**
    * Override this to configure where tests will look for resources
    *
@@ -42,7 +20,7 @@ trait Resources
 
   def resource(name: String) =
     resourceDirectories
-      .find {
+      .flatMap {
         dir ⇒
           val resource = Local(s"$dir/$name")
           if (resource.existsSync)
@@ -50,6 +28,7 @@ trait Resources
           else
             None
       }
+      .headOption
       .getOrElse {
         throw new MissingResourceException("", getClass.getName, name)
       }

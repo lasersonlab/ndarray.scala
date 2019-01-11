@@ -38,28 +38,7 @@ extends Uri {
       }
       .iterator
 
-  def delete(recursive: Boolean = false): F[Unit] = {
-    if (recursive) {
-      list
-        .flatMap {
-          _
-            .map(
-              p ⇒
-                if (p.isDirectory)
-                  p.delete(recursive = true)
-                else
-                  F { p.file.delete(): Unit }
-            )
-            .toList
-            .sequence
-        }
-        .map {
-          _ ⇒
-            file.delete()
-        }
-    } else
-      F { file.delete() }
-  }
+  override def delete: F[Unit] = F { file.delete() }
 
   override def parentOpt: Option[Self] = Option(file.getParentFile).map(Local(_))
 
@@ -90,4 +69,6 @@ object Local {
     config: Config,
     ec: ExecutionContext
   ): Local = new Local(new File(str).getCanonicalFile)
+
+  lazy val cwd = new File(".").toString
 }

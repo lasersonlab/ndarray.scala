@@ -14,8 +14,7 @@ import org.lasersonlab.java_io.{ BoundedInputStream, SequenceInputStream }
 import org.lasersonlab.uri.Uri.Segment
 import slogging.LazyLogging
 
-import scala.concurrent.{ ExecutionContext, Future, Promise }
-import scala.util.Success
+import scala.concurrent.{ ExecutionContext, Future }
 
 case class Config(blockSize: Int, maxBlockCacheSize: Long, maxNumBlocks: Int)
 object Config {
@@ -91,7 +90,7 @@ abstract class Uri()(implicit val ec: ExecutionContext)
 
   def size: F[Long]
 
-  def list: F[List[Self]]
+  def list: F[Iterator[Self]]
 
   def blocks(from: Int = 0): F[List[Array[Byte]]] =
     getBlock(from)

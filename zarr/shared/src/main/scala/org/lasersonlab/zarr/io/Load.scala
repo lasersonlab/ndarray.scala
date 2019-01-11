@@ -1,20 +1,18 @@
 package org.lasersonlab.zarr.io
 
-import cats.effect.IO
-import cats.{ FlatMap, Monad, Traverse }
 import cats.implicits._
 import hammerlab.either._
 import io.circe.Decoder
 import io.circe.parser.parse
-import lasersonlab.zarr.Path
+import lasersonlab.zarr.{ F, Path }
 import magnolia._
-import org.lasersonlab.zarr.MonadErr
 
 import scala.language.experimental.macros
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.ExecutionContext
 
 trait Load[T] {
-  def apply[F[_]: MonadErr](dir: Path[F]): F[T]
+  def apply(dir: Path)(implicit ec: ExecutionContext): F[T]
 }
 
 trait LowPriorityLoad {
@@ -25,7 +23,7 @@ trait LowPriorityLoad {
   ):
     Load[T] =
     new Load[T] {
-      def apply[F[_]: MonadErr](dir: Path[F]): F[T] =
+      def apply(dir: Path)(implicit ec: ExecutionContext): F[T] =
         (dir ? basename)
           .flatMap {
             _
@@ -33,7 +31,7 @@ trait LowPriorityLoad {
               .map(
                 parse(_)
                   .flatMap {
-                    decoder.decodeJson(_): Exception | T
+                    decoder.decodeJson(_): Throwable | T
                   }
               )
           }
@@ -49,7 +47,7 @@ object Load
   ):
     Load[Option[T]] =
     new Load[Option[T]] {
-      def apply[F[_]: MonadErr](dir: Path[F]): F[Option[T]] = {
+      def apply(dir: Path)(implicit ec: ExecutionContext): F[Option[T]] = {
         val path = dir / basename
         path
           .exists
@@ -64,7 +62,7 @@ object Load
                     parse(_)
                       .flatMap {
                         decoder
-                          .decodeJson(_): Exception | T
+                          .decodeJson(_): Throwable | T
                       }
                       .map { Some(_): Option[T] }
                   }
@@ -79,15 +77,18 @@ object Load
   /** defines equality for this case class in terms of equality for all its parameters */
   def combine[T](ctx: CaseClass[Load, T]): Typeclass[T] =
     new Typeclass[T] {
-      def apply[F[_]: MonadErr](dir: Path[F]) =
+      def apply(dir: Path)(implicit ec: ExecutionContext) =
         ctx
           .parameters
           .toList
           .map {
             param ⇒
-              param.typeclass.apply(
-                dir / param.label
-              ).map(x ⇒ x: Any)
+              param
+                .typeclass
+                .apply(
+                  dir / param.label
+                )
+                .map(x ⇒ x: Any)
           }
           .sequence[F, Any]
           .map {
@@ -96,8 +97,8 @@ object Load
           }
     }
 
-  case class CoproductLoadError         [F[_]](path: Path[F], exceptions: Seq[(String, Exception)]) extends RuntimeException
-  case class CoproductAmbiguousLoadError[F[_]](path: Path[F],    results: Seq[ String            ]) extends RuntimeException
+  case class CoproductLoadError         (path: Path, exceptions: Seq[(String, Throwable)]) extends RuntimeException
+  case class CoproductAmbiguousLoadError(path: Path,    results: Seq[ String            ]) extends RuntimeException
 
   /** choose which equality subtype to defer to
    *
@@ -105,7 +106,7 @@ object Load
    *  method, we check that the second parameter is the same type. */
   def dispatch[T](ctx: SealedTrait[Typeclass, T]): Typeclass[T] =
     new Typeclass[T] {
-      def apply[F[_]: MonadErr](dir: Path[F]): F[T] =
+      def apply(dir: Path)(implicit ec: ExecutionContext): F[T] =
         ctx
           .subtypes
           .map {
@@ -121,7 +122,7 @@ object Load
           }
           .foldLeft(
             (
-              List[(String, Exception)](),
+              List[(String, Throwable)](),
               List[(String,         T)]()
             )
             .pure[F]
@@ -150,10 +151,10 @@ object Load
   /** binds the Magnolia macro to the `gen` method */
   implicit def gen[T]: Typeclass[T] = macro Magnolia.gen[T]
 
-  implicit class Ops[F[_]](val dir: Path[F]) extends AnyVal {
-    def load[T](implicit l: Load[T], F: MonadErr[F]): F[T] = l(dir)
+  implicit class Ops(val dir: Path) extends AnyVal {
+    def load[T](implicit l: Load[T], ec: ExecutionContext): F[T] = l(dir)
   }
   trait syntax {
-    @inline implicit def zarrLoadOps[F[_]](dir: Path[F]) = Ops(dir)
+    @inline implicit def zarrLoadOps(dir: Path)(implicit ec: ExecutionContext) = Ops(dir)
   }
 }

@@ -11,6 +11,8 @@ import org.lasersonlab.slist.{ Scannable, Zip }
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.Chunk.Idx
 
+import scala.concurrent.ExecutionContext
+
 /**
  * A Zarr "chunk" file, represented as a [[Path]] that bytes are lazily loaded from
  *
@@ -117,15 +119,16 @@ object Chunk {
             : Foldable
             : Scannable
             : Zip,
-         F[_]: FlatMap,
          T
             : DataType
   ](
-          path: Path[F],
+          path: Path,
          shape: ShapeT[Idx],
            idx: ShapeT[Idx],
     compressor: Compressor,
       sizeHint: Opt[Int] = None
+  )(
+    implicit ec: ExecutionContext
   ):
     F[Chunk[ShapeT, T]]
   =
@@ -153,14 +156,14 @@ object Chunk {
           }
       }
 
-  implicit def arrayLike[S[_], F[_]]: ArrayLike.Aux[Chunk[S, ?], S] =
+  implicit def arrayLike[S[_]]: ArrayLike.Aux[Chunk[S, ?], S] =
     new ArrayLike[Chunk[S, ?]] {
       type Shape[U] = S[U]
       @inline def shape   (chunk: Chunk[Shape, _]): Shape[Int] = chunk.shape
       @inline def apply[T](chunk: Chunk[Shape, T], idx: S[Int]): T = chunk(idx)
     }
 
-  implicit def foldable[Shape[_], F[_]]: Foldable[Chunk[Shape, ?]] =
+  implicit def foldable[Shape[_]]: Foldable[Chunk[Shape, ?]] =
     new Foldable[Chunk[Shape, ?]] {
       type F[A] = Chunk[Shape, A]
       def foldLeft [A, B](fa: F[A],  b:      B )(f: (B,      A ) ⇒      B ):      B  = fa.foldLeft ( b)(f)

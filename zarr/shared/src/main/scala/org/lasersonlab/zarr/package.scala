@@ -1,13 +1,14 @@
 package org.lasersonlab
 
 import cats.MonadError
-import cats.effect.IO
 import io.circe.generic.AutoDerivation
 import io.circe.{ Parser, ParsingFailure, Printer }
 import org.hammerlab.paths.HasPathOps
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike }
 import org.lasersonlab.uri.Uri
 import org.lasersonlab.zarr.utils.Idx
+
+import scala.concurrent.Future
 
 /**
  * Spec / Format questions:
@@ -42,8 +43,6 @@ package object zarr
 {
 
   type Arr[T] = scala.Array[T]
-  type MonadErr[F[_]] = MonadError[F, Exception]
-
   /**
    * inject a bunch of circe aliases in the package here, otherwise its top-level package `io` conflicts with an
    * eponymous [[zarr]] sub-package
@@ -72,7 +71,9 @@ package object zarr
     val pprint = Printer.spaces4.copy(colonLeft = "").pretty _
   }
 
-  type Path[F[_]] = Uri[F]
+  type F[T] = Future[T]
+  type Path = Uri
+   val Path = Uri
 
   /**
    * Aliases that partially-apply an "index" type ([[Int]] or [[Long]]; see [[Idx]])

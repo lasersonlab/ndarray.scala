@@ -22,15 +22,17 @@ import cats.Functor
 import org.hammerlab.shapeless.instances.InstanceMap
 import org.lasersonlab.commons.IOUtils.toByteArray
 
+import scala.concurrent.ExecutionContext
+
 sealed trait Compressor {
-  def apply[F[_]: Functor](path: Path[F], sizeHint: Opt[Int] = Non): F[Arr[Byte]]
+  def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]]
   def apply(os: OutputStream, itemsize: Int): OutputStream
 }
 object Compressor {
 
   case class ZLib(level: Int = DEFAULT_COMPRESSION)
     extends Compressor {
-    def apply[F[_]: Functor](path: Path[F], sizeHint: Opt[Int] = Non): F[Arr[Byte]] =
+    def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]] =
       path
         .stream()
         .map(new InflaterInputStream(_))
@@ -57,7 +59,7 @@ object Compressor {
 
   case object None
     extends Compressor {
-    def apply[F[_]: Functor](path: Path[F], sizeHint: Opt[Int] = Non): F[Arr[Byte]] = path.read
+    def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]] = path.read
     def apply(os: OutputStream, itemsize: Int): OutputStream = os
   }
 
@@ -86,7 +88,7 @@ object Compressor {
 
     val MAX_BUFFER_SIZE = (1 << 31) - 1
 
-    def apply[F[_]: Functor](path: Path[F], sizeHint: Opt[Int] = Non): F[Arr[Byte]] = {
+    def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]] = {
 
       path.read.map {
         arr ⇒

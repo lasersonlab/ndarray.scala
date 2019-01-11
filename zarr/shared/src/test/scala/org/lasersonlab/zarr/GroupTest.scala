@@ -2,8 +2,8 @@ package org.lasersonlab.zarr
 
 import java.util.Random
 
-import hammerlab.path._
 import lasersonlab.{ zarr ⇒ z }
+import org.lasersonlab.uri.Local
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.GroupTest._
 import org.lasersonlab.zarr.cmp.Cmp
@@ -19,6 +19,7 @@ class GroupTest
      with cmp.path {
 
   import DataType._
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   // set this to `true` to overwrite the existing "expected" data in src/test/resources
   val writeNewExpectedData = false
@@ -105,7 +106,7 @@ class GroupTest
       )
 
     if (writeNewExpectedData)
-      group.save(Path("zarr/shared/src/test/resources/grouptest.zarr")) !
+      group.save(Local("zarr/shared/src/test/resources/grouptest.zarr")) !
     else {
       val actual = tmpPath()
 

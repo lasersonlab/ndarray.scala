@@ -49,13 +49,13 @@ extends Uri()(httpConfig) {
   override def exists: F[Boolean] = metadata.attempt.map { _.isRight }
 
   import googleapis.storage
-  override def list: F[List[Self]] = {
+  override def list: F[Iterator[Self]] = {
     Http(listUri.toJavaUri)
       .json[storage.Objects]
       .map {
         case l @ storage.Objects(dirs, items, _) ⇒
           items
-            .fold[List[Metadata]](Nil)(_.toList)
+            .fold(Iterator[Metadata]())(_.iterator)
             .map {
               m ⇒
                 GCS(bucket, m.name.split("/").toVector)

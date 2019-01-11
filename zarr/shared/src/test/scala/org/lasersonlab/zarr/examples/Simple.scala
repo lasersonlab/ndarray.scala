@@ -11,6 +11,7 @@ object Simple {
   def main(args: Array[String]): Unit = {
 
     import lasersonlab.zarr._  // bring all things zarr into scope
+    import scala.concurrent.ExecutionContext.Implicits.global
 
     // Schema for a type that we will instatiate and then save as a Zarr "group" (a top-level directory with
     // subdirectories for each "array" field

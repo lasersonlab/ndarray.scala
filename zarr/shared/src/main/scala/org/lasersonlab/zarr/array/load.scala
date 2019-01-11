@@ -12,6 +12,8 @@ import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.{ zarr ⇒ z }
 
+import scala.concurrent.ExecutionContext
+
 trait load {
   self: Array.type ⇒
   /**
@@ -24,19 +26,19 @@ trait load {
             : Traverse
             : Zip
             : Scannable,
-         F[_]: MonadErr,
        Idx  : Idx.T,
          T,
          A[_]
             : Traverse
   ](
-      dir: Path[F],
+      dir: Path,
     shape: ShapeT[Dimension[Idx]]
   )(
    implicit
       indices:    Indices[A, ShapeT],
      datatype:   DataType[      T],
-   compressor: Compressor
+   compressor: Compressor,
+           ec: ExecutionContext
   ):
     F[
       A[
@@ -95,16 +97,16 @@ trait load {
    */
   def apply[
     ShapeT[_],
-         F[_]: MonadErr,
          T
          :  DataType.Decoder
          : FillValue.Decoder
   ](
-    dir: Path[F]
+    dir: Path
   )(
     implicit
      _v: VectorEvidence[ShapeT],
-    idx:            Idx
+    idx:            Idx,
+    ec: ExecutionContext
   ):
     F[
       Aux[
@@ -121,7 +123,7 @@ trait load {
     val v = _v
     import v._
     implicit val ev = v.t
-    apply[ShapeT, F, A, T](dir)
+    apply[ShapeT, A, T](dir)
       .map {
         _.asInstanceOf[
           Aux[
@@ -137,17 +139,17 @@ trait load {
 
   def apply[
     ShapeT[_],
-         F[_]: MonadErr,
          A[_],
          T
          :  DataType.Decoder
          : FillValue.Decoder
   ](
-    dir: Path[F]
+    dir: Path
   )(
     implicit
     idx: Idx,
-     ev: VectorEvidence.make[ShapeT, A]
+     ev: VectorEvidence.make[ShapeT, A],
+     ec: ExecutionContext
   ):
     F[
       Aux[
@@ -179,11 +181,12 @@ trait load {
    *
    * Dimensions are loaded as a [[List]], and the element-type is loaded as a type-member ("T")
    */
-  def ?[F[_]: MonadErr](
-    dir: Path[F]
+  def ?(
+    dir: Path
   )(
     implicit
-    idx: Idx
+    idx: Idx,
+    ec: ExecutionContext
   ):
     F[Array.*?[idx.T]]
   =
@@ -193,7 +196,6 @@ trait load {
         metadata ⇒
           apply[
             List,
-            F,
             idx.T,
             Vector.*,
             metadata.T
@@ -211,19 +213,19 @@ trait load {
             : Scannable
             : Zip
             : EncoderK,
-        F[_]: MonadErr,
       Idx  : Idx.T,
         A[_],
         T
   ](
-    dir: Path[F],
+    dir: Path,
     _metadata: Metadata[ShapeT, Idx, T]
   )(
     implicit
           indices:   Indices    [A, ShapeT],
         arrayLike: ArrayLike.Aux[A, ShapeT],
          traverse:  Traverse    [A        ],
-    traverseShape:  Traverse    [   ShapeT]
+    traverseShape:  Traverse    [   ShapeT],
+               ec: ExecutionContext
   ):
     F[
       Aux[
@@ -243,7 +245,7 @@ trait load {
       _chunks ← {
         implicit val md = _metadata
         import Metadata._
-        chunks[ShapeT, F, Idx, T, A](
+        chunks[ShapeT, Idx, T, A](
           dir,
           _metadata.shape
         )

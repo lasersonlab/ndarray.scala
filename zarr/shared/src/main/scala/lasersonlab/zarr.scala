@@ -6,6 +6,8 @@ import org.lasersonlab.zarr.{ Compressor, utils }
 import org.lasersonlab.zarr.dtype.ByteOrder._
 import org.lasersonlab.{ zarr ⇒ z }
 
+import scala.concurrent.Future
+
 object zarr
   extends z.int
      with hammerlab.bytes.syntax
@@ -23,7 +25,8 @@ object zarr
     implicit val zlib = Compressor.ZLib()
   }
 
-  type Path[F[_]] = Uri[F]
+  type F[T] = Future[T]
+  type Path = Uri
    val Path    = Uri
 
   type ChunkSize = z.utils.ChunkSize

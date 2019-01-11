@@ -5,6 +5,8 @@ import org.lasersonlab.zarr.Format._
 import org.lasersonlab.zarr.io._
 import org.lasersonlab.zarr.utils.Idx
 
+import scala.concurrent.ExecutionContext
+
 case class Group[Idx](
   arrays: Map[String, Array.*?[Idx]] =      Map.empty[String, Array.*?[Idx]],
   groups: Map[String, Group   [Idx]] =      Map.empty[String, Group   [Idx]],
@@ -46,10 +48,10 @@ object Group {
     implicit val _basename = Basename[Metadata](basename)
   }
 
-  case class InvalidChild[F[_]](
-    path: Path[F],
-    arrayError: Exception,
-    groupError: Exception
+  case class InvalidChild(
+    path: Path,
+    arrayError: Throwable,
+    groupError: Throwable
   )
   extends Exception(
     s"Path $path:\nNot an array:\n$arrayError\nNot a group:\n$groupError",
@@ -58,19 +60,17 @@ object Group {
 
   import circe.auto._
 
-  def apply[F[_]: MonadErr](
-    dir: Path[F]
+  def apply(
+    dir: Path
   )(
     implicit
-    idx: Idx
+    idx: Idx,
+     ec: ExecutionContext
   ):
     F[Group[idx.T]] =
     for {
       metadata ← dir.load[Metadata]
          attrs ← dir.load[Option[Attrs]]
-
-      arrays = Map.newBuilder[String, Array.*?[idx.T]]
-      groups = Map.newBuilder[String, Group   [idx.T]]
 
       files ←
         dir
@@ -90,7 +90,7 @@ object Group {
       results ←
         files
           .map {
-            path: Path[F] ⇒
+            path: Path ⇒
               /** First, try to parse as an [[Array]] */
               (
                 path,
@@ -113,9 +113,9 @@ object Group {
                     results
                       .flatMap {
                         case (arrays, groups) ⇒
-                          (attempt: Exception | Array.*?[idx.T])
+                          (attempt: Throwable | Array.*?[idx.T])
                             .fold(
-                              (arrayError: Exception) ⇒
+                              (arrayError: Throwable) ⇒
                                 /** If parsing as an [[Array]] failed, try parsing as a [[Group]] */
                                 Group(path)
                                   .map {
@@ -129,14 +129,14 @@ object Group {
                                   .map {
                                     _
                                       .left
-                                      .map[Exception] {
+                                      .map {
                                         groupError ⇒
                                           /** [[Array]]- and [[Group]]-parsing both failed */
                                           InvalidChild(
                                             path,
                                             arrayError,
                                             groupError
-                                          ): Exception
+                                          ): Throwable
                                       }
                                   }
                                   .rethrow,
@@ -161,13 +161,13 @@ object Group {
 
   implicit def group[Idx](implicit idx: Idx.T[Idx]): Load[Group[Idx]] =
     new Load[Group[Idx]] {
-      def apply[F[_]: MonadErr](dir: Path[F]): F[Group[Idx]] =
+      def apply(dir: Path)(implicit ec: ExecutionContext): F[Group[Idx]] =
         Group(dir)
     }
 
   implicit def save[Idx: Idx.T]: Save[Group[Idx]] =
     new Save[Group[Idx]] {
-      def direct[F[_]: MonadErr](t: Group[Idx], dir: Path[F]): F[Unit] = {
+      def direct(t: Group[Idx], dir: Path)(implicit ec: ExecutionContext): F[Unit] = {
         def groups =
           (
             for {

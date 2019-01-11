@@ -8,6 +8,7 @@ import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.{ Load, Save }
 import org.lasersonlab.zarr.utils.Idx
 
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 /**
@@ -201,13 +202,14 @@ object Array
     : FillValue.Decoder
   ](
     implicit
-    idx: Idx
+    idx: Idx,
+    ec: ExecutionContext
   ):
     Load[
       Of[Shape, idx.T, T]
     ] =
     new Load[Of[Shape, idx.T, T]] {
-      def apply[F[_]: MonadErr](dir: Path[F]): F[Of[Shape, idx.T, T]] = Array[Shape, F, T](dir).map(a ⇒ a: Of[Shape, idx.T, T])
+      def apply(dir: Path)(implicit ec: ExecutionContext): F[Of[Shape, idx.T, T]] = Array[Shape, T](dir).map(a ⇒ a: Of[Shape, idx.T, T])
     }
 
   /**
@@ -222,7 +224,8 @@ object Array
     T
   ](
     implicit
-    idx: Idx
+    idx: Idx,
+    ec: ExecutionContext
   ):
     Save[
       Of[ShapeT, idx.T, T]
@@ -234,14 +237,16 @@ object Array
     : EncoderK
     : Scannable,
     Idx: Idx.T
-  ]:
+  ](implicit ec: ExecutionContext):
   Save[
     Array.?[ShapeT, Idx]
   ] =
     new Save[Array.?[ShapeT, Idx]] {
-      def direct[F[_]: MonadErr](
+      def direct(
         _a: Array.?[ShapeT, Idx],
-        dir: Path[F]
+        dir: Path
+      )(
+        implicit ec: ExecutionContext
       ):
         F[Unit]
       = {

@@ -1,7 +1,5 @@
 package org.lasersonlab.uri
 
-import java.util.MissingResourceException
-
 import cats.implicits._
 
 import utest._
@@ -13,8 +11,16 @@ object LocalTest
 
   val tests = Tests{
     'local - {
-      resource("test.txt")
-        .flatMap(_.string)
+      val shared = "shared/src/test/resources/test.txt"
+      val uri = s"uri/$shared"
+      val resource =
+        if (Local(uri).existsSync)
+          Local(uri)
+        else
+          Local(s"../$shared")
+
+      resource
+        .string
         .map {
           actual ⇒
           assert(
@@ -31,23 +37,4 @@ object LocalTest
         }
     }
   }
-
-  def resource(name: String) =
-    build
-      .resourceDirectories
-      .toList
-      .map {
-        dir ⇒
-          Local(s"$dir/$name")
-      }
-      .map(f ⇒ f.exists.map(f → _))
-      .sequence
-      .map {
-        _
-          .find { _._2 }
-          . map { _._1 }
-          .getOrElse {
-            throw new MissingResourceException("", getClass.getName, name)
-          }
-      }
 }

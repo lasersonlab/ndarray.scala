@@ -121,6 +121,18 @@ lazy val slist = cross.settings(
 )
 lazy val `slist-x` = slist.x
 
+lazy val testing =
+  cross
+  .settings(
+    dep(
+      "com.lihaoyi" ^^ "utest" ^ "0.6.6"
+    )
+  )
+  .dependsOn(
+    uri
+  )
+lazy val `testing-x` = testing.x
+
 lazy val uri =
   cross
     .settings(
@@ -161,6 +173,8 @@ lazy val uri =
       )
     )
     .jsSettings(
+      //jsEnv := new org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv(),
+      scalaJSUseMainModuleInitializer := true,
       dep(
         "biz.enef" ^^ "slogging" ^ "0.6.1",
         scalajs.dom ^ "0.9.6",
@@ -300,6 +314,7 @@ lazy val all =
      netcdf,
      singlecell,
     `slist-x`,
+    `testing-x`,
     `uri-x`,
      utils,
     `xscala-x`,

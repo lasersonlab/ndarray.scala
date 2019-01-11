@@ -15,6 +15,8 @@ import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Basename
 import org.lasersonlab.zarr.utils.Idx
 
+import scala.concurrent.ExecutionContext
+
 object metadata {
 
   val basename = ".zarray"
@@ -53,13 +55,13 @@ object metadata {
      * @param dir directory containing `.zarray` metadata file
      * @param idx "index" type to use for dimensions' coordinates
      */
-    def apply[F[_]: MonadErr](dir: Path[F])(implicit idx: Idx): F[?[List, idx.T]] =
+    def apply(dir: Path)(implicit idx: Idx, ec: ExecutionContext): F[?[List, idx.T]] =
       (dir ? basename).flatMap {
         _
           .string
           .map {
             str ⇒
-            decode[metadata.?[List, idx.T]](str): Exception | metadata.?[List, idx.T]
+            decode[metadata.?[List, idx.T]](str): Throwable | metadata.?[List, idx.T]
           }
       }
       .rethrow
@@ -189,15 +191,15 @@ object metadata {
              : Traverse
              : Zip
              : DecoderK,
-         F[_]: MonadErr,
           T
              :  DataType.Decoder
              : FillValue.Decoder,
     ](
-      dir: Path[F]
+      dir: Path
     )(
       implicit
-      idx: Idx
+      idx: Idx,
+      ec: ExecutionContext
     ):
       F[Metadata[Shape, idx.T, T]]
     =
@@ -211,7 +213,7 @@ object metadata {
                 idx.T,
                 T
               ]
-            ](_): Exception | Metadata[Shape, idx.T, T]
+            ](_): Throwable | Metadata[Shape, idx.T, T]
           }
       }
       .rethrow

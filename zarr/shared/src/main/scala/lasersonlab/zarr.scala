@@ -27,7 +27,7 @@ object zarr
 
   type F[T] = Future[T]
   type Path = Uri
-   val Path    = Uri
+   val Path = Uri
 
   type ChunkSize = z.utils.ChunkSize
    val ChunkSize = z.utils.ChunkSize

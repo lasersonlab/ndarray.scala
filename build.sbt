@@ -123,14 +123,17 @@ lazy val `slist-x` = slist.x
 
 lazy val testing =
   cross
-  .settings(
-    dep(
-      "com.lihaoyi" ^^ "utest" ^ "0.6.6"
+    .settings(
+      dep(
+        cats,
+        "com.lihaoyi" ^^ "utest" ^ "0.6.6",
+        hammerlab.test.suite,
+        magnolia
+      )
     )
-  )
-  .dependsOn(
-    uri
-  )
+    .dependsOn(
+      uri
+    )
 lazy val `testing-x` = testing.x
 
 lazy val uri =
@@ -288,11 +291,10 @@ lazy val zarr =
       kindProjector,
       partialUnification,
       excludeFilter in sbt.Test := NothingFilter,
-      //(unmanagedResourceDirectories in sbt.Test) += baseDirectory.value / "../shared/src/test/resources"
+      testFrameworks += new TestFramework("utest.runner.Framework"),
     )
     .jvmSettings(
       dep(
-        //hammerlab.paths,
         "org.lasersonlab" ^ "jblosc" ^ "1.0.1"
       )
     )
@@ -300,6 +302,7 @@ lazy val zarr =
       `circe-utils`,
        ndarray,
          slist,
+       testing % "test->compile",
            uri,
         xscala
     )

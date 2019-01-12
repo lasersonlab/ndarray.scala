@@ -1,18 +1,16 @@
-package org.lasersonlab.zarr.cmp
+package org.lasersonlab.test
 
 import cats.Eq
 import cats.data.{ Ior, NonEmptyList }
 import magnolia._
-import org.hammerlab.{ test ⇒ t }
-import org.scalatest.FunSuite
 
 import scala.language.experimental.macros
 
 /**
- * Wrapper for [[t.Cmp]] that uses [[magnolia]] derivation
+ * Custom comparators that use [[magnolia]] derivation
  *
  * - works around https://github.com/milessabin/shapeless/issues/868
- * - loses type-level [[Diff]]-type propagation: Magnolia derivation doesn't allow for supporting them
+ * - loses type-level `Diff`-type propagation: Magnolia derivation doesn't allow for supporting them
  */
 trait Cmp[T] {
   type Diff
@@ -121,17 +119,17 @@ object Cmp {
         )
     }
 
-  trait syntax {
-    self: FunSuite ⇒
-    def eqv[T](l: T, r: T)(implicit ceq: Cmp[T]) =
-      ceq(l, r)
-        .foreach {
-          d ⇒
-            fail(d.toString)
-        }
-  }
+//  trait syntax {
+//    self: FunSuite ⇒
+//    def eqv[T](l: T, r: T)(implicit ceq: Cmp[T]) =
+//      ceq(l, r)
+//        .foreach {
+//          d ⇒
+//            fail(d.toString)
+//        }
+//  }
 
-  trait ops {
-    def cmp[T](l: T, r: T)(implicit cmp: Cmp[T]): Option[cmp.Diff] = cmp(l, r)
-  }
+//  trait ops {
+//    def cmp[T](l: T, r: T)(implicit cmp: Cmp[T]): Option[cmp.Diff] = cmp(l, r)
+//  }
 }

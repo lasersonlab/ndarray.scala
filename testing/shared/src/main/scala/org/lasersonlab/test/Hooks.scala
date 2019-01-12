@@ -1,11 +1,11 @@
 package org.lasersonlab.test
 
+import cats.implicits._
+import lasersonlab.future.F
 import utest.TestSuite
 
-import cats.implicits._
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{ ExecutionContext, Future }
-import Hooks.F
+import scala.concurrent.ExecutionContext
 
 trait HasExecutionContext {
   implicit def ec: ExecutionContext
@@ -38,12 +38,11 @@ trait AfterAlls
      with Afters
      with HasExecutionContext
 {
-  protected val afterAlls = ArrayBuffer[() ⇒ F[Unit]]()
-  def afterAll(fn: ⇒ F[Unit]): Unit = afterAlls += (() ⇒ fn)
-  var afterAllResult: Future[Unit] = _
+  protected val afterAlls = ArrayBuffer[() ⇒ Unit]()
+  def afterAll(fn: ⇒ Unit): Unit = afterAlls += (() ⇒ fn)
   final override def utestAfterAll(): Unit = {
-     super.utestAfterAll()
-    afterAllResult = afterAlls.map(_()).toList.sequence.map { _ ⇒ () }
+    super.utestAfterAll()
+    afterAlls.foreach(_())
   }
 }
 
@@ -76,21 +75,13 @@ self: TestSuite ⇒
         .sequence
       result ← runBody
       allAfters ←
-        (
-          afterAllResult ::
-          afters
-            .map(_())
-            .toList
-        )
+        afters
+          .map(_())
+          .toList
         .sequence
     } yield
       result
   }
-}
-
-object Hooks {
-  type F[T] = Future[T]
-   val F    = Future
 }
 
 trait FuturizeHook {

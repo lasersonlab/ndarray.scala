@@ -18,7 +18,6 @@ import org.blosc.JBlosc._
 import shapeless.the
 import Runtime.getRuntime
 
-import cats.Functor
 import org.hammerlab.shapeless.instances.InstanceMap
 import org.lasersonlab.commons.IOUtils.toByteArray
 

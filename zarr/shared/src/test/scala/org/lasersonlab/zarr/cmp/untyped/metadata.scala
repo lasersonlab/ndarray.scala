@@ -4,9 +4,9 @@ import cats.Traverse
 import cats.implicits._
 import hammerlab.either._
 import hammerlab.option._
+import org.lasersonlab.test.Cmp
 import org.lasersonlab.zarr.FillValue.NonNull
 import org.lasersonlab.zarr.array.{ metadata ⇒ md }
-import org.lasersonlab.zarr.cmp.Cmp
 import org.lasersonlab.zarr.dtype._
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.{ Dimension, FillValue, Metadata, dtype }

@@ -12,6 +12,10 @@ object Simple {
 
     import lasersonlab.zarr._  // bring all things zarr into scope
     import scala.concurrent.ExecutionContext.Implicits.global
+    import scala.concurrent.duration._
+    import scala.concurrent._
+
+    def get[T](f: Future[T]): T = Await.result(f, 10 seconds)
 
     // Schema for a type that we will instatiate and then save as a Zarr "group" (a top-level directory with
     // subdirectories for each "array" field
@@ -43,7 +47,7 @@ object Simple {
     }
 
     {
-      val foo = Path("foo").load[Foo].right.get
+      val foo = get(Path("foo").load[Foo])
       println(foo.ints.foldLeft(0)(_ + _))
       val ints = foo.ints.t.toList
       println(ints.take(100))
@@ -51,7 +55,7 @@ object Simple {
     }
 
     {
-      val foo = Path("foo.1m").load[Foo].right.get
+      val foo = get(Path("foo.1m").load[Foo])
       println(foo.ints.foldLeft(0)(_ + _))
       val ints = foo.ints.t.toList
       println(ints.take(100))

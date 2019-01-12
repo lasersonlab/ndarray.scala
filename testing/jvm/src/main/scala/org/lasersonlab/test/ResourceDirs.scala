@@ -8,15 +8,11 @@ trait ResourceDirs
     dir: Local = Local(Local.cwd)
   ):
     List[Local] =
-    (
-      if (dir / "src" / "test" / "resources" existsSync)
-        List(dir)
-      else
-        Nil
-    ) ++ (
-      if (dir.parent / "shared" / "src" / "test" / "resources" existsSync)
-        List(dir.parent / "shared")
-      else
-        Nil
+    List(
+      dir / "src" / "test" / "resources",
+      dir.parent / "shared" / "src" / "test" / "resources"
     )
+    .filter {
+      _ existsSync
+    }
 }

@@ -1,6 +1,6 @@
 package org.lasersonlab.uri
 
-import java.io.File
+import java.io.{ File, FileOutputStream, OutputStream }
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Files.newDirectoryStream
@@ -23,13 +23,15 @@ extends Uri {
 
   type Self = Local
 
+  override def toString: String = file.toString
+
   override def /(name: String): Self = Local(new File(file, name))
 
   override def exists: F[Boolean] = F { existsSync }
   def existsSync: Boolean = Files.exists(path)
 
-  override def list: F[Iterator[Local]] = F { listSync }
-  def listSync: Iterator[Local] =
+  override def children: F[Iterator[Local]] = F {childrenSync }
+  def childrenSync: Iterator[Local] =
     newDirectoryStream(path)
       .asScala
       .map {
@@ -38,7 +40,30 @@ extends Uri {
       }
       .iterator
 
+  def isDirectory: Boolean = file.isDirectory
+
   override def delete: F[Unit] = F { file.delete() }
+  def deleteSync(recursive: Boolean = false): Unit = {
+    if (recursive && isDirectory)
+      childrenSync
+        .foreach {
+          _.deleteSync(recursive = true)
+        }
+
+    file.delete()
+  }
+
+  override def outputStream: OutputStream = {
+    val parent = this.parent
+    if (!parent.existsSync) {
+      logger.info(s"Making intermediate directories: $parent")
+      Files.createDirectories(parent.file.toPath)
+    }
+    assert(parent.existsSync)
+    logger.info(s"Parent exists: $parent")
+
+    new FileOutputStream(file)
+  }
 
   override def parentOpt: Option[Self] = Option(file.getParentFile).map(Local(_))
 

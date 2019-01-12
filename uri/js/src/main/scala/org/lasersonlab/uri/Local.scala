@@ -1,10 +1,12 @@
 package org.lasersonlab.uri
 
+import java.io.OutputStream
 import java.net.URI
 
 import org.lasersonlab.uri.Local.fs
 
 import scala.concurrent.ExecutionContext
+import scala.scalajs.js.Dictionary
 import scala.scalajs.js.typedarray.Int8Array
 
 case class Local(str: String)(
@@ -23,13 +25,42 @@ extends Uri {
       .existsSync(str)
       .asInstanceOf[Boolean]
 
-  override def list: F[Iterator[Local]] = F { listSync }
+  def isDirectory: Boolean = stat.isDirectory.asInstanceOf[Boolean]
+
+  override def children: F[Iterator[Local]] = F { listSync }
   def listSync: Iterator[Local] =
     fs
       .readdirSync
       .asInstanceOf[Array[String]]
       .iterator
       .map(Local(_))
+
+
+  override def outputStream: OutputStream = {
+    val parent = this.parent
+
+    if (!parent.existsSync)
+      fs.mkdirSync(
+        parent.str,
+        Dictionary("recursive" → true)
+      )
+
+    new OutputStream {
+      val fd =
+        fs.openSync(
+          str,
+          "w"
+        )
+
+      import scala.scalajs.js.typedarray._
+
+      override def write(b: Int): Unit = write(Array(b.toByte))
+      override def write(b: Array[Byte]): Unit = fs.writeSync(fd, b.toTypedArray.buffer)
+      override def write(b: Array[Byte], off: Int, len: Int): Unit = write(b.slice(off, off + len))
+      override def flush(): Unit = super.flush()
+      override def close(): Unit = fs.closeSync(fd)
+    }
+  }
 
   override def delete: F[Unit] = F { fs.deleteSync(str) }
 

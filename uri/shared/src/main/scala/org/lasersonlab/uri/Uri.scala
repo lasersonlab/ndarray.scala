@@ -8,15 +8,20 @@ import java.util
 import cats.implicits._
 import hammerlab.either._
 import hammerlab.math.utils._
-import io.circe.Decoder
-import io.circe.parser.decode
+import _root_.io.circe.Decoder
+import _root_.io.circe.parser.decode
 import org.lasersonlab.java_io.{ BoundedInputStream, SequenceInputStream }
 import org.lasersonlab.uri.Uri.Segment
+//import org.lasersonlab.uri.io.OutputStream
 import slogging.LazyLogging
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.ExecutionContext
 
-case class Config(blockSize: Int, maxBlockCacheSize: Long, maxNumBlocks: Int)
+case class Config(
+  blockSize: Int,
+  maxBlockCacheSize: Long,
+  maxNumBlocks: Int
+)
 object Config {
   case class BlockSize(value: Int)
   case class MaxCacheSize(value: Long)
@@ -50,10 +55,8 @@ object Config {
 }
 
 abstract class Uri()(implicit val ec: ExecutionContext)
-  extends LazyLogging {
-
-  type F[+T] = Future[T]
-  val F = Future
+  extends LazyLogging
+     with lasersonlab.future {
 
   type Self <: Uri
 
@@ -84,22 +87,30 @@ abstract class Uri()(implicit val ec: ExecutionContext)
   override def toString: String = uri.toString
 
   def exists: F[Boolean]
+  def isDirectory: Boolean
 
-  def write(s: String): F[Unit] = ???
-  def outputStream: F[OutputStream] = ???
+  def write(s: String): F[Unit] = write(s.getBytes())
+
+  def write(bytes: Array[Byte]): F[Unit] = F {
+    val os = outputStream
+    os.write(bytes)
+    os.close()
+  }
+
+  def outputStream: OutputStream = ???  // TODO: remove these defaults
 
   def delete: F[Unit] = ???
   def delete(recursive: Boolean = false): F[Unit] =
     if (recursive) {
-      list
+      children
         .flatMap {
-          _
-            .map {
-              _.delete(recursive = true)
-            }
-            .toList
-            .sequence
-        }
+            _
+              .map {
+                _.delete(recursive = true)
+              }
+              .toList
+              .sequence
+          }
         .map {
           _ ⇒ delete()
         }
@@ -108,7 +119,8 @@ abstract class Uri()(implicit val ec: ExecutionContext)
 
   def size: F[Long]
 
-  def list: F[Iterator[Self]]
+  def list: F[List[Self]] = children.map(_.toList)
+  def children: F[Iterator[Self]]
 
   def blocks(from: Int = 0): F[List[Array[Byte]]] =
     getBlock(from)
@@ -240,4 +252,5 @@ object Uri {
     implicit val sym: Segment[Symbol] = _.name
     implicit val int: Segment[   Int] = _.toString
   }
+  def apply(str: String)(implicit ec: ExecutionContext): Local = Local(str)
 }

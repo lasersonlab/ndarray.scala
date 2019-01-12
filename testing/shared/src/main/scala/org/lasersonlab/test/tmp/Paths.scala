@@ -1,7 +1,6 @@
 package org.lasersonlab.test.tmp
 
 import cats.implicits._
-import org.lasersonlab.test.Hooks.F
 import org.lasersonlab.test.{ AfterAlls, FuturizeHook }
 import org.lasersonlab.uri.Local
 import utest._
@@ -29,12 +28,7 @@ trait Paths
   def tmpPath(basename: String): Path = tmpDir() / basename
 
   afterAll {
-    (
-      files.map(f ⇒ if (f.existsSync) f.delete(    ) else F { () }) ++
-       dirs.map(d ⇒ if (d.existsSync) d.delete(true) else F { () })
-    )
-    .toList
-    .sequence
-    .map { _ ⇒ () }
+    files.foreach(f ⇒ if (f.existsSync) f.deleteSync(    ))
+     dirs.foreach(d ⇒ if (d.existsSync) d.deleteSync(true))
   }
 }

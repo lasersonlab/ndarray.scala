@@ -1,7 +1,8 @@
 package org.lasersonlab.zarr.cmp
 
+import org.lasersonlab.test.Cmp
 import org.lasersonlab.zarr.Dimension
-import Cmp.by
+import org.lasersonlab.test.Cmp.by
 
 object dimension {
   trait cmp {

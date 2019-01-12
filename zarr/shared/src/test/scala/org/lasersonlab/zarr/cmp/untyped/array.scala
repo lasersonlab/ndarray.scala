@@ -3,7 +3,7 @@ package org.lasersonlab.zarr.cmp.untyped
 import cats.Traverse
 import cats.implicits._
 import hammerlab.either._
-import org.lasersonlab.zarr.cmp.Cmp
+import org.lasersonlab.test.Cmp
 import org.lasersonlab.zarr.cmp.untyped.array.ElemsDiff.{ Index, Sizes }
 import org.lasersonlab.zarr.utils.Idx
 import org.lasersonlab.zarr.{ Array, Attrs, Dimension, Metadata }

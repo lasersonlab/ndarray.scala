@@ -1,5 +1,7 @@
 package org.lasersonlab.zarr
 
+import java.io.ByteArrayOutputStream
+
 import cats.{ Eval, Foldable, Traverse }
 import org.lasersonlab.circe.EncoderK
 import org.lasersonlab.ndarray.Vector
@@ -301,18 +303,18 @@ object Array
                       ()
                   }
 
-                path
-                  .outputStream
-                  .map {
-                    os ⇒
-                      a.metadata.compressor(
-                        os,
-                        datatype.size
-                      )
+                val baos = new ByteArrayOutputStream()
 
-                      os.write(buffer.array())
-                      os.close()
-                  }
+                val os =
+                  a.metadata.compressor(
+                    baos,
+                    datatype.size
+                  )
+
+                os.write(buffer.array())
+                os.close()
+
+                path.write(baos.toByteArray)
             }
             .sequence
             .map { _ ⇒ () }

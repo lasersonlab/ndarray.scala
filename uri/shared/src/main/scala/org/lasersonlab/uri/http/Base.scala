@@ -22,5 +22,7 @@ trait Base {
 
   override def /(name: String): Self = make(uri.resolve(name))
 
-  override def list: F[Iterator[Self]] = throw new UnsupportedOperationException(s"Can't list HTTP URIs")
+  override def children: F[Iterator[Self]] = throw new UnsupportedOperationException(s"Can't list HTTP URIs")
+
+  override def isDirectory: Boolean = uri.toString.endsWith("/")
 }

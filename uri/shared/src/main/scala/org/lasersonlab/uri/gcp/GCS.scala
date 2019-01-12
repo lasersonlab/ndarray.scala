@@ -6,19 +6,6 @@ import cats.implicits._
 import org.lasersonlab.uri.Uri.Segment
 import org.lasersonlab.uri.{ Config, Http, Uri, http ⇒ h }
 
-import scala.concurrent.ExecutionContext
-
-case class Metadata(
-  id: String,
-  name: String,
-  size: Long,
-  md5Hash: String
-)
-object Metadata {
-  import io.circe.generic.semiauto._
-  implicit val decoder = deriveDecoder[Metadata]
-}
-
 case class GCS(
   bucket: String,
   path: Vector[String]
@@ -48,8 +35,11 @@ extends Uri()(httpConfig) {
 
   override def exists: F[Boolean] = metadata.attempt.map { _.isRight }
 
+  override def isDirectory: Boolean = uri.toString.endsWith("/")
+
   import googleapis.storage
-  override def list: F[Iterator[Self]] = {
+
+  override def children: F[Iterator[Self]] = {
     Http(listUri.toJavaUri)
       .json[storage.Objects]
       .map {

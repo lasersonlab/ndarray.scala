@@ -74,8 +74,8 @@ object Group {
 
       files ←
         dir
-          .list
-          .map {
+        .children
+        .map {
             _
               .filter {
                 _.basename match {

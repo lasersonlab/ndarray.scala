@@ -1,6 +1,5 @@
 package org.lasersonlab.test
 
-import java.io.File
 import java.util.MissingResourceException
 
 import org.lasersonlab.uri.Local
@@ -18,18 +17,24 @@ trait Resources
    */
   def resourceDirectories = resourceDirs()
 
-  def resource(name: String) =
+  def resource(name: String): Local =
     resourceDirectories
       .flatMap {
         dir ⇒
           val resource = Local(s"$dir/$name")
           if (resource.existsSync)
             Some(resource)
-          else
+          else {
+            println(s"Didn't find resource: $dir/$name")
             None
+          }
       }
       .headOption
       .getOrElse {
-        throw new MissingResourceException("", getClass.getName, name)
+        throw new MissingResourceException(
+          s"No resource $name found in directories: ${resourceDirectories.mkString(",")}",
+          getClass.getName,
+          name
+        )
       }
 }

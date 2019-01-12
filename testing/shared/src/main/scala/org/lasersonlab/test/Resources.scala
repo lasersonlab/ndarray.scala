@@ -21,7 +21,7 @@ trait Resources
     resourceDirectories
       .flatMap {
         dir ⇒
-          val resource = Local(s"$dir/$name")
+          val resource = dir / name
           if (resource.existsSync)
             Some(resource)
           else

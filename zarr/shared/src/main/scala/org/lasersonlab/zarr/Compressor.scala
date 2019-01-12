@@ -14,13 +14,13 @@ import caseapp.core.argparser.{ ArgParser, SimpleArgParser }
 import hammerlab.option._
 import org.blosc.JBlosc
 import org.blosc.JBlosc._
-import org.lasersonlab.zlib.{ Inflater, Deflater }
+import org.lasersonlab.zlib.{ Deflater, Inflater }
 import shapeless.the
 import Runtime.getRuntime
 
 import org.hammerlab.shapeless.instances.InstanceMap
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ ExecutionContext, Future }
 
 sealed trait Compressor {
   def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]]
@@ -31,7 +31,9 @@ object Compressor {
   case class ZLib(level: Int = DEFAULT_COMPRESSION)
     extends Compressor {
     def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]] =
-      path.read.map(Inflater(_))
+      path.read.map(Inflater(_)).recoverWith {
+        case e ⇒ Future.failed(new IOException(s"Failed to inflate: $path", e))
+      }
 
     val deflater = Deflater(level)
     override def compress(in: Arr[Byte], itemsize: Int): Arr[Byte] = deflater(in)

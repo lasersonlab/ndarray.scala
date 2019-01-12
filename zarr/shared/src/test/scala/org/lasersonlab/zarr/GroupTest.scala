@@ -21,10 +21,16 @@ object GroupTest
 {
   import DataType._
 
+  import threads.single
+
   // set this to `true` to overwrite the existing "expected" data in src/test/resources
   val writeNewExpectedData = false
 
-  override lazy val resourceDirectories: List[Local] = (Local.cwd / "zarr" / "shared" / "src" / "test" / "resources") :: Nil
+  import hammerlab.scalajs._
+  override lazy val resourceDirectories: List[Local] =
+    (
+      (Local.cwd.parent js_? (Local.cwd / "zarr")) / "shared" / "src" / "test" / "resources"
+    ) :: Nil
 
   val bytes =
     for {

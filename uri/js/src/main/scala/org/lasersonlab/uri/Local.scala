@@ -3,7 +3,7 @@ package org.lasersonlab.uri
 import java.io.OutputStream
 import java.net.URI
 
-import org.lasersonlab.uri.Local.fs
+import org.lasersonlab.uri.Local.{ fs, path }
 
 import scala.concurrent.ExecutionContext
 import scala.scalajs.js.Dictionary
@@ -25,25 +25,33 @@ extends Uri {
       .existsSync(str)
       .asInstanceOf[Boolean]
 
-  def isDirectory: Boolean = stat.isDirectory.asInstanceOf[Boolean]
+  def isDirectory: Boolean = stat.isDirectory().asInstanceOf[Boolean]
 
-  override def children: F[Iterator[Local]] = F {childrenSync }
+  override def children: F[Iterator[Local]] = F { childrenSync }
   def childrenSync: Iterator[Local] =
-    fs
-      .readdirSync
-      .asInstanceOf[Array[String]]
-      .iterator
-      .map(Local(_))
+    if (!existsSync || !isDirectory)
+      Iterator()
+    else {
+      val result =
+      fs
+        .readdirSync(str)
 
+      result
+        .asInstanceOf[scalajs.js.Array[String]]
+        .toArray
+        .iterator
+        .map(base ⇒ Local(s"$str/$base"))
+    }
 
   override def outputStream: OutputStream = {
     val parent = this.parent
 
-    if (!parent.existsSync)
+    if (!parent.existsSync) {
       fs.mkdirSync(
         parent.str,
         Dictionary("recursive" → true)
       )
+    }
 
     new OutputStream {
       val fd =
@@ -63,26 +71,37 @@ extends Uri {
   }
 
   override def delete: F[Unit] = F { deleteSync() }
-  def deleteSync(): Unit = fs.deleteSync(str)
+  def deleteSync(): Unit =
+    if (isDirectory)
+      fs.rmdirSync(str)
+    else
+      fs.unlinkSync(str)
   def deleteSync(recursive: Boolean): Unit = {
     if (recursive && isDirectory)
       childrenSync
-      .foreach {
-        _.deleteSync(recursive = true)
-      }
+        .foreach {
+          _.deleteSync(recursive = true)
+        }
 
     deleteSync()
   }
 
   override def parentOpt: Option[Self] =
-    fs
-      .realPathSync(str)
-      .asInstanceOf[String]
-      .split("/")
-      .toVector match {
-      case Vector() ⇒ None
-      case parent :+ _ ⇒ Some(Local(parent.mkString("/")))
-    }
+    if (!existsSync) {
+      val parent = path.dirname(path.normalize(str)).asInstanceOf[String]
+      if (parent == str)
+        None
+      else
+        Some(Local(parent))
+    } else
+      fs
+        .realpathSync(str)
+        .asInstanceOf[String]
+        .split("/")
+        .toVector match {
+          case Vector() ⇒ None
+          case parent :+ _ ⇒ Some(Local(parent.mkString("/")))
+        }
 
   lazy val stat = fs.statSync(str)
 
@@ -108,5 +127,6 @@ extends Uri {
 object Local {
   import scalajs.js.Dynamic.{ global ⇒ g }
   val fs = g.require("fs")
-  lazy val cwd = g.process.cwd().asInstanceOf[String]
+  val path = g.require("path")
+  def cwd(implicit ec: ExecutionContext) = Local(g.process.cwd().asInstanceOf[String])
 }

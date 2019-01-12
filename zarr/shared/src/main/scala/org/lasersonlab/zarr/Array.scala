@@ -303,18 +303,13 @@ object Array
                       ()
                   }
 
-                val baos = new ByteArrayOutputStream()
-
-                val os =
-                  a.metadata.compressor(
-                    baos,
+                val compressed =
+                  a.metadata.compressor.compress(
+                    buffer.array(),
                     datatype.size
                   )
 
-                os.write(buffer.array())
-                os.close()
-
-                path.write(baos.toByteArray)
+                path.write(compressed)
             }
             .sequence
             .map { _ ⇒ () }

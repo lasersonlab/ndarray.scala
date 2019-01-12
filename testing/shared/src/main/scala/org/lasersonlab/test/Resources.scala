@@ -15,7 +15,7 @@ trait Resources
    *
    * False-positives from having other modules' resources on the classpath shouldn't be a problem, in most cases 🤞.
    */
-  def resourceDirectories = resourceDirs()
+  lazy val resourceDirectories: List[Local] = resourceDirs()
 
   def resource(name: String): Local =
     resourceDirectories
@@ -24,10 +24,8 @@ trait Resources
           val resource = Local(s"$dir/$name")
           if (resource.existsSync)
             Some(resource)
-          else {
-            println(s"Didn't find resource: $dir/$name")
+          else
             None
-          }
       }
       .headOption
       .getOrElse {

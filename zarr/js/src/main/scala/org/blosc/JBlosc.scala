@@ -15,12 +15,18 @@ object JBlosc {
       compressorName: String,
            blockSize: Int,
           numThreads: Int
-  ): Int = ???
+  ): Int = {
+    println("JBlosc.compressCtx")
+    ???
+  }
 
   def decompressCtx(
            src: Buffer,
           dest: Buffer,
       destSize: Long,
     numThreads: Int
-  ): Int = ???
+  ): Int = {
+    println("JBlosc.decompressCtx")
+    ???
+  }
 }

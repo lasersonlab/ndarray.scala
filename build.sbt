@@ -299,7 +299,7 @@ lazy val zarr =
       )
     )
     .jsSettings(
-      jsDependencies += "org.webjars.npm" % "pako" % "1.0.7"
+      jsDependencies += "org.webjars.npm" % "pako" % "1.0.7" / "pako.js"
     )
     .dependsOn(
       `circe-utils`,

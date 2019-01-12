@@ -1,7 +1,7 @@
 package org.lasersonlab
 
-import io.circe.generic.AutoDerivation
-import io.circe.{ Parser, ParsingFailure, Printer }
+import _root_.io.circe.generic.AutoDerivation
+import _root_.io.circe.{ Parser, ParsingFailure, Printer }
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike }
 import org.lasersonlab.uri.Uri
 import org.lasersonlab.zarr.utils.Idx

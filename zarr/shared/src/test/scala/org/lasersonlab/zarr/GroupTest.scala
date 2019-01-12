@@ -24,6 +24,8 @@ object GroupTest
   // set this to `true` to overwrite the existing "expected" data in src/test/resources
   val writeNewExpectedData = false
 
+  override lazy val resourceDirectories: List[Local] = (Local.cwd / "zarr" / "shared" / "src" / "test" / "resources") :: Nil
+
   val bytes =
     for {
       x ← 1 to  50
@@ -71,6 +73,8 @@ object GroupTest
          float = n.toFloat  *  10,
         double = n.toDouble * 100
       )
+
+
 
   import scala.Array  // needed until next release of utest: https://github.com/lihaoyi/utest/pull/186/files#r247263418
   val tests = Tests.apply{

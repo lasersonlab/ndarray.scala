@@ -1,10 +1,9 @@
 package org.lasersonlab.zarr
 
-import java.io.{ ByteArrayOutputStream, IOException, OutputStream }
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer._
 import java.util.zip.Deflater.DEFAULT_COMPRESSION
-import java.util.zip.{ Deflater, DeflaterOutputStream, InflaterInputStream }
 
 import cats.implicits._
 import circe.Decoder.Result
@@ -15,35 +14,27 @@ import caseapp.core.argparser.{ ArgParser, SimpleArgParser }
 import hammerlab.option._
 import org.blosc.JBlosc
 import org.blosc.JBlosc._
+import org.lasersonlab.zlib.{ Inflater, Deflater }
 import shapeless.the
 import Runtime.getRuntime
 
 import org.hammerlab.shapeless.instances.InstanceMap
-import org.lasersonlab.commons.IOUtils.toByteArray
 
 import scala.concurrent.ExecutionContext
 
 sealed trait Compressor {
   def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]]
-  def apply(os: OutputStream, itemsize: Int): OutputStream
+  def compress(in: Arr[Byte], itemsize: Int): Arr[Byte]
 }
 object Compressor {
 
   case class ZLib(level: Int = DEFAULT_COMPRESSION)
     extends Compressor {
     def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]] =
-      path
-        .stream()
-        .map(new InflaterInputStream(_))
-        .map(toByteArray(_))
+      path.read.map(Inflater(_))
 
-    def apply(os: OutputStream, itemsize: Int): OutputStream =
-      new DeflaterOutputStream(
-        os,
-        new Deflater(
-          level
-        )
-      )
+    val deflater = Deflater(level)
+    override def compress(in: Arr[Byte], itemsize: Int): Arr[Byte] = deflater(in)
   }
   object ZLib {
     val regex = """zlib(?:\((\d)\))""".r
@@ -59,7 +50,7 @@ object Compressor {
   case object None
     extends Compressor {
     def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]] = path.read
-    def apply(os: OutputStream, itemsize: Int): OutputStream = os
+    override def compress(in: Arr[Byte], itemsize: Int): Arr[Byte] = in
   }
 
   import Blosc._, CName._
@@ -87,8 +78,7 @@ object Compressor {
 
     val MAX_BUFFER_SIZE = (1 << 31) - 1
 
-    def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]] = {
-
+    def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]] =
       path.read.map {
         arr ⇒
           val size = arr.length
@@ -134,24 +124,12 @@ object Compressor {
 
           ret
       }
-    }
 
-    def apply(os: OutputStream, itemsize: Int): OutputStream =
-      new ByteArrayOutputStream() {
-        override def close(): Unit = {
-          super.close()
-          val bytes = toByteArray
-          apply(bytes, itemsize, os)
-          os.close()
-        }
-      }
-
-    def apply(
+    def compress(
       bytes: Arr[Byte],
-      itemsize: Int,
-      os: OutputStream
+      itemsize: Int
     ):
-      Unit
+      Arr[Byte]
     = {
       // JBlosc requires you give it at least this much space
       val destLength =
@@ -182,19 +160,13 @@ object Compressor {
         )
 
       if (compressed > 0) {
-        os.write(dest.array(), 0, compressed)
-        os.close()
+        dest
+          .array()
+          .slice(0, compressed)
       } else if (compressed == 0)
-        if (destLength > bytes.length)
-          throw new IllegalStateException(
-            s"Blosc buffer apparently too small ($destLength) for data of size ${bytes.length}"
-          )
-        else
-          apply(
-            bytes,
-            itemsize,
-            os
-          )
+        throw new IllegalStateException(
+          s"Blosc buffer apparently too small ($destLength) for data of size ${bytes.length}"
+        )
       else
         throw new Exception(
           s"Blosc error compressing ${bytes.length} bytes into buffer of size $destLength"

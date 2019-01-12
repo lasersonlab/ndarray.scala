@@ -4,25 +4,27 @@ import org.lasersonlab.uri.Local
 
 trait ResourceDirs
   extends HasExecutionContext {
+  val blacklist = Set(".git", ".idea")
   def resourceDirs(
-    dir: Local = Local(Local.cwd),
+    dir: Local = Local.cwd,
     maxDepth: Int = 2
   ):
     List[Local] =
-    (
-      if (dir / "src" / "test" / "resources" existsSync)
-        List(dir)
+    {
+      val resources = dir / "src" / "test" / "resources"
+      println(s"Looking for src/test/resources under $dir…")
+      if (resources existsSync)
+        List(resources)
       else
         Nil
-    ) ++ (
+    } ++ (
       if (maxDepth > 0)
         dir
-        .childrenSync
-        .flatMap {
-            child ⇒
-              resourceDirs(child, maxDepth - 1)
-          }
-        .toList
+          .childrenSync
+          .filterNot(child ⇒ blacklist(child.basename))
+          .filter(_.isDirectory)
+          .flatMap { resourceDirs(_, maxDepth - 1) }
+          .toList
       else
         Nil
     )

@@ -5,7 +5,7 @@ import org.lasersonlab.uri.Local
 trait ResourceDirs
   extends HasExecutionContext {
   def resourceDirs(
-    dir: Local = Local(Local.cwd)
+    dir: Local = Local.cwd
   ):
     List[Local] =
     List(

@@ -96,5 +96,5 @@ object Local {
     ec: ExecutionContext
   ): Local = new Local(new File(str).getCanonicalFile)
 
-  lazy val cwd = new File(".").toString
+  def cwd(implicit ec: ExecutionContext) = Local(new File("."))
 }

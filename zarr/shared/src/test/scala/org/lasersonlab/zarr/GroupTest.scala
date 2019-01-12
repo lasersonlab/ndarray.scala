@@ -4,32 +4,14 @@ import java.util.Random
 import java.util.concurrent.Executor
 
 import lasersonlab.{ zarr ⇒ z }
-import org.hammerlab.cmp.{ Cmp, CanEq ⇒ CE }
-import org.lasersonlab.test.Cmp
-import org.lasersonlab.test.future.{ Assert, CanEq }
+import org.lasersonlab.test.future.Assert
 import org.lasersonlab.uri.Local
 import org.lasersonlab.zarr
-
-import scala.concurrent.ExecutionContext
-//import org.lasersonlab.zarr.GroupTest._
 import org.lasersonlab.zarr.dtype.DataType
 import org.lasersonlab.zarr.io.Load
 import utest._
 
-//object FooTest
-//  extends TestSuite
-//  extends lasersonlab.Suite
-//     with Load.syntax
-//     with zarr.cmp.all
-//     with Assert.syntax
-//{
-//  import scala.Array
-//  override val tests: utest.Tests = utest.Tests {
-//    TestableSymbol('typed).-({
-//      (())
-//    })
-//  }
-//}
+import scala.concurrent.ExecutionContext
 
 object GroupTest
   extends lasersonlab.Suite
@@ -37,15 +19,7 @@ object GroupTest
      with zarr.cmp.all
      with Assert.syntax
 {
-
   import DataType._
-
-  override implicit val ec =
-    ExecutionContext.fromExecutor(
-      new Executor {
-        def execute(task: Runnable) = task.run()
-      }
-    )
 
   // set this to `true` to overwrite the existing "expected" data in src/test/resources
   val writeNewExpectedData = false
@@ -144,170 +118,162 @@ object GroupTest
           expectedPath = resource("grouptest.zarr")
           _ ← ==(actual, expectedPath)
           group2 ← actual.load[Foo]
-//          _ = println(s"ints: ${group2.ints.t.toList.size}")
-//          _ = println(s"longs: ${group2.longs.t.toList.size}")
-//          _ ← ==(group, group2)
-//          expected ← expectedPath.load[Foo]
-//          _ ← ==(group, expected)
+          _ ← ==(group, group2)
+          expected ← expectedPath.load[Foo]
+          _ ← ==(group, expected)
         } yield
           ()
       }
     }
-  }
 
-//  test("typed – mixed compressors / endianness") {
-//    import GroupTest._
-//    import org.lasersonlab.zarr.Compressor.Blosc
-//    import org.lasersonlab.zarr.Compressor.Blosc._
-//
-//    val group =
-//      Foo(
-//          bytes = { Array(       50 :: 100 :: 200 :: ⊥,      20 :: 50 :: 110 :: ⊥,  compressor = z.compress.zlib )(   bytes ) },
-//         shorts = { Array( 2 ::   2 ::   2 ::   2 :: ⊥, 1 ::  1 ::  1 ::   1 :: ⊥,  compressor = z.compress.   - )(  shorts ) },
-//           ints = { Array(                   1000 :: ⊥,                             compressor =   Blosc( lz4hc) )(    ints ) },
-//          longs = { Array(                   1000 :: ⊥,                   100 :: ⊥, compressor =   Blosc(  zlib) )(   longs ) },
-//         floats = { Array(             100 :: 100 :: ⊥,             20 :: 100 :: ⊥, compressor =   Blosc(  zstd) )(  floats ) },
-//        doubles = { Array(                     20 :: ⊥,                             compressor =   Blosc(snappy) )( doubles ) },
-//        strings =
-//          Strings(
-//            s2 = {
-//              implicit val d = string(2)
-//              Array(10 :: ⊥)((1 to 10).map(_.toString))
-//            },
-//            s3 = {
-//              implicit val d = string(3)
-//              Array(
-//                10 :: 10 :: ⊥,
-//                 3 ::  4 :: ⊥
-//              )(
-//                (1 to 100).map(_.toString)
-//              )
-//            }
-//          ),
-//        structs =
-//          Structs(
-//            ints = {
-//              implicit val > = z.order.>
-//              Array(10 :: ⊥)(i4s)
-//            },
-//            numbers = {
-//              implicit val short_> = I16(z.order.>)
-//              implicit val  long_> = I64(z.order.>)
-//              import z.compress.-
-//              Array(
-//                10 :: 10 :: ⊥,
-//                 2 ::  5 :: ⊥
-//              )(
-//                numbers
-//              )
-//            }
-//          )
-//      )
-//
-//    if (writeNewExpectedData)
-//      group.save(Path("zarr/shared/src/test/resources/mixed.zarr")) !
-//    else {
-//      val actual = tmpPath()
-//
-//      group.save(actual).!
-//
-//      val expectedPath = resource("mixed.zarr")
-//
-//      eqv(actual, expectedPath)
-//
-//      val group2 = actual.load[Foo] !
-//
-//      eqv(group, group2)
-//
-//      val expected = expectedPath.load[Foo] !
-//
-//      eqv(group, expected)
-//    }
-//  }
-//
-//  test("untyped") {
-//    val group =
-//      Group(
-//          'bytes → Array(       50 :: 100 :: 200 :: Nil,      20 :: 50 :: 110 :: Nil)(   bytes ),
-//         'shorts → Array( 2 ::   2 ::   2 ::   2 :: Nil, 1 ::  1 ::  1 ::   1 :: Nil)(  shorts ),
-//           'ints → Array(                   1000 :: Nil                             )(    ints ),
-//          'longs → Array(                   1000 :: Nil,                  100 :: Nil)(   longs ),
-//         'floats → Array(             100 :: 100 :: Nil,            20 :: 100 :: Nil)(  floats ),
-//        'doubles → Array(                     20 :: Nil                             )( doubles ),
-//        'strings →
-//          Group(
-//            's2 → {
-//              implicit val d = string(2)
-//              Array(10 :: Nil)((1 to 10).map(_.toString))
-//            },
-//            's3 → {
-//              implicit val d = string(3)
-//              Array(
-//                10 :: 10 :: Nil,
-//                 3 ::  4 :: Nil
-//              )(
-//                (1 to 100).map(_.toString)
-//              )
-//            }
-//          ),
-//        'structs →
-//          Group(
-//            'ints → {
-//              implicit val dtype = struct.?('value → int)
-//              Array(10 :: Nil)(
-//                (1 to 10)
-//                  .map {
-//                    i ⇒
-//                      untyped.Struct("value" → i)
-//                  }
-//
-//              )
-//            },
-//            'numbers → {
-//              implicit val dtype =
-//                struct.?(
-//                   'short → short,
-//                     'int → int,
-//                    'long → long,
-//                   'float → float,
-//                  'double → double
-//                )
-//              Array(
-//                10 :: 10 :: Nil,
-//                 2 ::  5 :: Nil
-//              )(
-//                (
-//                  for {
-//                    r ← 0 until 10
-//                    c ← 0 until 10
-//                    n = 10 * r + c
-//                  } yield
-//                    untyped.Struct(
-//                       "short" →  n.toShort,
-//                         "int" →  n,
-//                        "long" → (n          * 1e9 toLong),
-//                       "float" → (n.toFloat  *  10),
-//                      "double" → (n.toDouble * 100)
-//                    )
-//                )
-//              )
-//            }
-//          )
-//      )
-//
-//    val actual = tmpPath()
-//
-//    group.save(actual).!
-//
-//    val group2 = actual.load[Group[Int]] !
-//
-//    eqv(group, group2)
-//
-//    val expected = resource("grouptest.zarr").load[Group[Int]] !
-//
-//    eqv(group, expected)
-//  }
-//}
+    "typed – mixed compressors / endianness" - {
+      import lasersonlab.zarr.Array
+      import org.lasersonlab.zarr.Compressor.Blosc
+      import org.lasersonlab.zarr.Compressor.Blosc.{ == ⇒ _, _ }
+
+      val group =
+        Foo(
+            bytes = { Array(       50 :: 100 :: 200 :: ⊥,      20 :: 50 :: 110 :: ⊥,  compressor = z.compress.zlib )(   bytes ) },
+           shorts = { Array( 2 ::   2 ::   2 ::   2 :: ⊥, 1 ::  1 ::  1 ::   1 :: ⊥,  compressor = z.compress.   - )(  shorts ) },
+             ints = { Array(                   1000 :: ⊥,                             compressor =   Blosc( lz4hc) )(    ints ) },
+            longs = { Array(                   1000 :: ⊥,                   100 :: ⊥, compressor =   Blosc(  zlib) )(   longs ) },
+           floats = { Array(             100 :: 100 :: ⊥,             20 :: 100 :: ⊥, compressor =   Blosc(  zstd) )(  floats ) },
+          doubles = { Array(                     20 :: ⊥,                             compressor =   Blosc(snappy) )( doubles ) },
+          strings =
+            Strings(
+              s2 = {
+                implicit val d = string(2)
+                Array(10 :: ⊥)((1 to 10).map(_.toString))
+              },
+              s3 = {
+                implicit val d = string(3)
+                Array(
+                  10 :: 10 :: ⊥,
+                   3 ::  4 :: ⊥
+                )(
+                  (1 to 100).map(_.toString)
+                )
+              }
+            ),
+          structs =
+            Structs(
+              ints = {
+                implicit val > = z.order.>
+                Array(10 :: ⊥)(i4s)
+              },
+              numbers = {
+                implicit val short_> = I16(z.order.>)
+                implicit val  long_> = I64(z.order.>)
+                Array(
+                  10 :: 10 :: ⊥,
+                   2 ::  5 :: ⊥
+                )(
+                  numbers
+                )
+              }
+            )
+        )
+
+      if (writeNewExpectedData)
+        group.save(Path("mixed.zarr"))
+      else {
+        val actual = tmpPath()
+        val expectedPath = resource("mixed.zarr")
+        for {
+          _ ← group.save(actual)
+          _ ← ==(actual, expectedPath)
+          group2 ← actual.load[Foo]
+          _ ← ==(group, group2)
+          expected ← expectedPath.load[Foo]
+          _ ← ==(group, expected)
+        } yield
+          ()
+      }
+    }
+
+    'untyped - {
+      import lasersonlab.zarr.Array
+      val group =
+        Group(
+            'bytes → Array(       50 :: 100 :: 200 :: Nil,      20 :: 50 :: 110 :: Nil)(   bytes ),
+           'shorts → Array( 2 ::   2 ::   2 ::   2 :: Nil, 1 ::  1 ::  1 ::   1 :: Nil)(  shorts ),
+             'ints → Array(                   1000 :: Nil                             )(    ints ),
+            'longs → Array(                   1000 :: Nil,                  100 :: Nil)(   longs ),
+           'floats → Array(             100 :: 100 :: Nil,            20 :: 100 :: Nil)(  floats ),
+          'doubles → Array(                     20 :: Nil                             )( doubles ),
+          'strings →
+            Group(
+              's2 → {
+                implicit val d = string(2)
+                Array(10 :: Nil)((1 to 10).map(_.toString))
+              },
+              's3 → {
+                implicit val d = string(3)
+                Array(
+                  10 :: 10 :: Nil,
+                   3 ::  4 :: Nil
+                )(
+                  (1 to 100).map(_.toString)
+                )
+              }
+            ),
+          'structs →
+            Group(
+              'ints → {
+                implicit val dtype = struct.?('value → int)
+                Array(10 :: Nil)(
+                  (1 to 10)
+                    .map {
+                      i ⇒
+                        untyped.Struct("value" → i)
+                    }
+
+                )
+              },
+              'numbers → {
+                implicit val dtype =
+                  struct.?(
+                     'short → short,
+                       'int → int,
+                      'long → long,
+                     'float → float,
+                    'double → double
+                  )
+                Array(
+                  10 :: 10 :: Nil,
+                   2 ::  5 :: Nil
+                )(
+                  (
+                    for {
+                      r ← 0 until 10
+                      c ← 0 until 10
+                      n = 10 * r + c
+                    } yield
+                      untyped.Struct(
+                         "short" →  n.toShort,
+                           "int" →  n,
+                          "long" → (n          * 1e9 toLong),
+                         "float" → (n.toFloat  *  10),
+                        "double" → (n.toDouble * 100)
+                      )
+                  )
+                )
+              }
+            )
+        )
+
+      val actual = tmpPath()
+
+      for {
+        _ ← group.save(actual)
+        group2 ← actual.load[Group[Int]]
+        _ ← ==(group, group2)
+        expected ← resource("grouptest.zarr").load[Group[Int]]
+        _ ← ==(group, expected)
+      } yield
+        ()
+    }
+  }
 
 /**
  * Sample record-types for testing IO above

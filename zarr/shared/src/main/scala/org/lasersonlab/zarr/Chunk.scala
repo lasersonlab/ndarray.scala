@@ -46,6 +46,7 @@ case class Chunk[
 
   type Shape = ShapeT[Idx]
 
+//  println(s"Got chunk with ${bytes.length} bytes, shape $shape, idx $idx, size $size")
 //  lazy val bytes =
 //    compressor(path, size * dtype.size)
 //      .map {
@@ -140,8 +141,7 @@ object Chunk {
             throw new FileNotFoundException(path.toString)
           else {
             val (size, sizeProducts) = shape.scanRight(1) { _ * _ }
-            path
-              .read
+            compressor(path, sizeHint)
               .map {
                 Chunk(
                   _,

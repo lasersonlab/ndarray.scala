@@ -42,15 +42,16 @@ extends Uri {
 
   def isDirectory: Boolean = file.isDirectory
 
-  override def delete: F[Unit] = F { file.delete() }
-  def deleteSync(recursive: Boolean = false): Unit = {
+  override def delete: F[Unit] = F { deleteSync() }
+  def deleteSync(): Unit = file.delete()
+  def deleteSync(recursive: Boolean): Unit = {
     if (recursive && isDirectory)
       childrenSync
         .foreach {
           _.deleteSync(recursive = true)
         }
 
-    file.delete()
+    deleteSync()
   }
 
   override def outputStream: OutputStream = {

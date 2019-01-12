@@ -17,12 +17,12 @@ trait ResourceDirs
     ) ++ (
       if (maxDepth > 0)
         dir
-          .listSync
-          .flatMap {
+        .childrenSync
+        .flatMap {
             child ⇒
               resourceDirs(child, maxDepth - 1)
           }
-          .toList
+        .toList
       else
         Nil
     )

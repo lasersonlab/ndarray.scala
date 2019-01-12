@@ -1,11 +1,11 @@
 package org.lasersonlab.zarr
 
-import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 
 import cats.{ Eval, FlatMap, Foldable, Functor, Semigroupal }
 import cats.implicits._
 import hammerlab.option._
+import org.lasersonlab.io.FileNotFoundException
 import org.lasersonlab.ndarray.ArrayLike
 import org.lasersonlab.slist.{ Scannable, Zip }
 import org.lasersonlab.zarr.dtype.DataType
@@ -138,7 +138,7 @@ object Chunk {
       .flatMap {
         exists ⇒
           if (!exists)
-            throw new FileNotFoundException(path.toString)
+            throw FileNotFoundException(path)
           else {
             val (size, sizeProducts) = shape.scanRight(1) { _ * _ }
             compressor(path, sizeHint)

@@ -27,8 +27,8 @@ extends Uri {
 
   def isDirectory: Boolean = stat.isDirectory.asInstanceOf[Boolean]
 
-  override def children: F[Iterator[Local]] = F { listSync }
-  def listSync: Iterator[Local] =
+  override def children: F[Iterator[Local]] = F {childrenSync }
+  def childrenSync: Iterator[Local] =
     fs
       .readdirSync
       .asInstanceOf[Array[String]]
@@ -62,7 +62,17 @@ extends Uri {
     }
   }
 
-  override def delete: F[Unit] = F { fs.deleteSync(str) }
+  override def delete: F[Unit] = F { deleteSync() }
+  def deleteSync(): Unit = fs.deleteSync(str)
+  def deleteSync(recursive: Boolean): Unit = {
+    if (recursive && isDirectory)
+      childrenSync
+      .foreach {
+        _.deleteSync(recursive = true)
+      }
+
+    deleteSync()
+  }
 
   override def parentOpt: Option[Self] =
     fs

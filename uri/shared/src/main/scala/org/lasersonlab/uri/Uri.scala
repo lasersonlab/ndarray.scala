@@ -1,6 +1,6 @@
 package org.lasersonlab.uri
 
-import java.io.{ ByteArrayInputStream, FileNotFoundException, InputStream, OutputStream }
+import java.io.{ ByteArrayInputStream, InputStream, OutputStream }
 import java.net.URI
 import java.nio.ByteBuffer
 import java.util
@@ -10,9 +10,9 @@ import hammerlab.either._
 import hammerlab.math.utils._
 import _root_.io.circe.Decoder
 import _root_.io.circe.parser.decode
+import org.lasersonlab.io.FileNotFoundException
 import org.lasersonlab.java_io.{ BoundedInputStream, SequenceInputStream }
 import org.lasersonlab.uri.Uri.Segment
-//import org.lasersonlab.uri.io.OutputStream
 import slogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
@@ -75,7 +75,7 @@ abstract class Uri()(implicit val ec: ExecutionContext)
       .map {
         exists ⇒
           if (!exists)
-            throw new FileNotFoundException(path.toString)
+            throw FileNotFoundException(path)
           else
             path
       }

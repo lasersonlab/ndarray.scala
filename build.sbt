@@ -298,6 +298,9 @@ lazy val zarr =
         "org.lasersonlab" ^ "jblosc" ^ "1.0.1"
       )
     )
+    .jsSettings(
+      jsDependencies += "org.webjars.npm" % "pako" % "1.0.7"
+    )
     .dependsOn(
       `circe-utils`,
        ndarray,

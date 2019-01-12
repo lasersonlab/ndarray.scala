@@ -1,9 +1,7 @@
 package org.lasersonlab
 
-import cats.MonadError
 import io.circe.generic.AutoDerivation
 import io.circe.{ Parser, ParsingFailure, Printer }
-import org.hammerlab.paths.HasPathOps
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike }
 import org.lasersonlab.uri.Uri
 import org.lasersonlab.zarr.utils.Idx
@@ -27,7 +25,6 @@ import scala.concurrent.Future
  */
 package object zarr
   extends utils.slist.Codecs
-     with HasPathOps
      with hammerlab.bytes.syntax
      with hammerlab.either
      with hammerlab.math.utils

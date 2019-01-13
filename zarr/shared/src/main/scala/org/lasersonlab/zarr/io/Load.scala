@@ -1,5 +1,7 @@
 package org.lasersonlab.zarr.io
 
+import java.io.IOException
+
 import cats.implicits._
 import hammerlab.either._
 import io.circe.Decoder
@@ -8,7 +10,6 @@ import lasersonlab.zarr.{ F, Path }
 import magnolia._
 
 import scala.language.experimental.macros
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
 trait Load[T] {
@@ -16,6 +17,7 @@ trait Load[T] {
 }
 
 trait LowPriorityLoad {
+  case class LoadFailure(path: Path, contents: String, cause: Throwable) extends IOException(s"Failed to load $path: $contents", cause)
   implicit def basename[T](
     implicit
     basename: Basename[T],
@@ -29,10 +31,13 @@ trait LowPriorityLoad {
             _
               .string
               .map(
-                parse(_)
-                  .flatMap {
-                    decoder.decodeJson(_): Throwable | T
-                  }
+                str ⇒
+                  parse(str)
+                    .flatMap {
+                      decoder.decodeJson
+                    }
+                    .left
+                    .map { LoadFailure(dir, str, _): Throwable }
               )
           }
           .rethrow
@@ -59,19 +64,18 @@ object Load
                 path
                   .string
                   .map {
-                    parse(_)
-                      .flatMap {
-                        decoder
-                          .decodeJson(_): Throwable | T
-                      }
-                      .map { Some(_): Option[T] }
+                    str ⇒
+                      parse(str)
+                        .flatMap { decoder.decodeJson }
+                        .left
+                        .map { LoadFailure(dir, str, _): Throwable }
+                        .map { Some(_): Option[T] }
                   }
                   .rethrow
           }
       }
     }
 
-  //type F[T] = IO[T]
   type Typeclass[T] = Load[T]
 
   /** defines equality for this case class in terms of equality for all its parameters */

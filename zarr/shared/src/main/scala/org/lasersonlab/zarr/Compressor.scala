@@ -28,7 +28,7 @@ sealed trait Compressor {
 }
 object Compressor {
 
-  case class ZLib(level: Int = DEFAULT_COMPRESSION)
+  case class ZLib(level: Int = ZLib.DEFAULT_LEVEL)
     extends Compressor {
     def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]] =
       path.read.map(Inflater(_)).recoverWith {
@@ -39,6 +39,7 @@ object Compressor {
     override def compress(in: Arr[Byte], itemsize: Int): Arr[Byte] = deflater(in)
   }
   object ZLib {
+    val DEFAULT_LEVEL = 6
     val regex = """zlib(?:\((\d)\))""".r
     object parse {
       def unapply(str: String): Option[ZLib] =

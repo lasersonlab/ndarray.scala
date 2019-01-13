@@ -116,25 +116,12 @@ object metadata {
             : ?[Shape, Idx]
       }
 
-    implicit def encoder[
-      Shape[_],
-        Idx
-    ]:
-      Encoder[
-        ?[
-          Shape,
-          Idx
-        ]
-      ]
-    =
-      new Encoder[
-        ?[
-          Shape,
-          Idx
-        ]
-      ] {
-        @inline def apply(m: ?[Shape, Idx]): Json = encode(m.t)
-      }
+    implicit def
+        encoder[  Shape[_], Idx ]:
+        Encoder[?[Shape   , Idx]] =
+    new Encoder[?[Shape   , Idx]] {
+      @inline def apply(m: ?[Shape, Idx]): Json = encode(m.t)
+    }
   }
 
   case class Metadata[
@@ -304,21 +291,11 @@ object metadata {
             }
       }
 
-    implicit def encoder[
-      Shape[_],
-        Idx,
-          T
-    ]:
-      Encoder[
-        Metadata[
-          Shape,
-          Idx,
-          T
-        ]
-      ]
-    =
-      new Encoder[Metadata[Shape, Idx, T]] {
-        def apply(m: Metadata[Shape, Idx, T]): Json = m.json
-      }
+    implicit def
+        encoder[            Shape[_], Idx, T]:
+        Encoder[   Metadata[Shape   , Idx, T]] =
+    new Encoder[   Metadata[Shape   , Idx, T]] {
+      def apply(m: Metadata[Shape   , Idx, T]): Json = m.json
+    }
   }
 }

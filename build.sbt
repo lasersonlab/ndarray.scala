@@ -1,3 +1,4 @@
+import org.scalajs.jsenv.nodejs.NodeJSEnv
 
 default(
   group("org.lasersonlab"),
@@ -299,7 +300,8 @@ lazy val zarr =
       )
     )
     .jsSettings(
-      jsDependencies += "org.webjars.npm" % "pako" % "1.0.7" / "pako.js"
+      jsDependencies += "org.webjars.npm" % "pako" % "1.0.7" / "pako.js",
+      jsEnv := new NodeJSEnv(NodeJSEnv.Config().withArgs("--max-old-space-size=2048" :: Nil))
     )
     .dependsOn(
       `circe-utils`,

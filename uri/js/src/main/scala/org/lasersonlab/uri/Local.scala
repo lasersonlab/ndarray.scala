@@ -63,7 +63,7 @@ extends Uri {
       import scala.scalajs.js.typedarray._
 
       override def write(b: Int): Unit = write(Array(b.toByte))
-      override def write(b: Array[Byte]): Unit = fs.writeSync(fd, b.toTypedArray.buffer)
+      override def write(b: Array[Byte]): Unit = fs.writeSync(fd, b.toTypedArray)
       override def write(b: Array[Byte], off: Int, len: Int): Unit = write(b.slice(off, off + len))
       override def flush(): Unit = super.flush()
       override def close(): Unit = fs.closeSync(fd)

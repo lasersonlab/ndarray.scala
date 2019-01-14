@@ -4,4 +4,5 @@ import scala.concurrent.ExecutionContext
 
 package object http {
   type Config = ExecutionContext
+  object Config {}
 }

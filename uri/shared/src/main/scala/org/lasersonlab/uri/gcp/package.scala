@@ -1,10 +1,13 @@
 package org.lasersonlab.uri
 
 package object gcp {
-  implicit def reqConfig(implicit auth: Auth) =
+  implicit def reqConfig(implicit auth: Auth): http.Defaults =
     http.Defaults(
-      headers = Map("Authorization" → s"Bearer ${auth.token}")
+      headers =
+        Map(
+          "Authorization" → s"Bearer ${auth.token}"
+        )
     )
 
-  implicit def wrapProject(implicit project: Project): Option[Project] = Some(project)
+  //implicit def wrapProject(implicit project: Project): Option[Project] = Some(project)
 }

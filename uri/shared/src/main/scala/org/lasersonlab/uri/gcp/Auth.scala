@@ -12,13 +12,6 @@ case class Auth(
 )
 
 object Auth {
-
-//  case class Response(
-//    access_token: String,
-//    expires: String,
-//    scope: String
-//  )
-
   def fromFragment(map: Map[String, String]): String | Auth = {
     def get(key: String) =
       map
@@ -42,9 +35,4 @@ object Auth {
         scopes
       )
   }
-}
-
-case class Project(token: String) { override def toString: String = token }
-object Project {
-  implicit def unwrap(project: Project): String = project.toString
 }

@@ -4,6 +4,7 @@ import java.net.URI
 
 import cats.implicits._
 import org.lasersonlab.uri.Uri.Segment
+import org.lasersonlab.uri.gcp.googleapis.projects.{ Project, UserProject }
 import org.lasersonlab.uri.{ Config, Http, Uri, http ⇒ h }
 
 case class GCS(
@@ -12,7 +13,7 @@ case class GCS(
 )(
   implicit
   auth: Auth,
-  val project: Option[Project],
+  val userProject: Option[UserProject],
   val config: Config,
   httpConfig: h.Config
 )
@@ -27,9 +28,9 @@ extends Uri()(httpConfig) {
       new URI(s"gs://$bucket/${path.mkString("/")}")
 
   import com.softwaremill.sttp._
-  
-  def objectUrl = uri"https://www.googleapis.com/storage/v1/b/$bucket/o/${path.mkString("/")}?userProject=$project"
-  def listUri = uri"https://www.googleapis.com/storage/v1/b/$bucket/o?delimiter=${"/"}&prefix=${path.mkString("", "/", "/")}&userProject=$project"
+
+  def objectUrl = uri"https://www.googleapis.com/storage/v1/b/$bucket/o/${path.mkString("/")}?userProject=$userProject"
+  def listUri = uri"https://www.googleapis.com/storage/v1/b/$bucket/o?delimiter=${"/"}&prefix=${path.mkString("", "/", "/")}&userProject=$userProject"
 
   override def /(name: String): Self = GCS(bucket, path :+ name)
 
@@ -94,7 +95,7 @@ object GCS {
   )(
     implicit
     auth: Auth,
-    project: Option[Project],
+    project: Option[UserProject],
     config: Config,
     httpConfig: h.Config
   ):

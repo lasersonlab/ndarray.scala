@@ -1,3 +1,3 @@
 addSbtPlugin("org.hammerlab.sbt" % "base" % "4.6.8")
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
-//addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.9.0")
+addSbtPlugin("ch.epfl.scala" % "sbt-scalajs-bundler" % "0.14.0")

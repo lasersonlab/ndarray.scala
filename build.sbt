@@ -146,6 +146,7 @@ lazy val uri =
 
         circe,
         circe.generic,
+        circe.lib("generic-extras"),
         circe.parser,
 
         fs2,
@@ -159,6 +160,7 @@ lazy val uri =
         "io.github.cquiroz" ^^ "scala-java-time" ^ "2.0.0-M13",
         "com.lihaoyi" ^^ "utest" ^ "0.6.6" tests
       ),
+      enableMacroParadise,
       testFrameworks += new TestFramework("utest.runner.Framework")
     )
     .jvmSettings(
@@ -212,6 +214,8 @@ lazy val viewerCommon =
 lazy val viewerClient =
   project
     .settings(
+      slinky.version := "0.5.1",
+      version in startWebpackDevServer := "3.1.14",
       dep(
         slinky,
         slinky.web,
@@ -225,6 +229,7 @@ lazy val viewerClient =
         sttp,
         hammerlab.types
       ),
+      webpackBundlingMode := BundlingMode.LibraryAndApplication(),
       enableMacroParadise,
       kindProjector,
       partialUnification,
@@ -233,11 +238,12 @@ lazy val viewerClient =
 
       npmDependencies in Compile ++=
         Seq(
+          "pako"        → "1.0.7",
           "react"       → "16.5.2",
           "react-dom"   → "16.5.2",
           "react-proxy" →  "1.1.8"
         ),
-      //scalacOptions += "-Xlog-implicits"
+//      scalacOptions += "-Xlog-implicits"
     )
     .enablePlugins(JS, ScalaJSBundlerPlugin)
     .dependsOn(

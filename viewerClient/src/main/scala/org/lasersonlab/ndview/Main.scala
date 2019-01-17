@@ -2,12 +2,12 @@ package org.lasersonlab.ndview
 
 import cats.effect.{ ExitCode, IO, IOApp }
 import cats.implicits._
-import hammerlab.option.liftOption
+import org.lasersonlab.uri.gcp.googleapis.storage.Bucket
+//import org.lasersonlab.uri.gcp.googleapis.?
 import io.circe.Printer
-import lasersonlab.future.F
 import org.lasersonlab.uri.gcp.SignIn.{ ClientId, RedirectUrl, Scope, SignOut, loadAuth }
-import org.lasersonlab.uri.gcp.googleapis.projects.{ Project, UserProject }
-import org.lasersonlab.uri.gcp.{ Auth, GCS, SignIn, googleapis }
+import org.lasersonlab.uri.gcp.googleapis.projects.Project
+import org.lasersonlab.uri.gcp.{ Auth, SignIn, googleapis }
 import org.scalajs.dom.document
 import org.scalajs.dom.raw.HTMLSelectElement
 import org.scalajs.dom.window.localStorage
@@ -46,20 +46,21 @@ object Main
   val pprint = Printer.spaces4.copy(colonLeft = "").pretty _
 
   @react class Page extends Component {
-    type Props = Auth
+    type Props = Unit
 
-    case class State(
-          project : Option[     Project]  = None,
-      userProject : Option[ UserProject]  = None,
-          projects: Option[List[Project]] = None,
-    )
+    type State = Logins
+//    case class State(
+//          project : Option[     Project ] = None,
+//      userProject : Option[ UserProject ] = None,
+//          projects: Option[List[Project]] = None,
+//    )
 
     def initialState: State = {
       val str = localStorage.getItem(stateKey)
       println(s"state from localStorage: $str")
       Option(str)
         .fold {
-          State()
+          Logins()
         } {
           decode[State](_) match {
             case Left(e) ⇒
@@ -71,35 +72,47 @@ object Main
         }
     }
 
-    implicit def auth: Auth = props
+    //implicit def auth: Auth = props
 
     override def shouldComponentUpdate(nextProps: Props, nextState: State): Boolean =
       props != nextProps ||
       state != nextState
 
     override def componentWillUpdate(nextProps: Props, nextState: State) = {
-      val nextProject = nextState.project
-      println(s"componentWillUpdate? ${state.project} $nextProject")
-      nextProject match {
-        case Some(p @ Project(_, _, _, None)) ⇒
-          buckets(p, nextState.userProject)
-        case _ ⇒
-      }
+      nextState
+        .login
+        .foreach {
+          login ⇒
+            implicit val auth = login.auth
+            nextState
+              .modF {
+                case user ⇒
+                  user
+                    .projects
+                    .fetchBuckets
+                    .map {
+                      projects ⇒
+                        user.copy(
+                          projects = projects
+                        )
+                    }
+              }
+              .foreach { setState }
+        }
+
       localStorage.setItem(stateKey, pprint(nextState.asJson))
     }
 
     def selectProject(
-      setProject: (State, Project) ⇒ State,
-      projection: State ⇒ Option[Project],
+      project: Option[Project],
       placeholder: String
     ) =
       state
-        .projects
-        .fold[ReactElement] {
-          select(disabled := true)
+        .login
+        .fold[ReactElement]  {
+            select(disabled := true)
         } {
-          projects ⇒
-            val project = projection(state)
+          case login @ Login(_, _, projects, _) ⇒
             select(
               value := project.fold[String] { "" } { _.id },
               onChange := {
@@ -111,11 +124,8 @@ object Main
                       .value
 
                   setState(
-                    _.copy(
-                      project =
-                        projects
-                          .find(_.id == id)
-                          .get
+                    _.set(
+                      login.project(id)
                     )
                   )
               }
@@ -131,7 +141,7 @@ object Main
               ) ::
               projects
                 .map {
-                  case p @ Project(name, id, number, _) ⇒
+                  case Project(name, id, _, _) ⇒
                     option(
                         key := id,
                       value := id
@@ -139,82 +149,107 @@ object Main
                       name
                     )
                 }
+                .toList
             )
         }
 
     def render = {
       println("render")
 
-      val State(project, userProject, projects) = state
+      val logins = state.logins
+      val login  = state.login
 
-      div(
-        button(onClick := { _ ⇒ SignIn () })("sign in" ),
-        button(onClick := { _ ⇒ SignOut() })("sign out"),
+      login
+        .fold {
+          div(
+            button(onClick := { _ ⇒ SignIn () })("sign in" ),
+          )
+        } {
+          login ⇒
+            implicit val Login(auth, user, projects, userProject) = login
 
-        selectProject((state, project) ⇒ state.copy(    project =             project ), _                  .project , placeholder = "Project"),
-        selectProject((state, project) ⇒ state.copy(userProject = UserProject(project)), _.userProject.map(_.project), placeholder = "'Bill-to' Project"),
+            div(
+              button(onClick := { _ ⇒ SignIn () })("sign in" ),
+              button(onClick := { _ ⇒ SignOut() })("sign out"),
 
-        for {
-          project ← project
-          buckets ← project.buckets
-        } yield
-          buckets
-            .buckets
-            .map {
-              bucket ⇒
-                div(
-                  key := bucket.id
-                )(
-                  s"$bucket"
-                )
-            }
-      )
-    }
+              selectProject(login.    project,         "Project"),
+              selectProject(login.userProject, "Bill-to Project"),
 
-    def buckets(implicit project: Project, userProject: Option[UserProject]): F[Unit] = {
-      println(s"got project: $project")
-      googleapis
-        .storage
-        .buckets
-        .map {
-          buckets ⇒
-            println(s"got ${buckets.size} buckets: ${buckets.mkString(",")}")
-            val newProject = project.copy(buckets = buckets)
-            setState(
-              _.copy(
-                project = newProject,
-                projects =
-                  state
-                    .projects
-                    .map {
-                      _.map {
-                        case p
-                          if p.id == project.id ⇒
-                          newProject
-                        case p ⇒ p
-                      }
-                    }
-              )
+              for {
+                project ← login.project
+                buckets ← project.buckets
+              } yield
+                buckets
+                  .map {
+                    case Bucket(id, name, _, _) ⇒
+                      div(
+                        key := id
+                      )(
+                        s"$name"
+                      )
+                  }
             )
         }
-        .reauthenticate_?
     }
+
+//    def buckets(
+//      implicit
+//      auth: Auth,
+//      project: Project,
+//      userProject: ?[UserProject]
+//    ): F[Unit] = {
+//      println(s"got project: $project")
+//      googleapis
+//        .storage
+//        .buckets
+//        .map {
+//          buckets ⇒
+//            println(s"got ${buckets.size} buckets: ${buckets.mkString(",")}")
+//            val newProject = project.copy(buckets = buckets)
+//            setState(
+//              _.copy(
+//                project = newProject,
+//                projects =
+//                  state
+//                    .projects
+//                    .map {
+//                      _.map {
+//                        case p
+//                          if p.id == project.id ⇒
+//                          newProject
+//                        case p ⇒ p
+//                      }
+//                    }
+//              )
+//            )
+//        }
+//        .reauthenticate_?
+//    }
 
     override def componentDidMount() = {
       println("did mount…")
-
-      if (state.projects.isEmpty) {
-        println("fetching projects…")
-        googleapis
-          .projects
-          .apply
-          .map {
-            projects ⇒
-              println(s"got ${projects.size} projects: ${projects.map(_.name).mkString(",")}")
-              setState(_.copy(projects = projects))
-          }
-          .reauthenticate_?
-      }
+      state
+        .login
+        .foreach {
+          login ⇒
+            implicit val auth = login.auth
+            println("fetching projects…")
+            googleapis
+              .projects()
+              .map {
+                projects ⇒
+                  println(s"got ${projects.size} projects: ${projects.map(_.name).mkString(",")}")
+                  setState(
+                    state
+                      .map {
+                        _.copy(
+                          projects = projects
+                        )
+                      }
+                  )
+              }
+              .reauthenticate_?
+        }
     }
 
   }

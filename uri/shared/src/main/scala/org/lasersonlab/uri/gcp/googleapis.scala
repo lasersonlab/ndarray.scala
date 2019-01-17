@@ -4,19 +4,21 @@ import java.net.URL
 
 import cats.implicits._
 import com.softwaremill.sttp._
-import hammerlab.option._
+import hammerlab.option.Opt
 import io.circe.Decoder.Result
 import io.circe.generic.decoding.DerivedDecoder
 import io.circe.generic.auto._
 import io.circe.{ Decoder, DecodingFailure, HCursor }
 import lasersonlab.future.F
-import org.lasersonlab.uri.gcp.googleapis.projects.{ Project, UserProject }
-import org.lasersonlab.uri.gcp.googleapis.storage.{ Bucket, Buckets }
+import org.lasersonlab.uri.gcp.googleapis.projects.{ Project }
+import org.lasersonlab.uri.gcp.googleapis.storage.{ Bucket }
 import org.lasersonlab.uri.{ Http, http }
 import shapeless.Lazy
 
 object googleapis {
   val base = uri"https://www.googleapis.com"
+
+  type ?[+T] = Opt[T]
 
   def kindDecoder[A](kind: String)(implicit d: Lazy[DerivedDecoder[A]]): Decoder[A] =
     new Decoder[A] {
@@ -34,13 +36,13 @@ object googleapis {
     id: String,
     name: String,
     email: String,
-    img: URL
+    img: String
   )
 
   object userinfo {
-    def apply(implicit auth: Auth): F[User] = {
+    def apply()(implicit auth: Auth, httpConfig: http.Config): F[User] = {
       Http(uri"https://www.googleapis.com/oauth2/v1/userinfo?alt=json".toJavaUri)
-        .json[URL]
+        .json[User]
     }
   }
 
@@ -48,6 +50,9 @@ object googleapis {
             items: Vector[T],
     nextPageToken: ?[String] = None
   )
+  object Paged {
+    implicit def unwrap[T](paged: Paged[T]): Vector[T] = paged.items
+  }
 
   import http.Config._
 
@@ -62,8 +67,23 @@ object googleapis {
       @JsonKey(         "name")   name:    String,
       @JsonKey(    "projectId")     id:    String,
       @JsonKey("projectNumber") number:    String,
-                               buckets: ?[Buckets]
-    )
+                               buckets: ?[Paged[Bucket]]
+    ) {
+      def fetchBuckets(implicit auth: Auth, h: http.Config): F[Project] =
+        if (buckets.isEmpty) {
+          implicit val project = this
+          googleapis
+            .storage
+            .buckets
+            .map {
+              buckets ⇒
+                copy(
+                  buckets = buckets
+                )
+            }
+        } else
+          F { this }
+    }
 
     case class UserProject(project: Project) {
       override def toString: String = project.id
@@ -73,7 +93,7 @@ object googleapis {
       implicit def unwrap(userProject: UserProject):     Project = userProject.project
     }
 
-    def apply(implicit auth: Auth, httpConfig: http.Config): F[Paged[Project]] = {
+    def apply()(implicit auth: Auth, httpConfig: http.Config): F[Paged[Project]] = {
       Http(url)
         .json[Projects]
         .map {
@@ -121,24 +141,26 @@ object googleapis {
       case class Config(
                auth:          Auth,
             project:       Project,
-        userProject: ?[UserProject]
       )
       object Config {
         implicit def wrap(
           implicit
                  auth:          Auth,
               project:       Project,
-          userProject: ?[UserProject]
         ): Config =
-           Config(auth, project, userProject)
+           Config(auth, project)
       }
     }
 
-    def buckets(implicit config: Buckets.Config, httpConfig: http.Config): F[Buckets] = {
-      implicit val Buckets.Config(auth, project, userProject) = config
+    def buckets(implicit config: Buckets.Config, httpConfig: http.Config): F[Paged[Bucket]] = {
+      implicit val Buckets.Config(auth, project) = config
       println(s"requesting buckets for project $project")
-      Http(uri"https://www.googleapis.com/storage/v1/b?project=${project.id}&userProject=${userProject.map(_.id)}".toJavaUri)
+      Http(uri"https://www.googleapis.com/storage/v1/b?project=${project.id}".toJavaUri)
         .json[Buckets]
+        .map {
+          case Buckets(items, nextPageToken) ⇒
+                 Paged(items.getOrElse(Vector()), nextPageToken)
+        }
     }
   }
 }

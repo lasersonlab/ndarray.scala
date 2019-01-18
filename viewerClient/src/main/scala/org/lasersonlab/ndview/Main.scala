@@ -2,10 +2,13 @@ package org.lasersonlab.ndview
 
 import cats.effect.{ ExitCode, IO, IOApp }
 import cats.implicits._
+import org.lasersonlab.uri.fragment
 import org.lasersonlab.uri.gcp.googleapis.storage.Bucket
-//import org.lasersonlab.uri.gcp.googleapis.?
+
+import scala.util.{ Failure, Success }
 import io.circe.Printer
-import org.lasersonlab.uri.gcp.SignIn.{ ClientId, RedirectUrl, Scope, SignOut, loadAuth }
+import org.lasersonlab.uri._
+import org.lasersonlab.uri.gcp.SignIn.{ ClientId, RedirectUrl, Scope, SignOut }
 import org.lasersonlab.uri.gcp.googleapis.projects.Project
 import org.lasersonlab.uri.gcp.{ Auth, SignIn, googleapis }
 import org.scalajs.dom.document
@@ -28,6 +31,7 @@ object Main
   implicit val REDIRECT_URL = RedirectUrl("http://localhost:8000")
   implicit val SCOPE =
     Scope(
+      "https://www.googleapis.com/auth/userinfo.email",
       "https://www.googleapis.com/auth/userinfo.profile",
       "https://www.googleapis.com/auth/devstorage.read_only",
       "https://www.googleapis.com/auth/cloud-platform.read-only"
@@ -47,13 +51,7 @@ object Main
 
   @react class Page extends Component {
     type Props = Unit
-
     type State = Logins
-//    case class State(
-//          project : Option[     Project ] = None,
-//      userProject : Option[ UserProject ] = None,
-//          projects: Option[List[Project]] = None,
-//    )
 
     def initialState: State = {
       val str = localStorage.getItem(stateKey)
@@ -62,17 +60,18 @@ object Main
         .fold {
           Logins()
         } {
-          decode[State](_) match {
+          decode[Logins](_) match {
             case Left(e) ⇒
-              err.println(s"Failed to parse state from localStorage: $str; clearing")
+              err.println(s"Failed to parse state from localStorage:")
+              err.println(e)
+              err.println(str)
               localStorage.removeItem(stateKey)
               initialState
             case Right(state) ⇒ state
           }
         }
+      Logins()
     }
-
-    //implicit def auth: Auth = props
 
     override def shouldComponentUpdate(nextProps: Props, nextState: State): Boolean =
       props != nextProps ||
@@ -104,6 +103,7 @@ object Main
     }
 
     def selectProject(
+      update: (Login, String) ⇒ Login,
       project: Option[Project],
       placeholder: String
     ) =
@@ -125,7 +125,7 @@ object Main
 
                   setState(
                     _.set(
-                      login.project(id)
+                      update(login, id)
                     )
                   )
               }
@@ -153,9 +153,13 @@ object Main
             )
         }
 
+    def stateJson =
+      div(
+        pprint(state.asJson)
+      )
+
     def render = {
       println("render")
-
       val logins = state.logins
       val login  = state.login
 
@@ -163,6 +167,7 @@ object Main
         .fold {
           div(
             button(onClick := { _ ⇒ SignIn () })("sign in" ),
+            stateJson
           )
         } {
           login ⇒
@@ -172,8 +177,8 @@ object Main
               button(onClick := { _ ⇒ SignIn () })("sign in" ),
               button(onClick := { _ ⇒ SignOut() })("sign out"),
 
-              selectProject(login.    project,         "Project"),
-              selectProject(login.userProject, "Bill-to Project"),
+              selectProject(_.    project(_), login.    project,         "Project"),
+              selectProject(_.userProject(_), login.userProject, "Bill-to Project"),
 
               for {
                 project ← login.project
@@ -188,46 +193,33 @@ object Main
                         s"$name"
                       )
                   }
+              ,
+              stateJson
             )
         }
     }
 
-//    def buckets(
-//      implicit
-//      auth: Auth,
-//      project: Project,
-//      userProject: ?[UserProject]
-//    ): F[Unit] = {
-//      println(s"got project: $project")
-//      googleapis
-//        .storage
-//        .buckets
-//        .map {
-//          buckets ⇒
-//            println(s"got ${buckets.size} buckets: ${buckets.mkString(",")}")
-//            val newProject = project.copy(buckets = buckets)
-//            setState(
-//              _.copy(
-//                project = newProject,
-//                projects =
-//                  state
-//                    .projects
-//                    .map {
-//                      _.map {
-//                        case p
-//                          if p.id == project.id ⇒
-//                          newProject
-//                        case p ⇒ p
-//                      }
-//                    }
-//              )
-//            )
-//        }
-//        .reauthenticate_?
-//    }
-
     override def componentDidMount() = {
       println("did mount…")
+      Auth
+        .fromFragment(fragment.map)
+        .foreach {
+          implicit auth ⇒
+            println(s"Processing fragment auth: $auth")
+            document.location.hash = ""
+            Login()
+              .onComplete {
+                case Success(login) ⇒
+                  println(s"got new login: $login")
+                  setState(
+                    state :+ login
+                  )
+                case Failure(e) ⇒
+                  err.println("Failed to create login:")
+                  err.println(e)
+              }
+        }
+
       state
         .login
         .foreach {
@@ -256,18 +248,10 @@ object Main
 
   override def run(args: List[String]): IO[ExitCode] = {
     println("client main")
-    loadAuth match {
-      case Left(e) ⇒
-        println(s"no creds; sign in again")
-        println(e)
-        SignIn()
-        loadAuth
-      case Right(auth) ⇒
-        ReactDOM.render(
-          Page(auth),
-          document.getElementById("root")
-        )
-    }
+    ReactDOM.render(
+      Page(),
+      document.getElementById("root")
+    )
 
     IO.pure(ExitCode.Success)
   }

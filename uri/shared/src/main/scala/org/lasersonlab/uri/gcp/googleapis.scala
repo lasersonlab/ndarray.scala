@@ -1,24 +1,19 @@
 package org.lasersonlab.uri.gcp
 
-import java.net.URL
-
 import cats.implicits._
 import com.softwaremill.sttp._
-import hammerlab.option.Opt
 import io.circe.Decoder.Result
 import io.circe.generic.decoding.DerivedDecoder
 import io.circe.generic.auto._
 import io.circe.{ Decoder, DecodingFailure, HCursor }
 import lasersonlab.future.F
-import org.lasersonlab.uri.gcp.googleapis.projects.{ Project }
-import org.lasersonlab.uri.gcp.googleapis.storage.{ Bucket }
-import org.lasersonlab.uri.{ Http, http }
+import org.lasersonlab.uri._
+import org.lasersonlab.uri.gcp.googleapis.projects.Project
+import org.lasersonlab.uri.gcp.googleapis.storage.Bucket
 import shapeless.Lazy
 
 object googleapis {
   val base = uri"https://www.googleapis.com"
-
-  type ?[+T] = Opt[T]
 
   def kindDecoder[A](kind: String)(implicit d: Lazy[DerivedDecoder[A]]): Decoder[A] =
     new Decoder[A] {
@@ -35,8 +30,8 @@ object googleapis {
   case class User(
     id: String,
     name: String,
-    email: String,
-    img: String
+    email: Option[String],
+    picture: String
   )
 
   object userinfo {

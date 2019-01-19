@@ -12,6 +12,7 @@ default(
     hammerlab.shapeless_utils → "1.5.1",
     hammerlab.             io → "5.2.1",
   ),
+  circe.version := "0.11.1",
   http4s.version := "0.20.0-M1"
 )
 

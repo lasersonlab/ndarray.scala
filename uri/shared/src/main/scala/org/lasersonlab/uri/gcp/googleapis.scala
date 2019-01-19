@@ -3,9 +3,9 @@ package org.lasersonlab.uri.gcp
 import cats.implicits._
 import com.softwaremill.sttp._
 import io.circe.Decoder.Result
-import io.circe.generic.decoding.DerivedDecoder
 import io.circe.generic.auto._
-import io.circe.{ Decoder, DecodingFailure, HCursor }
+import io.circe.generic.decoding.DerivedDecoder
+import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor }
 import lasersonlab.future.F
 import org.lasersonlab.uri._
 import org.lasersonlab.uri.gcp.googleapis.projects.Project
@@ -45,9 +45,17 @@ object googleapis {
             items: Vector[T],
     nextPageToken: ?[String] = None
   )
-  object Paged {
+  trait PagedCodecs {
+    import io.circe.generic.semiauto._
+    implicit def pagedDecoder[T: Decoder]: Decoder[Paged[T]] = deriveDecoder[Paged[T]]
+    implicit def pagedEncoder[T: Encoder]: Encoder[Paged[T]] = deriveEncoder[Paged[T]]
+  }
+  object Paged extends PagedCodecs {
     implicit def unwrap[T](paged: Paged[T]): Vector[T] = paged.items
   }
+
+  // Need this to take precedence over Encoder.encodeIterable
+  import Paged.pagedEncoder
 
   import http.Config._
 

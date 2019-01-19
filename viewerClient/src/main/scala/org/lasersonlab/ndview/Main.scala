@@ -5,22 +5,37 @@ import cats.implicits._
 import org.lasersonlab.uri.fragment
 import org.lasersonlab.uri.gcp.googleapis.storage.Bucket
 
+import System.err
+
+import io.circe.generic.auto._
+import io.circe.parser.decode
+import io.circe.syntax._
+
+import lasersonlab.opt.slinky._
 import scala.util.{ Failure, Success }
+import hammerlab.option.{ Non, Som }
 import io.circe.Printer
 import org.lasersonlab.uri._
 import org.lasersonlab.uri.gcp.SignIn.{ ClientId, RedirectUrl, Scope, SignOut }
+import org.lasersonlab.uri.gcp.googleapis.Paged
 import org.lasersonlab.uri.gcp.googleapis.projects.Project
 import org.lasersonlab.uri.gcp.{ Auth, SignIn, googleapis }
 import org.scalajs.dom.document
 import org.scalajs.dom.raw.HTMLSelectElement
 import org.scalajs.dom.window.localStorage
+import scalajs.js.Dynamic.literal
 import slinky.core._
 import slinky.core.annotations.react
 import slinky.core.facade.ReactElement
+import slinky.readwrite.{ Reader, Writer }
 import slinky.web.ReactDOM
 import slinky.web.html._
 
 import scala.concurrent.ExecutionContext
+import scala.scalajs.js
+
+// Need this to take precedence over Encoder.encodeIterable
+import Paged.pagedEncoder
 
 object Main
   extends IOApp
@@ -40,12 +55,6 @@ object Main
   implicit val ec = ExecutionContext.global
 
   val stateKey = "app-state"
-
-  import System.err
-
-  import io.circe.generic.auto._
-  import io.circe.parser.decode
-  import io.circe.syntax._
 
   val pprint = Printer.spaces4.copy(colonLeft = "").pretty _
 
@@ -70,7 +79,6 @@ object Main
             case Right(state) ⇒ state
           }
         }
-      Logins()
     }
 
     override def shouldComponentUpdate(nextProps: Props, nextState: State): Boolean =
@@ -133,7 +141,6 @@ object Main
               option(
                 key := "_default",
                 value := "",
-                selected := true,
                 disabled := true,
                   hidden := true
               )(
@@ -155,6 +162,12 @@ object Main
 
     def stateJson =
       div(
+        style := literal(
+          marginTop = "2em",
+          fontSize = "0.8em",
+          fontFamily = "monospace"
+        )
+      )(
         pprint(state.asJson)
       )
 
@@ -174,11 +187,15 @@ object Main
             implicit val Login(auth, user, projects, userProject) = login
 
             div(
-              button(onClick := { _ ⇒ SignIn () })("sign in" ),
-              button(onClick := { _ ⇒ SignOut() })("sign out"),
+              div(
+                className := "controls"
+              )(
+                button(onClick := { _ ⇒ SignIn () })("sign in" ),
+                button(onClick := { _ ⇒ SignOut() })("sign out"),
 
-              selectProject(_.    project(_), login.    project,         "Project"),
-              selectProject(_.userProject(_), login.userProject, "Bill-to Project"),
+                selectProject(_.    project(_), login.    project,         "Project"),
+                selectProject(_.userProject(_), login.userProject, "Bill-to Project"),
+              ),
 
               for {
                 project ← login.project

@@ -22,7 +22,7 @@ case class Login(
 object Login {
   def apply()(implicit auth: Auth, httpConfig: http.Config): F[Login] =
     for {
-      user ← googleapis.userinfo()
+          user ← googleapis.userinfo()
       projects ← googleapis.projects()
     } yield
       Login(

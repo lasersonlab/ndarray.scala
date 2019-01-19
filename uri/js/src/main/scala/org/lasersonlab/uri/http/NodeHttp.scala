@@ -7,7 +7,7 @@ import cats.implicits._
 import io.scalajs.nodejs.http.IncomingMessage
 import io.scalajs.npm.request._
 import org.lasersonlab.{ uri ⇒ u }
-import org.lasersonlab.uri.{ Http, Uri, http }
+import org.lasersonlab.uri.{ Http, Uri, caching, http }
 
 import scala.concurrent.Promise
 import scala.scalajs.js.Dictionary
@@ -16,7 +16,7 @@ import scala.util.{ Failure, Try }
 
 case class NodeHttp(uri: URI)(
     implicit
-    val config: u.Config,
+    val cachingConfig: caching.Config,
     defaults: Defaults,
     httpConfig: http.Config
 )

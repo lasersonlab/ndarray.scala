@@ -11,7 +11,7 @@ import scala.scalajs.js.typedarray.Int8Array
 
 case class Local(str: String)(
   implicit
-  val config: Config,
+  val cachingConfig: caching.Config,
   override val ec: ExecutionContext
 )
 extends Uri {

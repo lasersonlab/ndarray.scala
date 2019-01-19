@@ -4,7 +4,7 @@ import java.io.IOException
 import java.net.URI
 
 import org.lasersonlab.{ uri ⇒ u }
-import org.lasersonlab.uri.{ Http, Uri, http }
+import org.lasersonlab.uri.{ Http, Uri, caching, http }
 import org.scalajs.dom
 import org.scalajs.dom.ext.AjaxException
 import org.scalajs.dom.raw.XMLHttpRequest
@@ -15,7 +15,7 @@ import scala.util.{ Failure, Try }
 
 case class BrowserHttp(uri: URI)(
     implicit
-    val config: u.Config,
+    val cachingConfig: caching.Config,
     defaults: Defaults,
     httpConfig: http.Config
 )

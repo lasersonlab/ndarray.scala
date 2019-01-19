@@ -12,8 +12,11 @@ import org.lasersonlab.uri.gcp.googleapis.projects.Project
 import org.lasersonlab.uri.gcp.googleapis.storage.Bucket
 import shapeless.Lazy
 
-object googleapis {
+object googleapis
+  extends Config.implicits {
   val base = uri"https://www.googleapis.com"
+
+  type ?[+T] = Option[T]
 
   def kindDecoder[A](kind: String)(implicit d: Lazy[DerivedDecoder[A]]): Decoder[A] =
     new Decoder[A] {
@@ -30,12 +33,12 @@ object googleapis {
   case class User(
     id: String,
     name: String,
-    email: Option[String],
+    email: ?[String],
     picture: String
   )
 
   object userinfo {
-    def apply()(implicit auth: Auth, httpConfig: http.Config): F[User] = {
+    def apply()(implicit config: Config): F[User] = {
       Http(uri"https://www.googleapis.com/oauth2/v1/userinfo?alt=json".toJavaUri)
         .json[User]
     }
@@ -61,18 +64,21 @@ object googleapis {
 
   object projects {
     val url = uri"https://cloudresourcemanager.googleapis.com/v1/projects".toJavaUri
-    case class Projects(projects: Option[Vector[Project]] = None, nextPageToken: Option[String] = None)
+    case class Projects(
+           projects: ?[Vector[Project]] = None,
+      nextPageToken: ?[        String ] = None
+    )
 
     import io.circe.generic.extras._
     implicit val config: Configuration = Configuration.default
     @ConfiguredJsonCodec
     case class Project(
-      @JsonKey(         "name")   name:    String,
-      @JsonKey(    "projectId")     id:    String,
-      @JsonKey("projectNumber") number:    String,
+      @JsonKey(         "name")   name:         String  ,
+      @JsonKey(    "projectId")     id:         String  ,
+      @JsonKey("projectNumber") number:         String  ,
                                buckets: ?[Paged[Bucket]]
     ) {
-      def fetchBuckets(implicit auth: Auth, h: http.Config): F[Project] =
+      def fetchBuckets(implicit config: Config): F[Project] =
         if (buckets.isEmpty) {
           implicit val project = this
           googleapis
@@ -81,7 +87,7 @@ object googleapis {
             .map {
               buckets ⇒
                 copy(
-                  buckets = buckets
+                  buckets = Some(buckets)
                 )
             }
         } else
@@ -96,7 +102,8 @@ object googleapis {
       implicit def unwrap(userProject: UserProject):     Project = userProject.project
     }
 
-    def apply()(implicit auth: Auth, httpConfig: http.Config): F[Paged[Project]] = {
+    def apply()(implicit config: Config): F[Paged[Project]] = {
+      println(s"Getting projects for auth ${config.auth}")
       Http(url)
         .json[Projects]
         .map {
@@ -140,23 +147,9 @@ object googleapis {
     object Buckets {
       implicit val decoder = kindDecoder[Buckets]("storage#buckets")
       implicit def toSeq(buckets: Buckets): Vector[Bucket] = buckets.buckets
-
-      case class Config(
-               auth:          Auth,
-            project:       Project,
-      )
-      object Config {
-        implicit def wrap(
-          implicit
-                 auth:          Auth,
-              project:       Project,
-        ): Config =
-           Config(auth, project)
-      }
     }
 
-    def buckets(implicit config: Buckets.Config, httpConfig: http.Config): F[Paged[Bucket]] = {
-      implicit val Buckets.Config(auth, project) = config
+    def buckets(implicit config: Config, project: Project): F[Paged[Bucket]] = {
       println(s"requesting buckets for project $project")
       Http(uri"https://www.googleapis.com/storage/v1/b?project=${project.id}".toJavaUri)
         .json[Buckets]

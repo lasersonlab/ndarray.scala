@@ -10,6 +10,7 @@ import akka.http.scaladsl.model.HttpMethods.{ GET, HEAD }
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import cats.implicits._
+import org.lasersonlab.uri.caching.Config
 import org.lasersonlab.uri.http.{ Base, Defaults }
 import org.lasersonlab.{ uri ⇒ u }
 
@@ -18,7 +19,7 @@ import scala.util.{ Failure, Success, Try }
 
 case class Http(uri: URI)(
   implicit
-  val config: u.Config,
+  val config: Config,
   defaults: Defaults,
   httpConfig: http.Config
 )

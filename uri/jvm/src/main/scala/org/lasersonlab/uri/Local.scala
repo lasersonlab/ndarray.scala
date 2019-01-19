@@ -14,7 +14,7 @@ import math.min
 
 case class Local private(file: File)(
   implicit
-  val config: Config,
+  val cachingConfig: caching.Config,
   override val ec: ExecutionContext
 )
 extends Uri {
@@ -86,13 +86,13 @@ object Local {
 
   def apply(file: File)(
     implicit
-    config: Config,
+    cachingConfig: caching.Config,
     ec: ExecutionContext
   ): Local = new Local(file.getCanonicalFile)
 
   def apply(str: String)(
     implicit
-    config: Config,
+    cachingConfig: caching.Config,
     ec: ExecutionContext
   ): Local = new Local(new File(str).getCanonicalFile)
 

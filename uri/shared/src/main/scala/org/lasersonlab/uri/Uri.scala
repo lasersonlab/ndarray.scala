@@ -6,8 +6,6 @@ import java.nio.ByteBuffer
 import java.util
 
 import cats.implicits._
-import hammerlab.either._
-import hammerlab.math.utils._
 import _root_.io.circe.Decoder
 import _root_.io.circe.parser.decode
 import org.lasersonlab.io.FileNotFoundException
@@ -16,43 +14,6 @@ import org.lasersonlab.uri.Uri.Segment
 import slogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
-
-case class Config(
-  blockSize: Int,
-  maxBlockCacheSize: Long,
-  maxNumBlocks: Int
-)
-object Config {
-  case class BlockSize(value: Int)
-  case class MaxCacheSize(value: Long)
-
-  implicit val    defaultBlockSize =    BlockSize( 2  << 20)
-  implicit val defaultMaxCacheSize = MaxCacheSize(64L << 20)
-
-  implicit def defaultConfig(
-    implicit
-    blockSize: BlockSize,
-    maxCacheSize: MaxCacheSize
-  ):
-    Config =
-    Config(
-         blockSize.value,
-      maxCacheSize.value
-    )
-
-  def apply(
-    blockSize: Int,
-    maxBlockCacheSize: Long
-  ):
-    Config =
-    Config(
-      blockSize,
-      maxBlockCacheSize,
-      (maxBlockCacheSize /↑ blockSize)
-        .safeInt
-        .getOrThrow
-    )
-}
 
 abstract class Uri()(implicit val ec: ExecutionContext)
   extends LazyLogging
@@ -81,8 +42,8 @@ abstract class Uri()(implicit val ec: ExecutionContext)
       }
   }
 
-  val config: Config
-  lazy val Config(blockSize, maximumSize, maxNumBlocks) = config
+  val cachingConfig: caching.Config
+  lazy val caching.Config(blockSize, maximumSize, maxNumBlocks) = cachingConfig
 
   override def toString: String = uri.toString
 

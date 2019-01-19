@@ -11,9 +11,7 @@ import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
 
-import lasersonlab.opt.slinky._
 import scala.util.{ Failure, Success }
-import hammerlab.option.{ Non, Som }
 import io.circe.Printer
 import org.lasersonlab.uri._
 import org.lasersonlab.uri.gcp.SignIn.{ ClientId, RedirectUrl, Scope, SignOut }
@@ -27,12 +25,10 @@ import scalajs.js.Dynamic.literal
 import slinky.core._
 import slinky.core.annotations.react
 import slinky.core.facade.ReactElement
-import slinky.readwrite.{ Reader, Writer }
 import slinky.web.ReactDOM
 import slinky.web.html._
 
 import scala.concurrent.ExecutionContext
-import scala.scalajs.js
 
 // Need this to take precedence over Encoder.encodeIterable
 import Paged.pagedEncoder
@@ -64,7 +60,7 @@ object Main
 
     def initialState: State = {
       val str = localStorage.getItem(stateKey)
-      println(s"state from localStorage: $str")
+      //println(s"state from localStorage: $str")
       Option(str)
         .fold {
           Logins()
@@ -75,7 +71,7 @@ object Main
               err.println(e)
               err.println(str)
               localStorage.removeItem(stateKey)
-              initialState
+              Logins()
             case Right(state) ⇒ state
           }
         }
@@ -168,7 +164,7 @@ object Main
           fontFamily = "monospace"
         )
       )(
-        pprint(state.asJson)
+        Json(state.asJson)
       )
 
     def render = {
@@ -220,47 +216,45 @@ object Main
       println("did mount…")
       Auth
         .fromFragment(fragment.map)
-        .foreach {
-          implicit auth ⇒
-            println(s"Processing fragment auth: $auth")
-            document.location.hash = ""
-            Login()
-              .onComplete {
-                case Success(login) ⇒
-                  println(s"got new login: $login")
-                  setState(
-                    state :+ login
-                  )
-                case Failure(e) ⇒
-                  err.println("Failed to create login:")
-                  err.println(e)
-              }
-        }
-
-      state
-        .login
-        .foreach {
-          login ⇒
-            implicit val auth = login.auth
-            println("fetching projects…")
-            googleapis
-              .projects()
-              .map {
-                projects ⇒
-                  println(s"got ${projects.size} projects: ${projects.map(_.name).mkString(",")}")
-                  setState(
-                    state
-                      .map {
-                        _.copy(
-                          projects = projects
-                        )
+        .fold(
+          {
+            _ ⇒
+              state
+                .login
+                .foreach {
+                  login ⇒
+                    implicit val auth = login.auth
+                    login
+                      .projects
+                      .fetchBuckets
+                      .onComplete {
+                        case Success(projects) ⇒
+                          println("Updating projects after bucket-fetch attempt")
+                          setState ( state.map { _.copy(projects = projects) } )
+                        case Failure(e) ⇒
+                          err.println("Failed to fetch buckets:")
+                          err.println(e)
                       }
-                  )
-              }
-              .reauthenticate_?
+                }
+          },
+          {
+            implicit auth ⇒
+              println(s"Processing fragment auth: $auth")
+              document.location.hash = ""
+              Login()
+                .onComplete {
+                  case Success(login) ⇒
+                    println(s"got new login: $login")
+                    setState(
+                      state :+ login
+                    )
+                  case Failure(e) ⇒
+                    err.println("Failed to create login:")
+                    err.println(e)
+                }
         }
+      )
     }
-
   }
 
   override def run(args: List[String]): IO[ExitCode] = {

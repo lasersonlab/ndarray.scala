@@ -2,6 +2,7 @@ package org.lasersonlab.uri
 
 import java.net.URI
 
+import org.lasersonlab.uri.caching.Config
 import org.lasersonlab.uri.http.{ BrowserHttp, Defaults, NodeHttp }
 
 trait Http extends Uri

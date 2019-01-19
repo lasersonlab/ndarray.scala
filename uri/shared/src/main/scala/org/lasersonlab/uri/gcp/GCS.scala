@@ -3,21 +3,21 @@ package org.lasersonlab.uri.gcp
 import java.net.URI
 
 import cats.implicits._
+import org.lasersonlab.{ uri ⇒ u }
 import org.lasersonlab.uri.Uri.Segment
 import org.lasersonlab.uri.gcp.googleapis.projects.{ Project, UserProject }
-import org.lasersonlab.uri.{ Config, Http, Uri, http ⇒ h }
+import org.lasersonlab.uri.{ Http, Uri, caching, http ⇒ h }
 
 case class GCS(
   bucket: String,
   path: Vector[String]
 )(
   implicit
-  auth: Auth,
+  config: Config,
   val userProject: Option[UserProject],
-  val config: Config,
-  httpConfig: h.Config
+  val cachingConfig: caching.Config,
 )
-extends Uri()(httpConfig) {
+extends Uri()(config.httpConfig) {
 
   type Self = GCS
 

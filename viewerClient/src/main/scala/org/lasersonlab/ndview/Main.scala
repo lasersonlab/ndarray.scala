@@ -3,20 +3,21 @@ package org.lasersonlab.ndview
 import cats.effect.{ ExitCode, IO, IOApp }
 import cats.implicits._
 import org.lasersonlab.uri.fragment
-import org.lasersonlab.uri.gcp.googleapis.storage.Bucket
+import org.lasersonlab.uri.gcp.googleapis.storage.{ Bucket, Objects }
 import System.err
 
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
 
+import hammerlab.bytes._
 import scala.util.{ Failure, Success }
 import io.circe.Printer
 import org.lasersonlab.uri._
 import org.lasersonlab.uri.gcp.SignIn.{ ClientId, RedirectUrl, Scopes, SignOut }
 import org.lasersonlab.uri.gcp.googleapis.{ Paged, scopes }
 import org.lasersonlab.uri.gcp.googleapis.projects.Project
-import org.lasersonlab.uri.gcp.{ Auth, SignIn, googleapis }
+import org.lasersonlab.uri.gcp.{ Auth, Metadata, SignIn, googleapis }
 import org.scalajs.dom.document
 import org.scalajs.dom.raw.HTMLSelectElement
 import org.scalajs.dom.window.localStorage
@@ -40,6 +41,7 @@ object Main
 
   implicit val CLIENT_ID = ClientId("218219996328-lltra1ss5e34hlraupaalrr6f56qmiat.apps.googleusercontent.com")
   implicit val REDIRECT_URL = RedirectUrl("http://localhost:8000")
+
   import scopes.auth._
   implicit val SCOPE =
     Scopes(
@@ -48,8 +50,6 @@ object Main
        devstorage read_only,
       `cloud-platform` `read-only`
     )
-
-  println(SCOPE)
 
   implicit val ec = ExecutionContext.global
 
@@ -161,11 +161,7 @@ object Main
 
     def stateJson =
       div(
-        style := literal(
-          marginTop = "2em",
-          fontSize = "0.8em",
-          fontFamily = "monospace"
-        )
+        className := "state"
       )(
         Json(state.asJson)
       )
@@ -202,11 +198,68 @@ object Main
               } yield
                 buckets
                   .map {
-                    case Bucket(id, name, _, _) ⇒
+                    case bucket @ Bucket(id, name, _, _, objects) ⇒
                       div(
-                        key := id
+                        key := id,
+                        className := "bucket",
+                        onClick := {
+                          _ ⇒
+                            println("clicked")
+                            bucket
+                              .ls()
+                              .map {
+                                next ⇒
+                                  println(s"Got new bucket: $next")
+                                  setState {
+                                    _.set {
+                                      login
+                                        .copy(
+                                          projects =
+                                            projects
+                                              .mod(project.id) {
+                                                  project
+                                                    .copy(
+                                                      buckets =
+                                                        Some(
+                                                          buckets
+                                                            .copy(
+                                                              items =
+                                                                buckets
+                                                                  .items
+                                                                  .map {
+                                                                    case b if b.id == bucket.id ⇒ next
+                                                                    case b ⇒ b
+                                                                  }
+                                                            )
+                                                        )
+                                                    )
+                                              }
+                                        )
+                                    }
+                                  }
+                              }
+                              .reauthenticate_?
+                        }
                       )(
-                        s"$name"
+                        (s"$name": ReactElement) +:
+                        objects
+                          .fold {
+                            Vector[ReactElement]()
+                          } {
+                            objects ⇒
+                              objects
+                                .dirs
+                                .map {
+                                  dir ⇒
+                                    div(className := "dir")(dir)
+                                } ++
+                              objects
+                                .files
+                                .map {
+                                  case Metadata(_, name, size, _) ⇒
+                                    div(className := "file")(s"$name (${Bytes.format(size)})")
+                                }
+                          }: _*
                       )
                   }
               ,

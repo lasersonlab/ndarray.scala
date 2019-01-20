@@ -15,7 +15,22 @@ case class Projects(
   def apply(id: String): Project = projects.find(_.id == id).get
   def project: Option[Project] = projectId.map(apply)
   def select(id: String): Projects = copy(projectId = Some(id))
-  def mod(pf: PartialFunction[Project, F[Project]])(implicit ec: ExecutionContext): F[Projects] = {
+  def mod(id: String)(project: Project): Projects =
+    copy(
+      projects =
+        projects
+          .copy(
+            items =
+              projects
+                .items
+                .foldLeft(Vector[Project]()) {
+                  case (builder, cur) ⇒
+                    builder :+ (if (cur.id == id) project else cur)
+                }
+          )
+    )
+
+  def modF(pf: PartialFunction[Project, F[Project]])(implicit ec: ExecutionContext): F[Projects] = {
     def f(project: Project) = if (pf.isDefinedAt(project)) pf(project) else F { project }
     projects
       .items
@@ -33,7 +48,7 @@ case class Projects(
       }
   }
   def fetchBuckets(implicit cfg: gcp.Config): F[Projects] =
-    mod {
+    modF {
       case project @ Project(_, _, _, None) ⇒
         project.fetchBuckets
     }

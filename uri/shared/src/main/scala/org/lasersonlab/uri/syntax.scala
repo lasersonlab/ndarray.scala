@@ -5,6 +5,7 @@ import java.net.URI
 trait syntax {
   import syntax.Ops
   @inline implicit def makeURIOps(uri: URI): Ops = Ops(uri)
+  @inline implicit def sttpToJavaNetUri(uri: com.softwaremill.sttp.Uri): URI = uri.toJavaUri
 }
 
 object syntax {

@@ -3,9 +3,9 @@ package org.lasersonlab.uri.gcp
 import java.net.URI
 
 import cats.implicits._
-import org.lasersonlab.{ uri ⇒ u }
 import org.lasersonlab.uri.Uri.Segment
-import org.lasersonlab.uri.gcp.googleapis.projects.{ Project, UserProject }
+import org.lasersonlab.uri.gcp.googleapis.projects.UserProject
+import org.lasersonlab.uri.gcp.googleapis.storage
 import org.lasersonlab.uri.{ Http, Uri, caching, http ⇒ h }
 
 case class GCS(
@@ -29,8 +29,8 @@ extends Uri()(config.httpConfig) {
 
   import com.softwaremill.sttp._
 
-  def objectUrl = uri"https://www.googleapis.com/storage/v1/b/$bucket/o/${path.mkString("/")}?userProject=$userProject"
-  def listUri = uri"https://www.googleapis.com/storage/v1/b/$bucket/o?delimiter=${"/"}&prefix=${path.mkString("", "/", "/")}&userProject=$userProject"
+  def objectUrl = uri"${storage.base}/b/$bucket/o/${path.mkString("/")}?userProject=$userProject"
+  def listUri = uri"${storage.base}/b/$bucket/o?delimiter=${"/"}&prefix=${path.mkString("", "/", "/")}&userProject=$userProject"
 
   override def /(name: String): Self = GCS(bucket, path :+ name)
 

@@ -4,7 +4,6 @@ import cats.effect.{ ExitCode, IO, IOApp }
 import cats.implicits._
 import org.lasersonlab.uri.fragment
 import org.lasersonlab.uri.gcp.googleapis.storage.Bucket
-
 import System.err
 
 import io.circe.generic.auto._
@@ -14,13 +13,14 @@ import io.circe.syntax._
 import scala.util.{ Failure, Success }
 import io.circe.Printer
 import org.lasersonlab.uri._
-import org.lasersonlab.uri.gcp.SignIn.{ ClientId, RedirectUrl, Scope, SignOut }
-import org.lasersonlab.uri.gcp.googleapis.Paged
+import org.lasersonlab.uri.gcp.SignIn.{ ClientId, RedirectUrl, Scopes, SignOut }
+import org.lasersonlab.uri.gcp.googleapis.{ Paged, scopes }
 import org.lasersonlab.uri.gcp.googleapis.projects.Project
 import org.lasersonlab.uri.gcp.{ Auth, SignIn, googleapis }
 import org.scalajs.dom.document
 import org.scalajs.dom.raw.HTMLSelectElement
 import org.scalajs.dom.window.localStorage
+
 import scalajs.js.Dynamic.literal
 import slinky.core._
 import slinky.core.annotations.react
@@ -40,13 +40,16 @@ object Main
 
   implicit val CLIENT_ID = ClientId("218219996328-lltra1ss5e34hlraupaalrr6f56qmiat.apps.googleusercontent.com")
   implicit val REDIRECT_URL = RedirectUrl("http://localhost:8000")
+  import scopes.auth._
   implicit val SCOPE =
-    Scope(
-      "https://www.googleapis.com/auth/userinfo.email",
-      "https://www.googleapis.com/auth/userinfo.profile",
-      "https://www.googleapis.com/auth/devstorage.read_only",
-      "https://www.googleapis.com/auth/cloud-platform.read-only"
+    Scopes(
+       userinfo email,
+       userinfo profile,
+       devstorage read_only,
+      `cloud-platform` `read-only`
     )
+
+  println(SCOPE)
 
   implicit val ec = ExecutionContext.global
 

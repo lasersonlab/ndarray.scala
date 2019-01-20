@@ -53,6 +53,7 @@ import io.{ circe ⇒ c }
           |  Num(_)
           |  Str(_) ⇒
           Seq(label(json.toString): ReactElement)
+        case Arr(Vector()) ⇒ open("[]")
         case Arr(elems) ⇒
           open("[") +:
           elems
@@ -68,6 +69,7 @@ import io.{ circe ⇒ c }
                 .withKey(idx.toString): ReactElement
             } :+
           close("]")
+        case Obj(Vector()) ⇒ open("{}")
         case Obj(items) ⇒
           open("{") +:
           items

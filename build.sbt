@@ -156,6 +156,7 @@ lazy val uri =
         hammerlab.types,
         hammerlab.math.utils,
 
+        sourcecode,
         sttp,
 
         "io.github.cquiroz" ^^ "scala-java-time" ^ "2.0.0-M13",

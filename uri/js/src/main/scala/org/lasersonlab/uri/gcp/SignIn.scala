@@ -8,6 +8,7 @@ import io.circe.parser.decode
 import io.circe.syntax._
 import lasersonlab.future.F
 import org.lasersonlab.uri.fragment
+import org.lasersonlab.uri.gcp.googleapis.Scope
 import org.scalajs.dom.document
 import org.scalajs.dom.ext.AjaxException
 import org.scalajs.dom.raw.HTMLFormElement
@@ -16,7 +17,7 @@ import org.scalajs.dom.window.localStorage
 import scala.concurrent.ExecutionContext
 
 object SignIn {
-  case class Scope(scopes: String*) {
+  case class Scopes(scopes: Scope*) {
     override def toString: String = scopes.mkString(" ")
   }
   case class ClientId(override val toString: String)
@@ -25,11 +26,12 @@ object SignIn {
   implicit class Ops(val f: F[Unit]) extends AnyVal {
     def reauthenticate_?(
       implicit
-         ClientId: ClientId,
+      ClientId: ClientId,
       RedirectUrl: RedirectUrl,
-            Scope: Scope,
-               ec: ExecutionContext
-    ): F[Unit] =
+      Scope: Scopes,
+      ec: ExecutionContext
+    ):
+      F[Unit] =
       f
         .recover {
           case AjaxException(xhr) if xhr.status == 401 ⇒
@@ -48,9 +50,9 @@ object SignIn {
 
   def apply()(
     implicit
-       ClientId: ClientId,
+    ClientId: ClientId,
     RedirectUrl: RedirectUrl,
-          Scope: Scope,
+    Scopes: Scopes,
   ): Unit = {
 
     val form =
@@ -65,7 +67,7 @@ object SignIn {
       Map(
         "client_id" → ClientId,
         "redirect_uri" → RedirectUrl,
-        "scope" → Scope,
+        "scope" → Scopes,
         "include_granted_scopes" → "true",
         "response_type" → "token"
       )

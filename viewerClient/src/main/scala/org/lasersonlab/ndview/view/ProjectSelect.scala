@@ -8,12 +8,12 @@ import japgolly.scalajs.react.vdom.html_<^.^._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.lasersonlab.ndview.model.Login
 import org.lasersonlab.uri.?
-import org.lasersonlab.uri.gcp.googleapis.projects.Project
-import org.lasersonlab.uri.gcp.{ Auth, Metadata, SignIn, googleapis }
+import org.lasersonlab.gcp.googleapis.projects.Project
+import org.lasersonlab.gcp.{ Metadata, SignIn, googleapis }
 import org.scalajs.dom.raw.HTMLSelectElement
 
 // Need this to take precedence over Encoder.encodeIterable
-import org.lasersonlab.uri.gcp.googleapis.Paged.pagedEncoder
+import org.lasersonlab.gcp.googleapis.Paged.pagedEncoder
 
 object ProjectSelect {
   case class Props(

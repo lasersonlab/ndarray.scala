@@ -1,4 +1,4 @@
-package org.lasersonlab.uri.gcp.googleapis
+package org.lasersonlab.gcp.googleapis
 
 import io.circe.{ Decoder, Encoder }
 

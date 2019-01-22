@@ -3,28 +3,29 @@ package org.lasersonlab.ndview.view
 import java.lang.System.err
 
 import cats.implicits._
-import hammerlab.bytes.Bytes
 import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
 import japgolly.scalajs.react._
+import japgolly.scalajs.react.vdom.VdomArray
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^.^._
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.vdom.{ TagOf, VdomArray }
+import org.lasersonlab.circe.SingletonCodec._
+import org.lasersonlab.gcp.SignIn
+import org.lasersonlab.gcp.SignIn.SignOut
+import org.lasersonlab.gcp.oauth.scopes.auth._
+import org.lasersonlab.gcp.oauth.{ Auth, ClientId, RedirectUrl, Scopes }
 import org.lasersonlab.ndview.model.{ Login, Logins }
 import org.lasersonlab.uri.fragment
-import org.lasersonlab.uri.gcp.SignIn.{ ClientId, RedirectUrl, Scopes, SignOut }
-import org.lasersonlab.uri.gcp.googleapis.Paged.pagedEncoder
-import org.lasersonlab.uri.gcp.googleapis.scopes
-import org.lasersonlab.uri.gcp.googleapis.storage.Bucket
-import org.lasersonlab.uri.gcp.{ Auth, Metadata, SignIn, googleapis }
 import org.scalajs.dom.document
-import org.scalajs.dom.html.Div
 import org.scalajs.dom.window.localStorage
 
 import scala.concurrent.ExecutionContext
+
+// Need this to take precedence over Encoder.encodeIterable; TODO: debug circe derivation that requires this
+import org.lasersonlab.gcp.googleapis.Paged.pagedEncoder
 
 object Page
 extends SignIn.syntax
@@ -35,7 +36,6 @@ extends SignIn.syntax
   implicit val CLIENT_ID = ClientId("218219996328-lltra1ss5e34hlraupaalrr6f56qmiat.apps.googleusercontent.com")
   implicit val REDIRECT_URL = RedirectUrl("http://localhost:8000")
 
-  import scopes.auth._
   implicit val SCOPE =
     Scopes(
       userinfo email,
@@ -55,7 +55,6 @@ extends SignIn.syntax
       .builder[ExecutionContext]("Page")
       .initialState {
         val str = localStorage.getItem(stateKey)
-        //println(s"state from localStorage: $str")
         Option(str)
           .fold {
             Logins()
@@ -71,22 +70,15 @@ extends SignIn.syntax
             }
           }
       }
-      .renderPS {
-        (b, props, state) ⇒
-          import b.setState
+      .render {
+        b ⇒
+          import b._
           implicit val ec = props
 
-          def stateJson =
-            div(
-              key := "state",
-              className := "state"
-            )(
-              Json(state.asJson)
-            )
-
-          println("render")
           val logins = state.logins
           val login  = state.login
+
+          println(s"render (${logins.size} logins; project ${login.flatMap(_.project).map(_.name)})")
 
           div(
             key := "page",
@@ -99,10 +91,38 @@ extends SignIn.syntax
               login
                 .map {
                   login ⇒
+                    implicit val auth = login.auth
+                    def fetchBuckets =
+                      Callback.future {
+                        println(s"fetching buckets for login $login on project change")
+                        login
+                          .projects
+                          .fetchBuckets
+                          .map {
+                            projects ⇒
+                              println("got projects post-bucket-fetch")
+                              modState {
+                                state ⇒
+                                  state.mod(login.id) {
+                                    login ⇒
+                                      login
+                                        .copy(
+                                          projects =
+                                            login
+                                              .projects
+                                              .copy(
+                                                projects = projects.projects
+                                              )
+                                        )
+                                  }
+                              }
+                          }
+                      }
+
                     VdomArray(
                       button(key := "sign-out", onClick --> { SignOut(); Callback() }, "sign out"),
-                      ProjectSelect(login, id ⇒ setState { state.set(login.    project(id)) }, login.    project,         "Project"),
-                      ProjectSelect(login, id ⇒ setState { state.set(login.userProject(id)) }, login.userProject, "Bill-to Project"),
+                      ProjectSelect(login, id ⇒ fetchBuckets *> modState { s ⇒ println(s"setting project to $id"); s.set(login.    project(id)) }, login.    project,         "Project"),
+                      ProjectSelect(login, id ⇒ fetchBuckets *> modState { _.set(login.userProject(id)) }, login.userProject, "Bill-to Project"),
                     )
                 },
             ),
@@ -115,109 +135,38 @@ extends SignIn.syntax
                     project ← login.project
                     buckets ← project.buckets
                   } yield
-                    div(
-                      key := "buckets",
-                      className := "buckets"
-                    )(
-                      buckets
-                        .map {
-                          case bucket @ Bucket(id, name, _, _, objects) ⇒
-                            div(
-                              key := id,
-                              className := "bucket",
-                              onClick -->
-                                Callback.future {
-                                  println("clicked")
-                                  bucket
-                                    .ls()
-                                    .map {
-                                      next ⇒
-                                        println(s"Got new bucket: $next")
-                                        setState {
-                                          state
-                                            .set {
-                                              login
-                                                .copy(
-                                                  projects =
-                                                    projects
-                                                      .mod(project.id) {
-                                                          project
-                                                            .copy(
-                                                              buckets =
-                                                                Some(
-                                                                  buckets
-                                                                    .copy(
-                                                                      items =
-                                                                        buckets
-                                                                          .items
-                                                                          .map {
-                                                                            case b if b.id == bucket.id ⇒ next
-                                                                            case b ⇒ b
-                                                                          }
-                                                                    )
-                                                                )
-                                                            )
-                                                      }
-                                                )
-                                            }
-                                        }
-                                    }
-                                    .reauthenticate_?
-                                }
-                            )(
-                              name,
-                              objects
-                                .map {
-                                  objects ⇒
-                                    (
-                                      objects
-                                        .dirs
-                                        .map {
-                                          dir ⇒
-                                            div(
-                                              key := dir,
-                                              className := "dir"
-                                            )(
-                                              dir
-                                            )
-                                        } ++
-                                      objects
-                                        .files
-                                        .map {
-                                          case Metadata(_, name, size, _) ⇒
-                                            div(
-                                              key := name,
-                                              className := "file"
-                                            )(
-                                              s"$name (${Bytes.format(size)})"
-                                            )
-                                        }
-                                    )
-                                    .toVdomArray
-                                }
-                            )
-                        }: _*
+                    Buckets(
+                      login,
+                      project,
+                      buckets,
+                      f ⇒ modState { _.mod(login.id) { f } }
                     )
               },
 
-            stateJson
+            div(
+              key := "state",
+              className := "state"
+            )(
+              Json(state.asJson)
+            )
           )
       }
       .componentDidMount {
         p ⇒
+          import p._
           println("did mount…")
           Auth
             .fromFragment(fragment.map)
             .fold(
               {
                 _ ⇒
-                  p
-                    .state
+                  state
                     .login
                     .fold { Callback() } {
                       login ⇒
                         implicit val auth = login.auth
                         Callback.future {
+                          println(s"componentDidMount: fetching buckets for login $login")
                           login
                             .projects
                             .fetchBuckets
@@ -244,7 +193,7 @@ extends SignIn.syntax
                       .map {
                         login ⇒
                           println(s"got new login: $login")
-                          p.modState(
+                          modState(
                             _ :+ login
                           )
                       }
@@ -260,35 +209,11 @@ extends SignIn.syntax
       }
       .shouldComponentUpdate {
         p ⇒
+          import p._
           CallbackTo(
-            p.nextProps != p.currentProps ||
-            p.nextState != p.currentState
+            nextProps != currentProps ||
+            nextState != currentState
           )
-      }
-      .componentWillReceiveProps {
-        p ⇒
-          p.state
-            .login
-            .fold { Callback() } {
-              login ⇒
-                implicit val auth = login.auth
-                Callback.future(
-                  p.state
-                    .modF {
-                      case user ⇒
-                        user
-                          .projects
-                          .fetchBuckets
-                          .map {
-                            projects ⇒
-                              user.copy(
-                                projects = projects
-                              )
-                          }
-                    }
-                    .map { p.setState }
-                  )
-            }
       }
       .componentWillUpdate {
         p ⇒

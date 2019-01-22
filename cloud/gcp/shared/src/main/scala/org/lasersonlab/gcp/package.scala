@@ -1,4 +1,6 @@
-package org.lasersonlab.uri
+package org.lasersonlab
+
+import org.lasersonlab.uri.http
 
 package object gcp {
   implicit def httpDefaults(implicit config: gcp.Config): http.Defaults =

@@ -1,7 +1,7 @@
-package org.lasersonlab.uri.gcp
+package org.lasersonlab.gcp
 
 //import org.lasersonlab.uri.?
-//import org.lasersonlab.uri.gcp.googleapis.Paged
+//import org.lasersonlab.gcp.googleapis.Paged
 //
 //sealed trait Path
 //

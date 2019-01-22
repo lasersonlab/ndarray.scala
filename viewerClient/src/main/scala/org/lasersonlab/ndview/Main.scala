@@ -2,7 +2,7 @@ package org.lasersonlab.ndview
 
 import cats.effect.{ ExitCode, IO, IOApp }
 import org.lasersonlab.ndview.view.Page
-import org.lasersonlab.uri.gcp.SignIn
+import org.lasersonlab.gcp.SignIn
 import org.scalajs.dom.document
 
 import scala.concurrent.ExecutionContext.Implicits.global

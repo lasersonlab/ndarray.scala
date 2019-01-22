@@ -1,14 +1,14 @@
-package org.lasersonlab.uri.gcp.googleapis
+package org.lasersonlab.gcp.googleapis
 
 import com.softwaremill.sttp._
 import io.circe.generic.auto._
 import io.circe.generic.extras._
 import org.lasersonlab.uri._
-import org.lasersonlab.uri.gcp._
-import org.lasersonlab.uri.gcp.googleapis.storage.Bucket
+import org.lasersonlab.gcp._
+import org.lasersonlab.gcp.googleapis.storage.Bucket
 
 // Need this to take precedence over Encoder.encodeIterable
-import org.lasersonlab.uri.gcp.googleapis.Paged.pagedEncoder
+import org.lasersonlab.gcp.googleapis.Paged.pagedEncoder
 
 object projects {
   val url = uri"https://cloudresourcemanager.googleapis.com/v1/projects".toJavaUri

@@ -94,8 +94,8 @@ object Assert
 
   def f[L, R](l: L, r: R)(implicit c: CanEq[L, R], ec: ExecutionContext): F[Unit] =
     c(l, r).map {
-      case Some(diff) ⇒ Future.failed(ComparisonFailure(diff))
-      case None       ⇒ Future.successful(())
+      case Some(diff) ⇒ throw ComparisonFailure(diff)
+      case None       ⇒ ()
     }
 
   implicit def futureizeNeither[L, R](implicit c: CanEq[L, R], ec: ExecutionContext): Assert[L, R] = f(_, _)

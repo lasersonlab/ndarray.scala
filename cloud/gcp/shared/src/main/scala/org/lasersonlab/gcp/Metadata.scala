@@ -1,4 +1,4 @@
-package org.lasersonlab.uri.gcp
+package org.lasersonlab.gcp
 
 case class Metadata(
   id: String,

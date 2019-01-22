@@ -1,33 +1,23 @@
-package org.lasersonlab.uri.gcp
+package org.lasersonlab.gcp
 
 import java.lang.System.err
 
 import cats.ApplicativeError
 import cats.implicits._
 import io.circe.generic.auto._
-import io.circe.parser.decode
-import io.circe.syntax._
-import org.lasersonlab.uri.fragment
-import org.lasersonlab.uri.gcp.googleapis.Scope
+import org.lasersonlab.gcp.oauth.Params
 import org.scalajs.dom.document
 import org.scalajs.dom.ext.AjaxException
 import org.scalajs.dom.raw.HTMLFormElement
 import org.scalajs.dom.window.localStorage
 
 object SignIn {
-  case class Scopes(scopes: Scope*) {
-    override def toString: String = scopes.mkString(" ")
-  }
-  case class    ClientId(override val toString: String)
-  case class RedirectUrl(override val toString: String)
 
   implicit class Ops[F[_], T](val f: F[T]) extends AnyVal {
     def reauthenticate_?(
       implicit
       ae: ApplicativeError[F, Throwable],
-      ClientId: ClientId,
-      RedirectUrl: RedirectUrl,
-      Scope: Scopes,
+      params: Params
     ):
       F[T] =
       f
@@ -47,9 +37,7 @@ object SignIn {
 
   def apply()(
     implicit
-    ClientId: ClientId,
-    RedirectUrl: RedirectUrl,
-    Scopes: Scopes,
+    params: Params
   ): Unit = {
 
     val form =
@@ -60,17 +48,8 @@ object SignIn {
     form.method = "GET"
     form.action = oauthEndpoint
 
-    val params =
-      Map(
-        "client_id" → ClientId,
-        "redirect_uri" → RedirectUrl,
-        "scope" → Scopes,
-        "include_granted_scopes" → "true",
-        "response_type" → "token"
-      )
-
     for {
-      (name, value) ← params
+      (name, value) ← params.map
     } {
       val input = document.createElement("input")
       input.setAttribute( "type", "hidden")
@@ -86,27 +65,27 @@ object SignIn {
 
   def SignOut(): Unit = { localStorage.removeItem(credentialsKey) }
 
-  def loadAuth: Either[Exception, Auth] =
-    Option(
-      localStorage.getItem(credentialsKey)
-    )
-    .fold {
-      Auth
-        .fromFragment(fragment.map)
-        .map {
-          auth ⇒
-            val json = auth.asJson.noSpaces
-            println(s"setting localstorage: $json")
-            localStorage.setItem(credentialsKey, json)
-            auth
-        }
-        .leftMap(new Exception(_))  // TODO: use leftMap elsewhere
-    } {
-      str ⇒
-        val auth = decode[Auth](str)
-        document.location.hash = ""
-        auth
-    }
+//  def loadAuth: Either[Exception, Auth] =
+//    Option(
+//      localStorage.getItem(credentialsKey)
+//    )
+//    .fold {
+//      Auth
+//        .fromFragment(fragment.map)
+//        .map {
+//          auth ⇒
+//            val json = auth.asJson.noSpaces
+//            println(s"setting localstorage: $json")
+//            localStorage.setItem(credentialsKey, json)
+//            auth
+//        }
+//        .leftMap(new Exception(_))  // TODO: use leftMap elsewhere
+//    } {
+//      str ⇒
+//        val auth = decode[Auth](str)
+//        document.location.hash = ""
+//        auth
+//    }
 
   trait syntax {
     @inline implicit def makeSignInOps[F[_], T](f: F[T]): Ops[F, T] = Ops(f)

@@ -1,4 +1,4 @@
-package org.lasersonlab.uri.gcp
+package org.lasersonlab.gcp
 
 import io.circe.generic.decoding.DerivedDecoder
 import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json }

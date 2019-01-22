@@ -24,9 +24,6 @@ object Json {
     root: Boolean = true
   )
 
-  def  open(str: String): VdomNode = div(key :=  "open")(label(str))
-  def close(str: String): VdomNode = div(key := "close")(str)
-
   val component =
     ScalaComponent
       .builder[Props]("Json")
@@ -41,8 +38,10 @@ object Json {
                 field ⇒ s"$field: $str"
               }
 
+          def  open(str: String): VdomNode = div(key :=  "open")(label(str))
+          def close(str: String): VdomNode = div(key := "close")(str)
+
           div(
-            //key := props.key.getOrElse(""),
             className := s"json${if (root) "" else " indent"}",
             json match {
               case

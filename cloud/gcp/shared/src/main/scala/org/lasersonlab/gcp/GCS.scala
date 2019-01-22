@@ -1,11 +1,12 @@
-package org.lasersonlab.uri.gcp
+package org.lasersonlab.gcp
 
 import java.net.URI
 
 import cats.implicits._
 import org.lasersonlab.uri.Uri.Segment
-import org.lasersonlab.uri.gcp.googleapis.projects.UserProject
-import org.lasersonlab.uri.gcp.googleapis.storage
+import org.lasersonlab.gcp.googleapis.projects.UserProject
+import org.lasersonlab.gcp.googleapis.storage
+import org.lasersonlab.gcp.oauth.Auth
 import org.lasersonlab.uri.{ Http, Uri, caching, http ⇒ h }
 
 case class GCS(

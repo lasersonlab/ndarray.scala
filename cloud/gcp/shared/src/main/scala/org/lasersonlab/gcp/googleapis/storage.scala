@@ -1,10 +1,10 @@
-package org.lasersonlab.uri.gcp.googleapis
+package org.lasersonlab.gcp.googleapis
 
 import io.circe.generic.auto._
-import org.lasersonlab.uri.gcp.googleapis.projects.{ Project, UserProject }
-import org.lasersonlab.uri.gcp.{ Config, Metadata, googleapis }
+import org.lasersonlab.gcp.googleapis.projects.{ Project, UserProject }
+import org.lasersonlab.gcp.{ Config, Metadata, googleapis }
 import org.lasersonlab.uri._
-import org.lasersonlab.uri.gcp._
+import org.lasersonlab.gcp._
 import com.softwaremill.sttp._
 
 object storage {
@@ -45,7 +45,7 @@ object storage {
     objects: ?[Objects] = None
   ) {
     def uri = uri"${storage.base}/b/$name"
-    override def toString: String = name
+    //override def toString: String = name
     def ls(path: String*)(
       implicit
       config: Config,

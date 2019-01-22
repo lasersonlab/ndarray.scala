@@ -13,7 +13,8 @@ default(
     hammerlab.shapeless_utils → "1.5.1",
     hammerlab.             io → "5.2.1",
 
-    diode.react → "1.1.4.131"
+    diode.react → "1.1.4.131",
+    dom → "0.9.6"
   ),
   circe.version := "0.11.1",
   http4s.version := "0.20.0-M1",
@@ -21,41 +22,72 @@ default(
 )
 
 lazy val cloud =
-  project
+  cross
     .in(new File("cloud"))
     .settings(
       subgroup("cloud", "all")
     )
     .dependsOn(aws, gcp)
     .aggregate(aws, gcp)
+lazy val `cloud-x` = cloud.x
 
 lazy val aws =
-  project
+  cross
     .in(new File("cloud") / "aws")
     .settings(
-      subgroup("cloud"),
+      subgroup("cloud")
+    )
+    .jvmSettings(
       dep(
         "org.lasersonlab" ^ "s3fs" ^ "2.2.3"
       )
     )
+lazy val `aws-x` = aws.x
 
 lazy val gcp =
-  project
+  cross
     .in(new File("cloud") / "gcp")
     .settings(
       subgroup("cloud"),
       dep(
-        "org.lasersonlab" ^ "google-cloud-nio" ^ "0.55.2-alpha",
-        hammerlab.types
+        cats,
+        circe,
+        circe.generic,
+
+        hammerlab.types,
+
+        shapeless,
+        sttp
+      ),
+      enableMacroParadise
+    )
+    .jsSettings(
+      dep(
+        dom
       )
     )
+    .jvmSettings(
+      dep(
+        "org.lasersonlab" ^ "google-cloud-nio" ^ "0.55.2-alpha",
+      )
+    )
+    .dependsOn(
+      `circe-utils`,
+       uri
+    )
+lazy val `gcp-x` = gcp.x
 
 lazy val `circe-utils` =
   cross
     .in(new File("circe"))
     .settings(
-      dep(circe),
-      buildInfoPackage := "org.lasersonlab.circe_utils"
+      dep(
+        circe,
+        circe.generic,
+        hammerlab.shapeless_utils % "1.5.1",
+        shapeless
+      ),
+      buildInfoPackage := "org.lasersonlab.circe_utils"  // TODO: do this snake-casing automatically in plugin
     )
 lazy val `circe-utils-x` = `circe-utils`.x
 
@@ -73,7 +105,7 @@ lazy val convert =
       partialUnification
     )
     .dependsOn(
-      cloud,
+      cloud.jvm,
       netcdf,
       zarr.jvm andTest
     )
@@ -104,7 +136,7 @@ lazy val netcdf = project.settings(
     hammerlab.types,
   )
 ).dependsOn(
-  cloud,
+  cloud.jvm,
   utils
 )
 
@@ -172,6 +204,7 @@ lazy val uri =
     .jvmSettings(
       http4s.version := "0.19.0",
       dep(
+        // TODO: alias these
         "com.typesafe.akka" ^^ "akka-actor" ^ "2.5.19",
         "com.typesafe.akka" ^^ "akka-stream" ^ "2.5.19",
         "com.typesafe.akka" ^^ "akka-http" ^ "10.1.7",
@@ -189,7 +222,7 @@ lazy val uri =
       scalaJSUseMainModuleInitializer := true,
       dep(
         "biz.enef" ^^ "slogging" ^ "0.6.1",
-        scalajs.dom ^ "0.9.6",
+        dom,
         "io.scalajs.npm" ^^ "request" ^ "0.4.2"
       ),
     )
@@ -228,7 +261,7 @@ lazy val viewerClient =
       diode,
       dep(
 
-        scalajs.dom,
+        dom,
 
         cats,
         circe,
@@ -244,6 +277,8 @@ lazy val viewerClient =
       scalaJSUseMainModuleInitializer := true,
       slinky,
 
+      testFrameworks := Seq(new TestFramework("utest.runner.Framework")),
+
       npmDependencies in Compile ++=
         Seq(
           "pako"        → "1.0.7",
@@ -253,8 +288,11 @@ lazy val viewerClient =
     )
     .enablePlugins(JS, ScalaJSBundlerPlugin)
     .dependsOn(
+      gcp.js,
       uri.js,
-      viewerCommon.js
+      viewerCommon.js,
+
+      testing.js % "test->compile"
     )
 
 lazy val viewerServer =
@@ -313,7 +351,7 @@ lazy val zarr =
     )
     .jsSettings(
       jsDependencies += "org.webjars.npm" % "pako" % "1.0.7" / "pako.js",
-      jsEnv := new NodeJSEnv(NodeJSEnv.Config().withArgs("--max-old-space-size=2048" :: Nil))
+      jsEnv := new NodeJSEnv(NodeJSEnv.Config().withArgs("--max-old-space-size=2048" :: Nil))  // TODO: factor out
     )
     .dependsOn(
       `circe-utils`,
@@ -328,7 +366,7 @@ lazy val `zarr-x` = zarr.x
 lazy val all =
   root(
     `circe-utils-x`,
-     cloud,
+    `cloud-x`,
      convert,
     `ndarray-x`,
      netcdf,

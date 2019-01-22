@@ -1,6 +1,6 @@
-package org.lasersonlab.uri.gcp.googleapis
+package org.lasersonlab.gcp.oauth
 
-import org.lasersonlab.uri.gcp.googleapis
+import org.lasersonlab.gcp.googleapis
 
 case class Scope(override val toString: String)
 

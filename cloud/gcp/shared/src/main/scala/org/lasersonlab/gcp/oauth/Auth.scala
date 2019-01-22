@@ -1,4 +1,4 @@
-package org.lasersonlab.uri.gcp
+package org.lasersonlab.gcp.oauth
 
 import java.time.Instant.now
 
@@ -8,11 +8,12 @@ import hammerlab.str._
 case class Auth(
   token: String,
   expires: Long,
-  scopes: Seq[String]
+  scopes: Seq[String],
+  params: Params
 )
 
 object Auth {
-  def fromFragment(map: Map[String, String]): String | Auth = {
+  def fromFragment(map: Map[String, String])(implicit params: Params): String | Auth = {
     def get(key: String) =
       map
         .get(key)
@@ -32,7 +33,8 @@ object Auth {
       Auth(
         token,
         expires.getEpochSecond,
-        scopes
+        scopes,
+        params
       )
   }
 }

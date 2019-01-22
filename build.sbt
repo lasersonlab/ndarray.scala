@@ -1,4 +1,5 @@
 import org.scalajs.jsenv.nodejs.NodeJSEnv
+import scalajs._
 
 default(
   group("org.lasersonlab"),
@@ -11,9 +12,12 @@ default(
     hammerlab.          types → "1.5.0".snapshot,
     hammerlab.shapeless_utils → "1.5.1",
     hammerlab.             io → "5.2.1",
+
+    diode.react → "1.1.4.131"
   ),
   circe.version := "0.11.1",
-  http4s.version := "0.20.0-M1"
+  http4s.version := "0.20.0-M1",
+  diode.version := "1.1.4",
 )
 
 lazy val cloud =
@@ -216,11 +220,13 @@ lazy val viewerCommon =
 lazy val viewerClient =
   project
     .settings(
+
       slinky.version := "0.5.1",
       version in startWebpackDevServer := "3.1.14",
+
+      react,
+      diode,
       dep(
-        slinky,
-        slinky.web,
 
         scalajs.dom,
 
@@ -241,8 +247,6 @@ lazy val viewerClient =
       npmDependencies in Compile ++=
         Seq(
           "pako"        → "1.0.7",
-          "react"       → "16.5.2",
-          "react-dom"   → "16.5.2",
           "react-proxy" →  "1.1.8"
         ),
 //      scalacOptions += "-Xlog-implicits"

@@ -1,14 +1,14 @@
-package org.lasersonlab.ndview
+package org.lasersonlab.ndview.view
 
 import cats.implicits._
-import org.lasersonlab.uri._
 import io.circe.JsonNumber
-import japgolly.scalajs.react.vdom.html_<^._
-import ^._
-import japgolly.scalajs.react.vdom.html_<^.<._
-import japgolly.scalajs.react._
 import io.{ circe ⇒ c }
+import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.component.Scala
+import japgolly.scalajs.react.vdom.html_<^.<._
+import japgolly.scalajs.react.vdom.html_<^.^._
+import japgolly.scalajs.react.vdom.html_<^.{ VdomNode, _ }
+import org.lasersonlab.uri.?
 
 object Json {
   object Null { def unapply(json: c.Json): Option[                    Unit    ] = json.asNull                   }
@@ -20,7 +20,6 @@ object Json {
 
   case class Props(
     json: c.Json,
-    key: ?[String] = None,
     field: ?[String] = None,
     root: Boolean = true
   )
@@ -32,7 +31,7 @@ object Json {
     ScalaComponent
       .builder[Props]("Json")
       .render_P {
-        case props @ Props(json, _, _, root) ⇒
+        case props @ Props(json, _, root) ⇒
           def label(str: String): VdomNode =
             props
               .field
@@ -43,7 +42,7 @@ object Json {
               }
 
           div(
-            key := props.key.getOrElse(""),
+            //key := props.key.getOrElse(""),
             className := s"json${if (root) "" else " indent"}",
             json match {
               case
@@ -56,16 +55,15 @@ object Json {
               case Arr(elems) ⇒
                 open("[") +:
                 elems
-                  .mapWithIndex {
+                  .mapWithIndex[VdomNode] {
                     (elem, idx) ⇒
                       Json(
                         Props(
                           elem,
-                          key = idx.toString,
                           root = false
-                        )
-                      ): VdomNode
-                      //.withKey(idx.toString)
+                        ),
+                        key = idx.toString
+                      )
                   } :+
                 close("]") toVdomArray
               case Obj(Vector()) ⇒ open("{}")
@@ -77,12 +75,11 @@ object Json {
                       Json(
                         Props(
                           v,
-                          key = k,
                           field = k,
                           root = false
-                        )
+                        ),
+                        key = k
                       ): VdomNode
-                      //.withKey(k)
                   } :+
                 close("}") toVdomArray
             }
@@ -90,5 +87,6 @@ object Json {
       }
       .build
 
-  def apply(props: Props): Scala.Unmounted[Props, Unit, Unit] = component(props)
+  def apply(json: c.Json): Scala.Unmounted[Props, Unit, Unit] = apply(Props(json))
+  def apply(props: Props, key: ?[String] = None): Scala.Unmounted[Props, Unit, Unit] = component.withKey(key.getOrElse("root"))(props)
 }

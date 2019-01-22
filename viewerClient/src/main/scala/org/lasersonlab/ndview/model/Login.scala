@@ -1,11 +1,10 @@
-package org.lasersonlab.ndview
+package org.lasersonlab.ndview.model
 
 import cats.implicits._
-import org.lasersonlab.uri._
-import org.lasersonlab.uri.gcp.{ Auth, googleapis }
-import org.lasersonlab.uri.gcp.googleapis.{ Paged, User }
+import org.lasersonlab.uri.gcp.googleapis.User
 import org.lasersonlab.uri.gcp.googleapis.projects.Project
-import org.lasersonlab.uri.http
+import org.lasersonlab.uri.gcp.{ Auth, googleapis }
+import org.lasersonlab.uri.{ http, _ }
 
 case class Login(
   auth: Auth,

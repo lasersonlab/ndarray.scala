@@ -2,11 +2,11 @@ package org.lasersonlab.uri.gcp
 
 import java.lang.System.err
 
+import cats.ApplicativeError
 import cats.implicits._
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
-import lasersonlab.future.F
 import org.lasersonlab.uri.fragment
 import org.lasersonlab.uri.gcp.googleapis.Scope
 import org.scalajs.dom.document
@@ -14,34 +14,31 @@ import org.scalajs.dom.ext.AjaxException
 import org.scalajs.dom.raw.HTMLFormElement
 import org.scalajs.dom.window.localStorage
 
-import scala.concurrent.ExecutionContext
-
 object SignIn {
   case class Scopes(scopes: Scope*) {
     override def toString: String = scopes.mkString(" ")
   }
-  case class ClientId(override val toString: String)
+  case class    ClientId(override val toString: String)
   case class RedirectUrl(override val toString: String)
 
-  implicit class Ops(val f: F[Unit]) extends AnyVal {
+  implicit class Ops[F[_], T](val f: F[T]) extends AnyVal {
     def reauthenticate_?(
       implicit
+      ae: ApplicativeError[F, Throwable],
       ClientId: ClientId,
       RedirectUrl: RedirectUrl,
       Scope: Scopes,
-      ec: ExecutionContext
     ):
-      F[Unit] =
+      F[T] =
       f
-        .recover {
+        .onError {
           case AjaxException(xhr) if xhr.status == 401 ⇒
             println("buckets req caught 401, sign in again…")
-            SignIn()
-        }
-        .handleError {
-          e ⇒
+            SignIn().pure[F]
+          case e ⇒
             err.println(e.getMessage)
             err.println(e)
+            ().pure[F]
         }
   }
 
@@ -112,6 +109,6 @@ object SignIn {
     }
 
   trait syntax {
-    @inline implicit def makeSignInOps(f: F[Unit]): Ops = Ops(f)
+    @inline implicit def makeSignInOps[F[_], T](f: F[T]): Ops[F, T] = Ops(f)
   }
 }

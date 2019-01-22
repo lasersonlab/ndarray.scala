@@ -1,4 +1,4 @@
-package org.lasersonlab.ndview
+package org.lasersonlab.ndview.model
 
 import cats.implicits._
 import org.lasersonlab.uri._

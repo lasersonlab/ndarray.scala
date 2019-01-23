@@ -1,19 +1,125 @@
 package org.lasersonlab.gcp.googleapis
 
 import io.circe.generic.auto._
+import io.circe.syntax._
 import org.lasersonlab.gcp.googleapis.projects.{ Project, UserProject }
 import org.lasersonlab.gcp.{ Config, Metadata, googleapis }
 import org.lasersonlab.uri._
 import org.lasersonlab.gcp._
 import com.softwaremill.sttp._
+import io.circe.Decoder.Result
+import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json, JsonObject }
 
 object storage {
   val base = uri"${googleapis.base}/storage/v1"
 
+  object Path {
+    def unapply(str: String): Option[(String, Vector[String])] =
+      str
+        .split("/") match {
+          case Array(bucket, rest @ _*) ⇒
+            Some(
+              bucket,
+              rest.toVector
+            )
+          case _ ⇒ None
+        }
+  }
+
+  case class Dir(
+    bucket: String,
+    path: Vector[String],
+    objects: ?[Objects] = None
+  ) {
+    def name = (bucket +: path) mkString("", "/", "/")
+  }
+  object Dir {
+    /** Simplified JSON representation (when [[Objects]] is populated; flat [[String name string]] otherwise */
+    case class Repr(name: String, objects: Objects)
+    implicit val encoder: Encoder[Dir] = {
+      case dir @ Dir(bucket, path, None         ) ⇒ dir.name.asJson
+      case dir @ Dir(bucket, path, Some(objects)) ⇒ Repr(dir.name, objects).asJson
+    }
+    import lasersonlab.circe._
+    implicit val decoder: Decoder[Dir] =
+      (c: HCursor) ⇒
+        c
+          .value
+          .as[Either[String, Repr]]
+          .flatMap {
+            case
+              Left(
+                Path(
+                  bucket,
+                  path
+                )
+              ) ⇒
+              Right(
+                Dir(
+                  bucket,
+                  path
+                )
+              )
+            case
+              Right(
+                Repr(
+                  Path(
+                    bucket,
+                    path
+                  ),
+                  objects
+                )
+              ) ⇒
+              Right(
+                Dir(
+                  bucket,
+                  path,
+                  Some(objects)
+                )
+              )
+            case other ⇒
+              Left(
+                DecodingFailure(
+                  s"Bad dir objects: $other",
+                  c.history
+                )
+              )
+          }
+  }
+  case class Obj(bucket: String, path: Vector[String], metadata: Metadata)
+  object Obj {
+    implicit val encoder: Encoder[Obj] = { case Obj(_, _, metadata) ⇒ metadata.asJson }
+    implicit val decoder: Decoder[Obj] =
+      (c: HCursor) ⇒
+        c
+          .value
+          .as[Metadata]
+          .flatMap {
+            metadata ⇒
+              metadata.name match {
+                case Path(bucket, path) ⇒
+                  Right(
+                    Obj(
+                      bucket,
+                      path,
+                      metadata
+                    )
+                  )
+                case name ⇒
+                  Left(
+                    DecodingFailure(
+                      s"Invalid object name $name",
+                      c.history
+                    )
+                  )
+              }
+          }
+  }
+
   case class Objects(
-         prefixes: ?[Vector[  String]] = None,
-            items: ?[Vector[Metadata]] = None,
-    nextPageToken: ?[         String ] = None
+         prefixes: ?[Vector[Dir]] = None,
+            items: ?[Vector[Obj]] = None,
+    nextPageToken: ?[    String ] = None
   ) {
     def dirs = prefixes.getOrElse(Vector())
     def files = items.getOrElse(Vector())
@@ -32,7 +138,6 @@ object storage {
     objects: ?[Objects] = None
   ) {
     def uri = uri"${storage.base}/b/$name"
-    //override def toString: String = name
     def ls(path: String*)(
       implicit
       config: Config,

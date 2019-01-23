@@ -1,0 +1,69 @@
+{
+  "kind": "storage#objects",
+  "prefixes": [
+    "10x/",
+    "hca/",
+    "loom/",
+    "mca/"
+  ],
+  "items": [
+    {
+      "kind": "storage#object",
+      "id": "ll-sc-data/test-public.txt/1547143025743385",
+      "selfLink": "https://www.googleapis.com/storage/v1/b/ll-sc-data/o/test-public.txt",
+      "name": "test-public.txt",
+      "bucket": "ll-sc-data",
+      "generation": "1547143025743385",
+      "metageneration": "1",
+      "contentType": "text/plain",
+      "timeCreated": "2019-01-10T17:57:05.743Z",
+      "updated": "2019-01-10T17:57:05.743Z",
+      "storageClass": "REGIONAL",
+      "timeStorageClassUpdated": "2019-01-10T17:57:05.743Z",
+      "size": "11",
+      "md5Hash": "cF8BqGDbI/o0qsRrM5VIXw==",
+      "mediaLink": "https://www.googleapis.com/download/storage/v1/b/ll-sc-data/o/test-public.txt?generation=1547143025743385&alt=media",
+      "contentLanguage": "en",
+      "crc32c": "Teay/g==",
+      "etag": "CJms3fPk498CEAE="
+    },
+    {
+      "kind": "storage#object",
+      "id": "ll-sc-data/test-write.txt/1532480791118244",
+      "selfLink": "https://www.googleapis.com/storage/v1/b/ll-sc-data/o/test-write.txt",
+      "name": "test-write.txt",
+      "bucket": "ll-sc-data",
+      "generation": "1532480791118244",
+      "metageneration": "1",
+      "timeCreated": "2018-07-25T01:06:31.117Z",
+      "updated": "2018-07-25T01:06:31.117Z",
+      "storageClass": "REGIONAL",
+      "timeStorageClassUpdated": "2018-07-25T01:06:31.117Z",
+      "size": "11",
+      "md5Hash": "nHL1vwsRP2XD6kTmQg85lw==",
+      "mediaLink": "https://www.googleapis.com/download/storage/v1/b/ll-sc-data/o/test-write.txt?generation=1532480791118244&alt=media",
+      "crc32c": "moEuwA==",
+      "etag": "CKSDuOmHudwCEAE="
+    },
+    {
+      "kind": "storage#object",
+      "id": "ll-sc-data/test.txt/1532480352143794",
+      "selfLink": "https://www.googleapis.com/storage/v1/b/ll-sc-data/o/test.txt",
+      "name": "test.txt",
+      "bucket": "ll-sc-data",
+      "generation": "1532480352143794",
+      "metageneration": "1",
+      "contentType": "text/plain",
+      "timeCreated": "2018-07-25T00:59:12.143Z",
+      "updated": "2018-07-25T00:59:12.143Z",
+      "storageClass": "REGIONAL",
+      "timeStorageClassUpdated": "2018-07-25T00:59:12.143Z",
+      "size": "11",
+      "md5Hash": "cF8BqGDbI/o0qsRrM5VIXw==",
+      "mediaLink": "https://www.googleapis.com/download/storage/v1/b/ll-sc-data/o/test.txt?generation=1532480352143794&alt=media",
+      "contentLanguage": "en",
+      "crc32c": "Teay/g==",
+      "etag": "CLKTj5iGudwCEAE="
+    }
+  ]
+}

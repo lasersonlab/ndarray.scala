@@ -1,0 +1,30 @@
+{
+    "kind": "storage#objects",
+    "prefixes": [
+        "10x/",
+        "hca/",
+        "loom/",
+        "mca/"
+    ],
+    "items": [
+        {
+            "id": "ll-sc-data/test-public.txt/1547143025743385",
+            "name": "test-public.txt",
+            "size": 11,
+            "md5Hash": "cF8BqGDbI/o0qsRrM5VIXw=="
+        },
+        {
+            "id": "ll-sc-data/test-write.txt/1532480791118244",
+            "name": "test-write.txt",
+            "size": 11,
+            "md5Hash": "nHL1vwsRP2XD6kTmQg85lw=="
+        },
+        {
+            "id": "ll-sc-data/test.txt/1532480352143794",
+            "name": "test.txt",
+            "size": 11,
+            "md5Hash": "cF8BqGDbI/o0qsRrM5VIXw=="
+        }
+    ],
+    "nextPageToken": null
+}

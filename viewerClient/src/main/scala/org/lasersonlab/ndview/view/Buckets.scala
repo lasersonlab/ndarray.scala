@@ -11,7 +11,7 @@ import org.lasersonlab.gcp
 import org.lasersonlab.gcp.Config.implicits._
 import org.lasersonlab.gcp.googleapis.Paged
 import org.lasersonlab.gcp.googleapis.projects.Project
-import org.lasersonlab.gcp.googleapis.storage.Bucket
+import org.lasersonlab.gcp.googleapis.storage.{ Bucket, Dir, Obj }
 import org.lasersonlab.gcp.{ Metadata, SignIn }
 import org.lasersonlab.ndview.UpdateBucket
 import org.lasersonlab.ndview.model.Login
@@ -23,8 +23,7 @@ extends SignIn.syntax
     model: ModelProxy[_],
     login: Login,
     project: Project,
-    buckets: Paged[Bucket],
-    //dispatch:
+    buckets: Paged[Bucket]
   )(
     implicit val config: gcp.Config
   )
@@ -55,7 +54,8 @@ extends SignIn.syntax
           implicit val Login(auth, user, projects, userProject) = login
           div(
             key := "buckets",  // TODO: remove key+className duplication boilerplate
-            className := "buckets"
+            className := "buckets",
+            h2("Buckets"),
           )(
             buckets
               .map {
@@ -92,19 +92,19 @@ extends SignIn.syntax
                               .map {
                                 dir ⇒
                                   div(
-                                    key := dir,
-                                    className := "dir"
+                                    key := dir.name,
+                                    className := "dir entry"
                                   )(
-                                    dir
+                                    dir.name
                                   )
                               } ++
                             objects
                               .files
                               .map {
-                                case Metadata(_, name, size, _) ⇒
+                                case Obj(_, path, Metadata(_, name, size, _)) ⇒
                                   div(
                                     key := name,
-                                    className := "file"
+                                    className := "file entry"
                                   )(
                                     s"$name (${Bytes.format(size)})"
                                   )

@@ -6,6 +6,7 @@ import cats.implicits._
 import org.lasersonlab.uri.Uri.Segment
 import org.lasersonlab.gcp.googleapis.projects.UserProject
 import org.lasersonlab.gcp.googleapis.storage
+import org.lasersonlab.gcp.googleapis.storage.{ Dir, Obj }
 import org.lasersonlab.gcp.oauth.Auth
 import org.lasersonlab.uri.{ Http, Uri, caching, http ⇒ h }
 
@@ -45,24 +46,26 @@ extends Uri()(config.httpConfig) {
     Http(listUri.toJavaUri)
       .json[storage.Objects]
       .map {
-        case l @ storage.Objects(dirs, items, _) ⇒
-          items
-            .fold(Iterator[Metadata]())(_.iterator)
-            .map {
-              m ⇒
-                GCS(bucket, m.name.split("/").toVector)
-            } ++
-          dirs
-            .getOrElse(Nil)
-            .map {
-              path ⇒
-                GCS(
-                  bucket,
-                  path
-                    .split("/")
-                    .toVector
-                )
+        case l @ storage.Objects(dirs, files, _) ⇒
+          files
+            .fold {
+              Iterator[Obj]()
+            } {
+              _.iterator
             }
+            .map {
+              case Obj(_, path, _) ⇒
+                GCS(bucket, path)
+            } ++
+            dirs
+              .getOrElse(Nil)
+              .map {
+                case Dir(_, path, _) ⇒
+                  GCS(
+                    bucket,
+                    path
+                  )
+              }
       }
   }
 

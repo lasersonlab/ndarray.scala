@@ -8,14 +8,15 @@ import io.circe.syntax._
 import lasersonlab.opt.circe._
 import org.lasersonlab.gcp.Metadata
 import org.lasersonlab.gcp.googleapis.projects.Project
-import org.lasersonlab.gcp.googleapis.storage.{ Billing, Bucket, Objects }
-import org.lasersonlab.gcp.googleapis.{ Paged, User }
+import org.lasersonlab.gcp.googleapis.storage.{ Billing, Bucket, Buckets, Dir, Objects }
+import org.lasersonlab.gcp.googleapis._
 import org.lasersonlab.gcp.oauth.{ Auth, Params, RedirectUrl, Scopes, _ }
 import org.lasersonlab.ndview.model.{ Login, Logins, Projects }
 import org.lasersonlab.ndview.view.Page.pprint
 import org.lasersonlab.test.future.Assert
 import utest._
 import org.lasersonlab.circe.SingletonCodec._
+import org.lasersonlab.gcp.googleapis.storage.Dir.Repr
 import org.lasersonlab.uri.Local
 
 import scala.concurrent.Future
@@ -27,487 +28,296 @@ object StateTest
   extends lasersonlab.Suite
      with Assert.syntax
 {
-  val json =
-    """{
-      |    "logins": [
-      |        {
-      |            "auth": {
-      |                "token": "ya29.GlyZBm2eJCPfrAeVndkS9nfdKNEvZ1OANkqdfORGUbxZcQiSAhx0KviK63SFnLD_Re2Xk_TEbHoVbQLNGjyl9CKlKPgVRH7zfDZiirfE344wPr7prKrTOodjQRJLmA",
-      |                "expires": 1548125206,
-      |                "scopes": [
-      |                    "email profile https://www.googleapis.com/auth/cloud-platform.read-only https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/devstorage.read_only"
-      |                ],
-      |                "params": {
-      |                    "clientId": "218219996328-lltra1ss5e34hlraupaalrr6f56qmiat.apps.googleusercontent.com",
-      |                    "redirectUrl": "http://localhost:8000",
-      |                    "scopes": [
-      |                        "https://www.googleapis.com/auth/userinfo.email",
-      |                        "https://www.googleapis.com/auth/userinfo.profile",
-      |                        "https://www.googleapis.com/auth/devstorage.read_only",
-      |                        "https://www.googleapis.com/auth/cloud-platform.read-only"
-      |                    ]
-      |                }
-      |            },
-      |            "user": {
-      |                "id": "106937999264733402135",
-      |                "name": "Ryan Williams",
-      |                "email": "ryan@lasersonlab.org",
-      |                "picture": "https://lh6.googleusercontent.com/-A5rE5wsEUIM/AAAAAAAAAAI/AAAAAAAAAAc/ig9En0FXVBs/photo.jpg"
-      |            },
-      |            "projects": {
-      |                "projects": {
-      |                    "items": [
-      |                        {
-      |                            "name": "hca-scale",
-      |                            "projectId": "hca-scale",
-      |                            "projectNumber": "218219996328",
-      |                            "buckets": {
-      |                                "items": [
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "dataproc-ec0dd18c-8914-432f-9e13-8335beaa47db-us-east1",
-      |                                        "name": "dataproc-ec0dd18c-8914-432f-9e13-8335beaa47db-us-east1",
-      |                                        "projectNumber": 218219996328,
-      |                                        "billing": null,
-      |                                        "objects": null
-      |                                    },
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-dataproc-initialization-actions",
-      |                                        "name": "ll-dataproc-initialization-actions",
-      |                                        "projectNumber": 218219996328,
-      |                                        "billing": null,
-      |                                        "objects": null
-      |                                    },
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-sc-data",
-      |                                        "name": "ll-sc-data",
-      |                                        "projectNumber": 218219996328,
-      |                                        "billing": {
-      |                                            "requesterPays": true
-      |                                        },
-      |                                        "objects": {
-      |                                            "kind": "storage#objects",
-      |                                            "prefixes": [
-      |                                                "10x/",
-      |                                                "hca/",
-      |                                                "loom/",
-      |                                                "mca/"
-      |                                            ],
-      |                                            "items": [
-      |                                                {
-      |                                                    "id": "ll-sc-data/test-public.txt/1547143025743385",
-      |                                                    "name": "test-public.txt",
-      |                                                    "size": 11,
-      |                                                    "md5Hash": "cF8BqGDbI/o0qsRrM5VIXw=="
-      |                                                },
-      |                                                {
-      |                                                    "id": "ll-sc-data/test-write.txt/1532480791118244",
-      |                                                    "name": "test-write.txt",
-      |                                                    "size": 11,
-      |                                                    "md5Hash": "nHL1vwsRP2XD6kTmQg85lw=="
-      |                                                },
-      |                                                {
-      |                                                    "id": "ll-sc-data/test.txt/1532480352143794",
-      |                                                    "name": "test.txt",
-      |                                                    "size": 11,
-      |                                                    "md5Hash": "cF8BqGDbI/o0qsRrM5VIXw=="
-      |                                                }
-      |                                            ],
-      |                                            "nextPageToken": null
-      |                                        }
-      |                                    },
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-sc-data-bkup",
-      |                                        "name": "ll-sc-data-bkup",
-      |                                        "projectNumber": 218219996328,
-      |                                        "billing": null,
-      |                                        "objects": {
-      |                                            "kind": "storage#objects",
-      |                                            "prefixes": [
-      |                                                "10x/"
-      |                                            ],
-      |                                            "items": null,
-      |                                            "nextPageToken": null
-      |                                        }
-      |                                    },
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-sc-scripts",
-      |                                        "name": "ll-sc-scripts",
-      |                                        "projectNumber": 218219996328,
-      |                                        "billing": null,
-      |                                        "objects": null
-      |                                    }
-      |                                ],
-      |                                "nextPageToken": null
-      |                            }
-      |                        },
-      |                        {
-      |                            "name": "Laserson Lab",
-      |                            "projectId": "laserson-lab",
-      |                            "projectNumber": "339088619166",
-      |                            "buckets": {
-      |                                "items": [
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-adhoc",
-      |                                        "name": "ll-adhoc",
-      |                                        "projectNumber": 339088619166,
-      |                                        "billing": null,
-      |                                        "objects": null
-      |                                    },
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-airr-seq",
-      |                                        "name": "ll-airr-seq",
-      |                                        "projectNumber": 339088619166,
-      |                                        "billing": null,
-      |                                        "objects": null
-      |                                    },
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-dropbox-larman",
-      |                                        "name": "ll-dropbox-larman",
-      |                                        "projectNumber": 339088619166,
-      |                                        "billing": null,
-      |                                        "objects": null
-      |                                    },
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-dropbox-tomasz",
-      |                                        "name": "ll-dropbox-tomasz",
-      |                                        "projectNumber": 339088619166,
-      |                                        "billing": null,
-      |                                        "objects": null
-      |                                    },
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-hobbes",
-      |                                        "name": "ll-hobbes",
-      |                                        "projectNumber": 339088619166,
-      |                                        "billing": null,
-      |                                        "objects": null
-      |                                    },
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-nat-prot-ex-data",
-      |                                        "name": "ll-nat-prot-ex-data",
-      |                                        "projectNumber": 339088619166,
-      |                                        "billing": null,
-      |                                        "objects": null
-      |                                    },
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-phage-libraries-private",
-      |                                        "name": "ll-phage-libraries-private",
-      |                                        "projectNumber": 339088619166,
-      |                                        "billing": null,
-      |                                        "objects": null
-      |                                    },
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-phip-analysis",
-      |                                        "name": "ll-phip-analysis",
-      |                                        "projectNumber": 339088619166,
-      |                                        "billing": null,
-      |                                        "objects": null
-      |                                    },
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-phip-seq",
-      |                                        "name": "ll-phip-seq",
-      |                                        "projectNumber": 339088619166,
-      |                                        "billing": null,
-      |                                        "objects": null
-      |                                    },
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-raw-seq",
-      |                                        "name": "ll-raw-seq",
-      |                                        "projectNumber": 339088619166,
-      |                                        "billing": null,
-      |                                        "objects": null
-      |                                    },
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-scratch",
-      |                                        "name": "ll-scratch",
-      |                                        "projectNumber": 339088619166,
-      |                                        "billing": null,
-      |                                        "objects": null
-      |                                    },
-      |                                    {
-      |                                        "kind": "storage#bucket",
-      |                                        "id": "ll-seq",
-      |                                        "name": "ll-seq",
-      |                                        "projectNumber": 339088619166,
-      |                                        "billing": null,
-      |                                        "objects": null
-      |                                    }
-      |                                ],
-      |                                "nextPageToken": null
-      |                            }
-      |                        }
-      |                    ],
-      |                    "nextPageToken": null
-      |                },
-      |                "projectId": "hca-scale"
-      |            },
-      |            "userProject": null
-      |        }
-      |    ],
-      |    "id": "106937999264733402135"
-      |}"""
-      .stripMargin
 
-  val logins =
-    Logins(
-      Vector(
-        Login(
-          Auth(
-            "ya29.GlyZBm2eJCPfrAeVndkS9nfdKNEvZ1OANkqdfORGUbxZcQiSAhx0KviK63SFnLD_Re2Xk_TEbHoVbQLNGjyl9CKlKPgVRH7zfDZiirfE344wPr7prKrTOodjQRJLmA",
-            1548125206,
-            List(
-              "email profile https://www.googleapis.com/auth/cloud-platform.read-only https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/devstorage.read_only"
-            ),
-            Params(
-              ClientId("218219996328-lltra1ss5e34hlraupaalrr6f56qmiat.apps.googleusercontent.com"),
-              RedirectUrl("http://localhost:8000"),
-              Scopes(
-                Scope("https://www.googleapis.com/auth/userinfo.email"),
-                Scope("https://www.googleapis.com/auth/userinfo.profile"),
-                Scope("https://www.googleapis.com/auth/devstorage.read_only"),
-                Scope("https://www.googleapis.com/auth/cloud-platform.read-only"),
+  override lazy val resourceDirectories: List[Path] = Local("viewerClient/src/test/resources") :: Nil
+  /*
+
+    val json = resource("state.json").string
+
+    val logins =
+      Logins(
+        Vector(
+          Login(
+            Auth(
+              "ya29.GlyZBm2eJCPfrAeVndkS9nfdKNEvZ1OANkqdfORGUbxZcQiSAhx0KviK63SFnLD_Re2Xk_TEbHoVbQLNGjyl9CKlKPgVRH7zfDZiirfE344wPr7prKrTOodjQRJLmA",
+              1548125206,
+              List(
+                "email profile https://www.googleapis.com/auth/cloud-platform.read-only https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/devstorage.read_only"
+              ),
+              Params(
+                ClientId("218219996328-lltra1ss5e34hlraupaalrr6f56qmiat.apps.googleusercontent.com"),
+                RedirectUrl("http://localhost:8000"),
+                Scopes(
+                  Scope("https://www.googleapis.com/auth/userinfo.email"),
+                  Scope("https://www.googleapis.com/auth/userinfo.profile"),
+                  Scope("https://www.googleapis.com/auth/devstorage.read_only"),
+                  Scope("https://www.googleapis.com/auth/cloud-platform.read-only"),
+                )
               )
-            )
-          ),
-          User(
-            "106937999264733402135",
-            "Ryan Williams",
-            Some("ryan@lasersonlab.org"),
-            "https://lh6.googleusercontent.com/-A5rE5wsEUIM/AAAAAAAAAAI/AAAAAAAAAAc/ig9En0FXVBs/photo.jpg"
-          ),
-          Projects(
-            Paged(
-              Vector(
-                Project(
-                  "hca-scale",
-                  "hca-scale",
-                  "218219996328",
-                  Some(
-                    Paged(
-                      Vector(
-                        Bucket(
-                          "dataproc-ec0dd18c-8914-432f-9e13-8335beaa47db-us-east1",
-                          "dataproc-ec0dd18c-8914-432f-9e13-8335beaa47db-us-east1",
-                          218219996328L,
-                          None,
-                          None
-                        ),
-                        Bucket(
-                          "ll-dataproc-initialization-actions",
-                          "ll-dataproc-initialization-actions",
-                          218219996328L,
-                          None,
-                          None
-                        ),
-                        Bucket(
-                          "ll-sc-data",
-                          "ll-sc-data",
-                          218219996328L,
-                          Some(Billing(true)),
-                          Some(
-                            Objects(
-                              Some(
-                                Vector(
-                                  "10x/",
-                                  "hca/",
-                                  "loom/",
-                                  "mca/"
-                                )
-                              ),
-                              Some(
-                                Vector(
-                                  Metadata(
-                                    "ll-sc-data/test-public.txt/1547143025743385",
-                                    "test-public.txt",
-                                    11,
-                                    "cF8BqGDbI/o0qsRrM5VIXw=="
-                                  ),
-                                  Metadata(
-                                    "ll-sc-data/test-write.txt/1532480791118244",
-                                    "test-write.txt",
-                                    11,
-                                    "nHL1vwsRP2XD6kTmQg85lw=="
-                                  ),
-                                  Metadata(
-                                    "ll-sc-data/test.txt/1532480352143794",
-                                    "test.txt",
-                                    11,
-                                    "cF8BqGDbI/o0qsRrM5VIXw=="
+            ),
+            User(
+              "106937999264733402135",
+              "Ryan Williams",
+              Some("ryan@lasersonlab.org"),
+              "https://lh6.googleusercontent.com/-A5rE5wsEUIM/AAAAAAAAAAI/AAAAAAAAAAc/ig9En0FXVBs/photo.jpg"
+            ),
+            Projects(
+              Paged(
+                Vector(
+                  Project(
+                    "hca-scale",
+                    "hca-scale",
+                    "218219996328",
+                    Some(
+                      Paged(
+                        Vector(
+                          Bucket(
+                            "dataproc-ec0dd18c-8914-432f-9e13-8335beaa47db-us-east1",
+                            "dataproc-ec0dd18c-8914-432f-9e13-8335beaa47db-us-east1",
+                            218219996328L,
+                            None,
+                            None
+                          ),
+                          Bucket(
+                            "ll-dataproc-initialization-actions",
+                            "ll-dataproc-initialization-actions",
+                            218219996328L,
+                            None,
+                            None
+                          ),
+                          Bucket(
+                            "ll-sc-data",
+                            "ll-sc-data",
+                            218219996328L,
+                            Some(Billing(true)),
+                            Some(
+                              Objects(
+                                Some(
+                                  Vector(
+                                    "10x/",
+                                    "hca/",
+                                    "loom/",
+                                    "mca/"
                                   )
-                                )
-                              ),
-                              None
+                                ),
+                                Some(
+                                  Vector(
+                                    Metadata(
+                                      "ll-sc-data/test-public.txt/1547143025743385",
+                                      "test-public.txt",
+                                      11,
+                                      "cF8BqGDbI/o0qsRrM5VIXw=="
+                                    ),
+                                    Metadata(
+                                      "ll-sc-data/test-write.txt/1532480791118244",
+                                      "test-write.txt",
+                                      11,
+                                      "nHL1vwsRP2XD6kTmQg85lw=="
+                                    ),
+                                    Metadata(
+                                      "ll-sc-data/test.txt/1532480352143794",
+                                      "test.txt",
+                                      11,
+                                      "cF8BqGDbI/o0qsRrM5VIXw=="
+                                    )
+                                  )
+                                ),
+                                None
+                              )
                             )
+                          ),
+                          Bucket(
+                            "ll-sc-data-bkup",
+                            "ll-sc-data-bkup",
+                            218219996328L,
+                            None,
+                            Some(
+                              Objects(
+                                Some(
+                                  Vector("10x/")
+                                ),
+                                None,
+                                None
+                              )
+                            )
+                          ),
+                          Bucket(
+                            "ll-sc-scripts",
+                            "ll-sc-scripts",
+                            218219996328L,
+                            None,
+                            None
                           )
                         ),
-                        Bucket(
-                          "ll-sc-data-bkup",
-                          "ll-sc-data-bkup",
-                          218219996328L,
-                          None,
-                          Some(
-                            Objects(
-                              Some(
-                                Vector("10x/")
-                              ),
-                              None,
-                              None
-                            )
+                        None
+                      )
+                    )
+                  ),
+                  Project(
+                    "Laserson Lab",
+                    "laserson-lab",
+                    "339088619166",
+                    Some(
+                      Paged(
+                        Vector(
+                          Bucket(
+                            "ll-adhoc",
+                            "ll-adhoc",
+                            339088619166L,
+                            None,
+                            None
+                          ),
+                          Bucket(
+                            "ll-airr-seq",
+                            "ll-airr-seq",
+                            339088619166L,
+                            None,
+                            None
+                          ),
+                          Bucket(
+                            "ll-dropbox-larman",
+                            "ll-dropbox-larman",
+                            339088619166L,
+                            None,
+                            None
+                          ),
+                          Bucket(
+                            "ll-dropbox-tomasz",
+                            "ll-dropbox-tomasz",
+                            339088619166L,
+                            None,
+                            None
+                          ),
+                          Bucket(
+                            "ll-hobbes",
+                            "ll-hobbes",
+                            339088619166L,
+                            None,
+                            None
+                          ),
+                          Bucket(
+                            "ll-nat-prot-ex-data",
+                            "ll-nat-prot-ex-data",
+                            339088619166L,
+                            None,
+                            None
+                          ),
+                          Bucket(
+                            "ll-phage-libraries-private",
+                            "ll-phage-libraries-private",
+                            339088619166L,
+                            None,
+                            None
+                          ),
+                          Bucket(
+                            "ll-phip-analysis",
+                            "ll-phip-analysis",
+                            339088619166L,
+                            None,
+                            None
+                          ),
+                          Bucket(
+                            "ll-phip-seq",
+                            "ll-phip-seq",
+                            339088619166L,
+                            None,
+                            None
+                          ),
+                          Bucket(
+                            "ll-raw-seq",
+                            "ll-raw-seq",
+                            339088619166L,
+                            None,
+                            None
+                          ),
+                          Bucket(
+                            "ll-scratch",
+                            "ll-scratch",
+                            339088619166L,
+                            None,
+                            None
+                          ),
+                          Bucket(
+                            "ll-seq",
+                            "ll-seq",
+                            339088619166L,
+                            None,
+                            None
                           )
                         ),
-                        Bucket(
-                          "ll-sc-scripts",
-                          "ll-sc-scripts",
-                          218219996328L,
-                          None,
-                          None
-                        )
-                      ),
-                      None
+                        None
+                      )
                     )
                   )
                 ),
-                Project(
-                  "Laserson Lab",
-                  "laserson-lab",
-                  "339088619166",
-                  Some(
-                    Paged(
-                      Vector(
-                        Bucket(
-                          "ll-adhoc",
-                          "ll-adhoc",
-                          339088619166L,
-                          None,
-                          None
-                        ),
-                        Bucket(
-                          "ll-airr-seq",
-                          "ll-airr-seq",
-                          339088619166L,
-                          None,
-                          None
-                        ),
-                        Bucket(
-                          "ll-dropbox-larman",
-                          "ll-dropbox-larman",
-                          339088619166L,
-                          None,
-                          None
-                        ),
-                        Bucket(
-                          "ll-dropbox-tomasz",
-                          "ll-dropbox-tomasz",
-                          339088619166L,
-                          None,
-                          None
-                        ),
-                        Bucket(
-                          "ll-hobbes",
-                          "ll-hobbes",
-                          339088619166L,
-                          None,
-                          None
-                        ),
-                        Bucket(
-                          "ll-nat-prot-ex-data",
-                          "ll-nat-prot-ex-data",
-                          339088619166L,
-                          None,
-                          None
-                        ),
-                        Bucket(
-                          "ll-phage-libraries-private",
-                          "ll-phage-libraries-private",
-                          339088619166L,
-                          None,
-                          None
-                        ),
-                        Bucket(
-                          "ll-phip-analysis",
-                          "ll-phip-analysis",
-                          339088619166L,
-                          None,
-                          None
-                        ),
-                        Bucket(
-                          "ll-phip-seq",
-                          "ll-phip-seq",
-                          339088619166L,
-                          None,
-                          None
-                        ),
-                        Bucket(
-                          "ll-raw-seq",
-                          "ll-raw-seq",
-                          339088619166L,
-                          None,
-                          None
-                        ),
-                        Bucket(
-                          "ll-scratch",
-                          "ll-scratch",
-                          339088619166L,
-                          None,
-                          None
-                        ),
-                        Bucket(
-                          "ll-seq",
-                          "ll-seq",
-                          339088619166L,
-                          None,
-                          None
-                        )
-                      ),
-                      None
-                    )
-                  )
-                )
+                None
               ),
-              None
+              Some("hca-scale")
             ),
-            Some("hca-scale")
-          ),
-          Non
-        )
-      ),
-      Some("106937999264733402135")
-    )
-
-  val tests = Tests {
-    'encode - {
-      val actual = pprint(logins.asJson)
-      ==(
-        actual,
-        json
+            Non
+          )
+        ),
+        Some("106937999264733402135")
       )
-      .onError {
-        case _ ⇒
-          Local("actual").write(actual)
-          Local("expected").write(json)
-          ().pure[Future]
+
+  */
+  val tests = Tests {
+//    'encode - {
+//      val actual = pprint(logins.asJson)
+//      ==(
+//        actual,
+//        json
+//      )
+//      .onError {
+//        case _ ⇒
+//          Local("actual").write(actual)
+//          Local("expected").write(json)
+//          ().pure[Future]
+//      }
+//    }
+//    'decode -
+//      ==(
+//        decode[Logins](json),
+//        Right(logins)
+//      )
+
+    import lasersonlab.circe._
+
+    'dir - {
+      println(decode[Either[String, Repr]]("\"yay\""))
+    }
+
+    'dirs - {
+      resource("dirs.json")
+        .string
+        .map {
+          json ⇒
+            val dirs = decode[?[Vector[Dir]]](json)
+//            val dirs = decode[Vector[Dir]](json)
+            println(dirs)
+            assert(
+              dirs == Right(Vector())
+            )
+        }
+    }
+
+    'objects - {
+      for {
+        in ← resource("objects.json").string
+        out ← resource("objects-out.json").string
+        objects = decode[Objects](in)
+      } yield {
+        assert(
+          objects.map {
+            o ⇒
+              val str = pprint(o.asJson)
+              //Local("actual").write(str)
+              str
+          } == Right(out)
+        )
+        ()
       }
     }
-    'decode -
-      ==(
-        decode[Logins](json),
-        Right(logins)
-      )
   }
 
 }

@@ -13,6 +13,7 @@ import japgolly.scalajs.react.vdom.VdomArray
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^.^._
 import japgolly.scalajs.react.vdom.html_<^._
+import lasersonlab.circe._
 import org.lasersonlab.circe.SingletonCodec._
 import org.lasersonlab.gcp.SignIn
 import org.lasersonlab.gcp.SignIn.SignOut
@@ -204,7 +205,17 @@ extends SignIn.syntax
       }
       .componentWillUpdate {
         p ⇒
-          localStorage.setItem(stateKey, pprint(p.nextState.asJson))
+          localStorage
+            .setItem(
+              stateKey,
+              pprint(
+                p
+                  .nextProps
+                  ._1
+                  .value
+                  .asJson
+              )
+            )
           Callback()
       }
       .build

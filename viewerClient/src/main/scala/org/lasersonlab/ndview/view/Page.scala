@@ -13,14 +13,13 @@ import japgolly.scalajs.react.vdom.VdomArray
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^.^._
 import japgolly.scalajs.react.vdom.html_<^._
-import lasersonlab.circe._
 import org.lasersonlab.circe.SingletonCodec._
 import org.lasersonlab.gcp.SignIn
 import org.lasersonlab.gcp.SignIn.SignOut
 import org.lasersonlab.gcp.oauth.scopes.auth._
 import org.lasersonlab.gcp.oauth.{ Auth, ClientId, RedirectUrl, Scopes }
-import org.lasersonlab.ndview.{ NewLogin, SelectProject, SelectUserProject, UpdateProjects }
 import org.lasersonlab.ndview.model.{ Login, Logins }
+import org.lasersonlab.ndview.{ NewLogin, SelectProject, SelectUserProject, UpdateProjects }
 import org.lasersonlab.uri.fragment
 import org.scalajs.dom.document
 import org.scalajs.dom.window.localStorage
@@ -114,7 +113,7 @@ extends SignIn.syntax
             key := "page",
             className := "page",
             div(
-              key := "controls",
+                    key := "controls",
               className := "controls"
             )(
               button(key := "sign-in", onClick --> { SignIn (); Callback() }, "sign in" ),
@@ -140,13 +139,13 @@ extends SignIn.syntax
                     buckets ← project.buckets
                   } yield
                     Buckets(
-                      model,
                       login,
                       project,
                       buckets
                     )
               },
 
+            h4("State (Debug)"),
             div(
               key := "state",
               className := "state"

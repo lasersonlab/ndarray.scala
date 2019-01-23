@@ -90,4 +90,5 @@ object SignIn {
   trait syntax {
     @inline implicit def makeSignInOps[F[_], T](f: F[T]): Ops[F, T] = Ops(f)
   }
+  object syntax extends syntax
 }

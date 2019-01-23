@@ -3,11 +3,11 @@ package org.lasersonlab.gcp
 import java.net.URI
 
 import cats.implicits._
-import org.lasersonlab.uri.Uri.Segment
 import org.lasersonlab.gcp.googleapis.projects.UserProject
 import org.lasersonlab.gcp.googleapis.storage
-import org.lasersonlab.gcp.googleapis.storage.{ Dir, Obj }
+import org.lasersonlab.gcp.googleapis.storage.{ Objects, Prefix }
 import org.lasersonlab.gcp.oauth.Auth
+import org.lasersonlab.uri.Uri.Segment
 import org.lasersonlab.uri.{ Http, Uri, caching, http ⇒ h }
 
 case class GCS(
@@ -19,7 +19,8 @@ case class GCS(
   val userProject: Option[UserProject],
   val cachingConfig: caching.Config,
 )
-extends Uri()(config.httpConfig) {
+extends Uri()(config.httpConfig)
+   with Prefix {
 
   type Self = GCS
 
@@ -40,32 +41,32 @@ extends Uri()(config.httpConfig) {
 
   override def isDirectory: Boolean = uri.toString.endsWith("/")
 
-  import googleapis.storage
-
   override def children: F[Iterator[Self]] = {
     Http(listUri.toJavaUri)
-      .json[storage.Objects]
+      .json[Objects]
       .map {
-        case l @ storage.Objects(dirs, files, _) ⇒
-          files
+        case l @ Objects(prefixes, items, _) ⇒
+          items
             .fold {
-              Iterator[Obj]()
+              Iterator[Metadata]()
             } {
               _.iterator
             }
             .map {
-              case Obj(_, path, _) ⇒
-                GCS(bucket, path)
+              md ⇒
+                GCS(bucket, path :+ md.name)
             } ++
-            dirs
-              .getOrElse(Nil)
-              .map {
-                case Dir(_, path, _) ⇒
-                  GCS(
-                    bucket,
-                    path
-                  )
-              }
+          prefixes
+            .fold(Iterator[String]()) {
+              _.iterator
+            }
+            .map {
+              name ⇒
+                GCS(
+                  bucket,
+                  path :+ name
+                )
+            }
       }
   }
 

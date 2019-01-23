@@ -2,17 +2,16 @@ package org.lasersonlab.ndview.view
 
 import cats.implicits._
 import diode.react.ModelProxy
-import hammerlab.bytes.Bytes
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^.^._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.lasersonlab.gcp
 import org.lasersonlab.gcp.Config.implicits._
+import org.lasersonlab.gcp.SignIn
 import org.lasersonlab.gcp.googleapis.Paged
 import org.lasersonlab.gcp.googleapis.projects.Project
-import org.lasersonlab.gcp.googleapis.storage.{ Bucket, Dir, Obj }
-import org.lasersonlab.gcp.{ Metadata, SignIn }
+import org.lasersonlab.gcp.googleapis.storage.Bucket
 import org.lasersonlab.ndview.UpdateBucket
 import org.lasersonlab.ndview.model.Login
 
@@ -20,25 +19,26 @@ object Buckets
 extends SignIn.syntax
 {
   case class Props(
-    model: ModelProxy[_],
     login: Login,
     project: Project,
     buckets: Paged[Bucket]
   )(
-    implicit val config: gcp.Config
+    implicit
+    val model: ModelProxy[_],
+    val config: gcp.Config
   )
 
   def apply(
-    model: ModelProxy[_],
     login: Login,
     project: Project,
     buckets: Paged[Bucket]
   )(
-    implicit config: gcp.Config
+    implicit
+    model: ModelProxy[_],
+    config: gcp.Config
   ) =
     component(
       Props(
-        model,
         login,
         project,
         buckets
@@ -49,9 +49,8 @@ extends SignIn.syntax
     ScalaComponent
       .builder[Props]("Buckets")
       .render_P {
-        case props @ Props(model, login, project, buckets) ⇒
-          import props.config
-          implicit val Login(auth, user, projects, userProject) = login
+        props ⇒
+          import props._
           div(
             key := "buckets",  // TODO: remove key+className duplication boilerplate
             className := "buckets",
@@ -59,7 +58,7 @@ extends SignIn.syntax
           )(
             buckets
               .map {
-                case bucket @ Bucket(id, name, _, _, objects) ⇒
+                case bucket @ Bucket(id, name, _, _, contents) ⇒
                   div(
                     key := id,
                     className := "bucket",
@@ -83,34 +82,61 @@ extends SignIn.syntax
                       }
                   )(
                     name,
-                    objects
+                    contents
                       .map {
-                        objects ⇒
-                          (
-                            objects
-                              .dirs
-                              .map {
-                                dir ⇒
-                                  div(
-                                    key := dir.name,
-                                    className := "dir entry"
-                                  )(
-                                    dir.name
-                                  )
-                              } ++
-                            objects
-                              .files
-                              .map {
-                                case Obj(_, path, Metadata(_, name, size, _)) ⇒
-                                  div(
-                                    key := name,
-                                    className := "file entry"
-                                  )(
-                                    s"$name (${Bytes.format(size)})"
-                                  )
-                              }
-                          )
-                          .toVdomArray
+                        Contents(login, project, _)
+
+//                        contents ⇒
+//                          (
+//                            contents
+//                              .dirs
+//                              .map {
+//                                dir ⇒
+//                                  div(
+//                                    key := dir.name,
+//                                    className := "dir entry",
+//                                    onClick --> {
+//                                      dir
+//                                        .ls()
+//                                        .fold { Callback() } {
+//                                          ΔF ⇒
+//                                            Callback.future {
+//                                              ΔF
+//                                                .map {
+//                                                  Δ ⇒
+//                                                    model.dispatchCB(
+//                                                      UpdateDir(login.id, project.id, dir, Δ)
+//                                                    )
+//                                                }
+//                                                .reauthenticate_?
+//                                            }
+//                                        }
+//                                    }
+//                                  )(
+//                                    dir.name
+//                                  )/*(
+//                                    dir
+//                                      .contents
+//                                      .map {
+//                                        contents ⇒
+//                                          import contents._
+//
+//                                      }
+//                                  )*/
+//                              } ++
+//                            contents
+//                              .objs
+//                              .map {
+//                                case Obj(_, path, Metadata(_, name, size, _)) ⇒
+//                                  div(
+//                                    key := name,
+//                                    className := "file entry"
+//                                  )(
+//                                    s"$name (${Bytes.format(size)})"
+//                                  )
+//                              }
+//                          )
+//                          .toVdomArray
                       }
                   )
               }: _*

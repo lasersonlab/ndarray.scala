@@ -1,19 +1,34 @@
 package org.lasersonlab.gcp.googleapis
 
+import com.softwaremill.sttp._
 import io.circe.generic.auto._
 import io.circe.syntax._
+import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor }
 import org.lasersonlab.gcp.googleapis.projects.{ Project, UserProject }
-import org.lasersonlab.gcp.{ Config, Metadata, googleapis }
+import org.lasersonlab.gcp.{ Config, Metadata, googleapis, _ }
 import org.lasersonlab.uri._
-import org.lasersonlab.gcp._
-import com.softwaremill.sttp._
-import io.circe.Decoder.Result
-import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json, JsonObject }
 
 object storage {
   val base = uri"${googleapis.base}/storage/v1"
 
+  trait Prefix {
+    def bucket: String
+    def path: Vector[String]
+    implicit def _self = this
+  }
+
+  case class Path(segments: Vector[String])
   object Path {
+    def apply(str: String)(implicit prefix: Prefix): Vector[String] = {
+      val path = str.split('/').toVector
+      if (path.dropRight(1) != prefix.path) {
+        import System.err
+        err.println(path)
+        err.println(prefix.path)
+        throw IllegalChildPath(str, prefix)
+      }
+      path
+    }
     def unapply(str: String): Option[(String, Vector[String])] =
       str
         .split("/") match {
@@ -29,104 +44,124 @@ object storage {
   case class Dir(
     bucket: String,
     path: Vector[String],
-    objects: ?[Objects] = None
-  ) {
-    def name = (bucket +: path) mkString("", "/", "/")
+    contents: ?[Contents] = None
+  )
+  extends Prefix
+  {
+    def name = (bucket +: path) mkString "/"
+    def basename = path.last
+    def uri = uri"${storage.base}/b/$bucket"
+    def ls()(
+      implicit
+      config: Config,
+      userProject: ?[UserProject] = None
+    ):
+      ?[F[Δ[Dir]]] =
+    {
+      contents
+        .fold {
+            Option(
+              Http(
+                uri"$uri/o?delimiter=${"/"}&prefix=${path.mkString("", "/", "/")}&userProject=$userProject"
+              )
+              .json[Objects]
+              .map {
+                objects ⇒
+                  (dir: Dir) ⇒ dir.copy(contents = Some(Contents(objects)))
+              }
+            )
+          } {
+            _ ⇒ None
+          }
+    }
+    def apply(path: List[String])(Δ: Δ[Dir]): Dir =
+      path match {
+        case Nil ⇒ Δ(this)
+        case h :: t ⇒
+          copy(
+            contents =
+              Some(
+                contents.get(path)(Δ)
+              )
+          )
+      }
   }
   object Dir {
-    /** Simplified JSON representation (when [[Objects]] is populated; flat [[String name string]] otherwise */
-    case class Repr(name: String, objects: Objects)
-    implicit val encoder: Encoder[Dir] = {
-      case dir @ Dir(bucket, path, None         ) ⇒ dir.name.asJson
-      case dir @ Dir(bucket, path, Some(objects)) ⇒ Repr(dir.name, objects).asJson
-    }
-    import lasersonlab.circe._
-    implicit val decoder: Decoder[Dir] =
-      (c: HCursor) ⇒
-        c
-          .value
-          .as[Either[String, Repr]]
-          .flatMap {
-            case
-              Left(
-                Path(
-                  bucket,
-                  path
-                )
-              ) ⇒
-              Right(
-                Dir(
-                  bucket,
-                  path
-                )
-              )
-            case
-              Right(
-                Repr(
-                  Path(
-                    bucket,
-                    path
-                  ),
-                  objects
-                )
-              ) ⇒
-              Right(
-                Dir(
-                  bucket,
-                  path,
-                  Some(objects)
-                )
-              )
-            case other ⇒
-              Left(
-                DecodingFailure(
-                  s"Bad dir objects: $other",
-                  c.history
-                )
-              )
-          }
+    def apply(str: String)(implicit prefix: Prefix): Dir =
+      Dir(
+        prefix.bucket,
+        Path(str)
+      )
   }
-  case class Obj(bucket: String, path: Vector[String], metadata: Metadata)
+
+  case class IllegalChildPath(str: String, prefix: Prefix) extends RuntimeException
+
+  case class Obj(
+    bucket: String,
+    path: Vector[String],
+    metadata: Metadata
+  ) {
+    def name = (bucket +: path) mkString "/"
+    def basename = path.last
+  }
   object Obj {
-    implicit val encoder: Encoder[Obj] = { case Obj(_, _, metadata) ⇒ metadata.asJson }
-    implicit val decoder: Decoder[Obj] =
-      (c: HCursor) ⇒
-        c
-          .value
-          .as[Metadata]
-          .flatMap {
-            metadata ⇒
-              metadata.name match {
-                case Path(bucket, path) ⇒
-                  Right(
-                    Obj(
-                      bucket,
-                      path,
-                      metadata
-                    )
-                  )
-                case name ⇒
-                  Left(
-                    DecodingFailure(
-                      s"Invalid object name $name",
-                      c.history
-                    )
-                  )
-              }
-          }
+    def apply(metadata: Metadata)(implicit prefix: Prefix): Obj =
+      Obj(
+        prefix.bucket,
+        Path(metadata.name),
+        metadata
+      )
   }
 
   case class Objects(
+         prefixes: ?[Vector[  String]] = None,
+            items: ?[Vector[Metadata]] = None,
+    nextPageToken: ?[    String ] = None
+  )
+  object Objects extends Kinded("storage#objects") {
+    implicit val decoder = kindDecoder[Objects]
+    implicit val encoder = kindEncoder[Objects]
+  }
+
+  /**
+   * Application-version of [[Objects]]; [[Objects.prefixes directories]] and [[Objects.items files]] are hydrated into
+   * [[Dir]]s and [[Obj]]s
+   */
+  case class Contents(
          prefixes: ?[Vector[Dir]] = None,
             items: ?[Vector[Obj]] = None,
     nextPageToken: ?[    String ] = None
   ) {
-    def dirs = prefixes.getOrElse(Vector())
-    def files = items.getOrElse(Vector())
+    def dirs: Vector[Dir] = prefixes.getOrElse(Vector())
+    def objs: Vector[Obj] =    items.getOrElse(Vector())
+    def apply(path: List[String])(Δ: Δ[Dir]): Contents =
+      path match {
+        case h :: t ⇒
+          copy(
+            prefixes =
+              Some(
+                prefixes
+                  .get
+                  .foldLeft { Vector[Dir]() } {
+                    (prefixes, next) ⇒
+                      prefixes :+ (
+                        if (next.path.last == h)
+                          next(t)(Δ)
+                        else
+                          next
+                      )
+                  }
+              )
+          )
+      }
   }
-  object Objects extends Kinded("storage#objects") {
-    implicit val decoder = kindDecoder[Objects]
-    implicit val encoder = kindEncoder[Objects]
+  object Contents {
+    def apply(objects: Objects)(implicit prefix: Prefix): Contents =
+      Contents(
+        objects.prefixes.map(_.map(Dir(_))),
+        objects.   items.map(_.map(Obj(_))),
+        objects.nextPageToken
+      )
   }
 
   case class Billing(requesterPays: Boolean = false)
@@ -134,11 +169,18 @@ object storage {
     id: String,
     name: String,
     projectNumber: Long,
-    billing: ?[Billing] = None,
-    objects: ?[Objects] = None
-  ) {
+    billing: ?[ Billing] = None,
+    // this doesn't exist in the Google API, but we hang it here and populate it after the fact (with subsequent
+    // "list objects" requests) instead of creating separate [[Bucket]] models for the Google-API vs application
+    // usage/persistence; it may be worth splitting them later to make the separation of the two concerns more explicit
+    objects: ?[Contents] = None
+  )
+  extends Prefix
+  {
+    def bucket = name
+    def path = Vector[String]()
     def uri = uri"${storage.base}/b/$name"
-    def ls(path: String*)(
+    def ls()(
       implicit
       config: Config,
       userProject: ?[UserProject] = None
@@ -149,18 +191,21 @@ object storage {
         .fold {
           Option(
             Http(
-              uri"$uri/o?delimiter=${"/"}&prefix=${path.mkString("/")}&userProject=$userProject"
+              uri"$uri/o?delimiter=${"/"}&userProject=$userProject"
             )
             .json[Objects]
             .map {
               objects ⇒
-                (bucket: Bucket) ⇒ bucket.copy(objects = Some(objects))
+                (bucket: Bucket) ⇒ bucket.copy(objects = Some(Contents(objects)))
             }
           )
         } {
           _ ⇒ None
         }
     }
+
+    def apply(path: List[String])(Δ: Δ[Dir]): Bucket =
+      copy(objects = Some(this.objects.get(path)(Δ)))
   }
   object Bucket extends Kinded("storage#bucket") {
     implicit val decoder = kindDecoder[Bucket]

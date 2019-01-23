@@ -1,49 +1,48 @@
 package org.lasersonlab.ndview.view
 
-import cats.ApplicativeError
 import cats.implicits._
+import diode.react.ModelProxy
 import hammerlab.bytes.Bytes
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^.^._
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.vdom.{ TagOf, VdomArray }
-import org.lasersonlab.ndview.model.Login
 import org.lasersonlab.gcp
 import org.lasersonlab.gcp.Config.implicits._
-import org.lasersonlab.gcp.{ Metadata, SignIn }
 import org.lasersonlab.gcp.googleapis.Paged
 import org.lasersonlab.gcp.googleapis.projects.Project
-import org.lasersonlab.gcp.googleapis.storage.{ Bucket, Buckets }
-
-import scala.concurrent.{ ExecutionContext, Future }
+import org.lasersonlab.gcp.googleapis.storage.Bucket
+import org.lasersonlab.gcp.{ Metadata, SignIn }
+import org.lasersonlab.ndview.UpdateBucket
+import org.lasersonlab.ndview.model.Login
 
 object Buckets
 extends SignIn.syntax
 {
   case class Props(
+    model: ModelProxy[_],
     login: Login,
     project: Project,
     buckets: Paged[Bucket],
-    update: (Login ⇒ Login) ⇒ Callback
+    //dispatch:
   )(
     implicit val config: gcp.Config
   )
 
   def apply(
+    model: ModelProxy[_],
     login: Login,
     project: Project,
-    buckets: Paged[Bucket],
-    update: (Login ⇒ Login) ⇒ Callback
+    buckets: Paged[Bucket]
   )(
     implicit config: gcp.Config
   ) =
     component(
       Props(
+        model,
         login,
         project,
-        buckets,
-        update
+        buckets
       )
     )
 
@@ -51,56 +50,36 @@ extends SignIn.syntax
     ScalaComponent
       .builder[Props]("Buckets")
       .render_P {
-        case props @ Props(login, project, buckets, update) ⇒
+        case props @ Props(model, login, project, buckets) ⇒
           import props.config
           implicit val Login(auth, user, projects, userProject) = login
           div(
-            key := "buckets",
+            key := "buckets",  // TODO: remove key+className duplication boilerplate
             className := "buckets"
           )(
             buckets
               .map {
                 case bucket @ Bucket(id, name, _, _, objects) ⇒
-                  implicitly[ExecutionContext]
-                  implicitly[ApplicativeError[Future, Throwable]]
                   div(
                     key := id,
                     className := "bucket",
-                    onClick -->
-                      Callback.future {
-                        println("clicked")
-                        bucket
-                          .ls()
-                          .map {
-                            next ⇒
-                              println(s"Got new bucket: $next")
-                              update(
-                                _
-                                  .copy(
-                                    projects =
-                                      projects
-                                        .mod(project.id) {
-                                            _
-                                              .copy(
-                                                buckets =
-                                                  Some(
-                                                    buckets
-                                                      .copy(
-                                                        items =
-                                                          buckets
-                                                            .items
-                                                            .map {
-                                                              case b if b.id == bucket.id ⇒ next
-                                                              case b ⇒ b
-                                                            }
-                                                      )
-                                                  )
-                                              )
-                                        }
-                                  )
-                              )
-                          }
-                          .reauthenticate_?
+                    onClick --> {
+                      println("clicked")
+                      bucket
+                        .ls()
+                        .fold { Callback() } {
+                          ΔF ⇒
+                            Callback.future {
+                              ΔF
+                                .map {
+                                  Δ ⇒
+                                    model.dispatchCB(
+                                      UpdateBucket(login.id, project.id, id, Δ)
+                                    )
+                                }
+                                .reauthenticate_?
+                            }
+                        }
                       }
                   )(
                     name,

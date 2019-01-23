@@ -1,8 +1,9 @@
 package org.lasersonlab.ndview.model
 
 import cats.implicits._
-import org.lasersonlab.uri.F
+import org.lasersonlab.uri._
 import org.lasersonlab.gcp.googleapis.?
+import org.lasersonlab.gcp.googleapis.projects.Project
 
 import scala.concurrent.ExecutionContext
 
@@ -11,47 +12,80 @@ case class Logins(
   id: ?[String] = None
 ) {
   def login: Option[Login] = id.map(id ⇒ logins.find(_.id == id).get)
+
+//  def apply(id: String): Login = logins.find(_.id == id).get
+
+  /**
+   * Receive a new login, after as after an OAuth flow
+   *
+   * If a login exists for this user, just replace the [[org.lasersonlab.gcp.oauth.Auth]] credentials, otherwise add the
+   * whole [[Login]]
+   *
+   * In either case, "select" its [[id]]
+   */
   def :+(login: Login): Logins =
     Logins(
       logins
-        .partition {
-          _.id == login.id
+        .foldLeft(
+          (
+            false,
+            Vector[Login]()
+          )
+        ) {
+          case (
+            (found, logins),
+            next
+          ) ⇒
+            if (next.id == login.id) {
+              println(s"Updating old login $next with new auth from $login")
+              (
+                true,
+                logins :+ next.copy(auth = login.auth)
+              )
+            } else
+              (
+                found,
+                logins :+ next
+              )
         } match {
-          case (Vector(old), rest) ⇒
-            println(s"Updating old login $old with new auth from $login")
-            rest :+ old.copy(auth = login.auth)
-          case (Vector(), rest) ⇒
-            println(s"Didn't find new login $login in existing logins ${logins.map(_.id).mkString(",")}")
-            rest :+ login
+          case ( true, logins) ⇒ logins
+          case (false, logins) ⇒ logins :+ login
         },
       Some(login.id)
     )
-  def mod(id: String)(f: Login ⇒ Login): Logins =
+
+  def apply(Δ: Δ[Login]): Logins = apply(id.get)(Δ)
+  def apply(id: String, select: Boolean = false)(Δ: Δ[Login]): Logins =
     copy(
       logins
         .foldLeft(Vector[Login]()) {
           (logins, next) ⇒
             logins :+ (
               if (next.id == id)
-                f(next)
+                Δ(next)
               else
                 next
             )
-        }
+        },
+      id = if (select) Some(id) else this.id
     )
 
-  def set(newLogin: Login): Logins = map { _ ⇒ newLogin }
-  def map(f: Login ⇒ Login): Logins = mod { case login if id.contains(login.id) ⇒ f(login) }
-  def modF(pf: PartialFunction[Login, F[Login]])(implicit ec: ExecutionContext): F[Logins] = {
-    def f(login: Login) = if (pf.isDefinedAt(login)) pf(login) else F { login }
-    logins
-      .traverse(f)
-      .map { copy(_) }
-  }
-  def mod(pf: PartialFunction[Login, Login]): Logins = {
-    def f(login: Login) = if (pf.isDefinedAt(login)) pf(login) else login
-    copy(
-      logins.map(f)
-    )
-  }
+//  def set(newLogin: Login): Logins = map { _ ⇒ newLogin }
+//  def map(f: Login ⇒ Login): Logins = mod { case login if id.contains(login.id) ⇒ f(login) }
+//  def modF(pf: PartialFunction[Login, F[Login]])(implicit ec: ExecutionContext): F[Logins] = {
+//    def f(login: Login) = if (pf.isDefinedAt(login)) pf(login) else F { login }
+//    logins
+//      .traverse(f)
+//      .map { copy(_) }
+//  }
+//  def mod(pf: PartialFunction[Login, Login]): Logins = {
+//    def f(login: Login) = if (pf.isDefinedAt(login)) pf(login) else login
+//    copy(
+//      logins.map(f)
+//    )
+//  }
+}
+
+object Logins {
+  implicit def loginsΔ(Δ: (String, Δ[Login])): Δ[Logins] = _.apply(Δ._1)(Δ._2)
 }

@@ -183,7 +183,7 @@ lazy val uri =
 
         circe,
         circe.generic,
-        circe.lib("generic-extras"),
+        circe.lib("generic-extras"),  // TODO: alias
         circe.parser,
 
         fs2,
@@ -258,9 +258,10 @@ lazy val viewerClient =
       version in startWebpackDevServer := "3.1.14",
 
       react,
-      diode,
       dep(
 
+        diode,
+        diode.react,
         dom,
 
         cats,
@@ -282,7 +283,7 @@ lazy val viewerClient =
       npmDependencies in Compile ++=
         Seq(
           "pako"        → "1.0.7",
-          "react-proxy" →  "1.1.8"
+          "react-proxy" → "1.1.8"
         ),
 //      scalacOptions += "-Xlog-implicits"
     )

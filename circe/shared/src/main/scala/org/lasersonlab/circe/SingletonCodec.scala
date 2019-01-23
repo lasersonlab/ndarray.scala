@@ -1,6 +1,6 @@
 package org.lasersonlab.circe
 
-import io.circe.{ Decoder, Encoder, HCursor }
+import io.circe.{ Decoder, Encoder }
 import shapeless._
 
 trait SingletonEncoders {

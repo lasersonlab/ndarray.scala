@@ -1,6 +1,7 @@
 package org.lasersonlab.ndview
 
 import cats.effect.{ ExitCode, IO, IOApp }
+import japgolly.scalajs.react.vdom.Implicits._
 import org.lasersonlab.ndview.view.Page
 import org.lasersonlab.gcp.SignIn
 import org.scalajs.dom.document
@@ -13,7 +14,15 @@ object Main
 {
   override def run(args: List[String]): IO[ExitCode] = {
     println("client main")
-    Page().renderIntoDOM(document.getElementById("root"))
+    val connection = Circuit.connect(_.logins)
+
+    connection(
+      Page(_)
+    )
+    .renderIntoDOM(
+      document.getElementById("root")
+    )
+
     IO.pure(ExitCode.Success)
   }
 }

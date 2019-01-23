@@ -19,7 +19,7 @@ import scala.util.{ Failure, Success, Try }
 
 case class Http(uri: URI)(
   implicit
-  val config: Config,
+  val cachingConfig: caching.Config,
   defaults: Defaults,
   httpConfig: http.Config
 )

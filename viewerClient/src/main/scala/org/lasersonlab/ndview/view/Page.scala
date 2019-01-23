@@ -3,6 +3,7 @@ package org.lasersonlab.ndview.view
 import java.lang.System.err
 
 import cats.implicits._
+import diode.react.ModelProxy
 import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.parser.decode
@@ -17,6 +18,7 @@ import org.lasersonlab.gcp.SignIn
 import org.lasersonlab.gcp.SignIn.SignOut
 import org.lasersonlab.gcp.oauth.scopes.auth._
 import org.lasersonlab.gcp.oauth.{ Auth, ClientId, RedirectUrl, Scopes }
+import org.lasersonlab.ndview.{ NewLogin, SelectProject, SelectUserProject, UpdateProjects }
 import org.lasersonlab.ndview.model.{ Login, Logins }
 import org.lasersonlab.uri.fragment
 import org.scalajs.dom.document
@@ -30,8 +32,7 @@ import org.lasersonlab.gcp.googleapis.Paged.pagedEncoder
 object Page
 extends SignIn.syntax
 {
-  type Props = Unit
-  type State = Logins
+  type Props = (ModelProxy[Logins], ExecutionContext)
 
   implicit val CLIENT_ID = ClientId("218219996328-lltra1ss5e34hlraupaalrr6f56qmiat.apps.googleusercontent.com")
   implicit val REDIRECT_URL = RedirectUrl("http://localhost:8000")
@@ -44,36 +45,64 @@ extends SignIn.syntax
       `cloud-platform` `read-only`
     )
 
-  implicit val ec = ExecutionContext.global
-
   val stateKey = "app-state"
 
   val pprint = Printer.spaces4.copy(colonLeft = "").pretty _
 
-  val component =
-    ScalaComponent
-      .builder[ExecutionContext]("Page")
-      .initialState {
-        val str = localStorage.getItem(stateKey)
-        Option(str)
-          .fold {
+  def initialState = {
+    val str = localStorage.getItem(stateKey)
+    Option(str)
+      .fold {
+        Logins()
+      } {
+        decode[Logins](_) match {
+          case Left(e) ⇒
+            err.println(s"Failed to parse state from localStorage:")
+            err.println(e)
+            err.println(str)
+            localStorage.removeItem(stateKey)
             Logins()
-          } {
-            decode[Logins](_) match {
-              case Left(e) ⇒
-                err.println(s"Failed to parse state from localStorage:")
-                err.println(e)
-                err.println(str)
-                localStorage.removeItem(stateKey)
-                Logins()
-              case Right(state) ⇒ state
-            }
+          case Right(state) ⇒ state
+        }
+      }
+  }
+
+  def fetchBuckets(
+    implicit
+    model: ModelProxy[Logins],
+    login: Login,
+    ec: ExecutionContext
+  ) = {
+    println(s"fetching buckets for login $login on project change")
+    implicit val auth = login.auth
+    login
+      .projects
+      .fetchBuckets
+      .fold { Callback() } {
+        ΔF ⇒
+          Callback.future {
+            ΔF
+              .map {
+                Δ ⇒
+                  println("got projects post-bucket-fetch")
+                  model
+                    .dispatchCB(
+                      UpdateProjects(login.id, Δ)
+                    )
+              }
           }
       }
+  }
+
+  val component =
+    ScalaComponent
+      .builder[Props]("Page")
       .render {
         b ⇒
           import b._
-          implicit val ec = props
+          implicit val (model, ec) = props
+
+          val state = model.value
 
           val logins = state.logins
           val login  = state.login
@@ -90,39 +119,13 @@ extends SignIn.syntax
               button(key := "sign-in", onClick --> { SignIn (); Callback() }, "sign in" ),
               login
                 .map {
-                  login ⇒
+                  implicit login ⇒
                     implicit val auth = login.auth
-                    def fetchBuckets =
-                      Callback.future {
-                        println(s"fetching buckets for login $login on project change")
-                        login
-                          .projects
-                          .fetchBuckets
-                          .map {
-                            projects ⇒
-                              println("got projects post-bucket-fetch")
-                              modState {
-                                state ⇒
-                                  state.mod(login.id) {
-                                    login ⇒
-                                      login
-                                        .copy(
-                                          projects =
-                                            login
-                                              .projects
-                                              .copy(
-                                                projects = projects.projects
-                                              )
-                                        )
-                                  }
-                              }
-                          }
-                      }
 
                     VdomArray(
                       button(key := "sign-out", onClick --> { SignOut(); Callback() }, "sign out"),
-                      ProjectSelect(login, id ⇒ fetchBuckets *> modState { s ⇒ println(s"setting project to $id"); s.set(login.    project(id)) }, login.    project,         "Project"),
-                      ProjectSelect(login, id ⇒ fetchBuckets *> modState { _.set(login.userProject(id)) }, login.userProject, "Bill-to Project"),
+                      ProjectSelect(login, id ⇒ fetchBuckets *> model.dispatchCB(    SelectProject(id)), login.    project,         "Project"),
+                      ProjectSelect(login, id ⇒ fetchBuckets *> model.dispatchCB(SelectUserProject(id)), login.userProject, "Bill-to Project"),
                     )
                 },
             ),
@@ -136,10 +139,10 @@ extends SignIn.syntax
                     buckets ← project.buckets
                   } yield
                     Buckets(
+                      model,
                       login,
                       project,
-                      buckets,
-                      f ⇒ modState { _.mod(login.id) { f } }
+                      buckets
                     )
               },
 
@@ -155,6 +158,10 @@ extends SignIn.syntax
         p ⇒
           import p._
           println("did mount…")
+
+          implicit val (model, ec) = props
+          val state = model.value
+
           Auth
             .fromFragment(fragment.map)
             .fold(
@@ -163,25 +170,7 @@ extends SignIn.syntax
                   state
                     .login
                     .fold { Callback() } {
-                      login ⇒
-                        implicit val auth = login.auth
-                        Callback.future {
-                          println(s"componentDidMount: fetching buckets for login $login")
-                          login
-                            .projects
-                            .fetchBuckets
-                            .map {
-                              projects ⇒
-                                println("Updating projects after bucket-fetch attempt")
-                                p.modState ( _.map { _.copy(projects = projects) } )
-                            }
-                            .recover[CallbackTo[Unit]] {
-                              case e ⇒
-                                err.println("Failed to fetch buckets:")
-                                err.println(e)
-                                Callback()
-                            }
-                        }
+                      implicit login ⇒ fetchBuckets
                     }
               },
               {
@@ -193,9 +182,7 @@ extends SignIn.syntax
                       .map {
                         login ⇒
                           println(s"got new login: $login")
-                          modState(
-                            _ :+ login
-                          )
+                          model.dispatchCB(NewLogin(login))
                       }
                       .recover[CallbackTo[Unit]] {
                         case e ⇒
@@ -222,5 +209,5 @@ extends SignIn.syntax
       }
       .build
 
-  def apply()(implicit ec: ExecutionContext) = component(ec)
+  def apply(logins: ModelProxy[Logins])(implicit ec: ExecutionContext) = component((logins, ec))
 }

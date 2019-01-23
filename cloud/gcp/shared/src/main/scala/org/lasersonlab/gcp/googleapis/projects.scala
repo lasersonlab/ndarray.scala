@@ -26,20 +26,52 @@ object projects {
     @JsonKey("projectNumber") number:         String  ,
                              buckets: ?[Paged[Bucket]]
   ) {
-    def fetchBuckets(implicit config: Config): F[Project] =
-      if (buckets.isEmpty) {
-        implicit val project = this
-        googleapis
-          .storage
-          .buckets()
-          .map {
-            buckets ⇒
-              copy(
-                buckets = Some(buckets)
+    def fetchBuckets(implicit config: Config): ?[F[Paged[Bucket]]] =
+      buckets
+        .fold {
+          implicit val project = this
+          Option(
+            googleapis
+              .storage
+              .buckets()
+          )
+        } {
+          _ ⇒ None
+        }
+
+    def +(buckets: Paged[Bucket]): Project =
+      copy(
+        buckets =
+          Some(
+            this
+              .buckets
+              .fold { buckets } { _ + buckets }
+          )
+      )
+
+    def apply(id: String)(Δ: Δ[Bucket]): Project =
+      copy(
+        buckets = {
+          val buckets = this.buckets.get
+          Some(
+            buckets
+              .copy(
+                items =
+                  buckets
+                    .items
+                    .foldLeft { Vector[Bucket]() } {
+                      (buckets, next) ⇒
+                        buckets :+ (
+                          if (next.id == id)
+                            Δ(next)
+                          else
+                            next
+                        )
+                    }
               )
-          }
-      } else
-        F { this }
+          )
+        }
+      )
   }
 
   case class UserProject(project: Project) {

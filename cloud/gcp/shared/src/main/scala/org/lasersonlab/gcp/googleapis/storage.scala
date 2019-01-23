@@ -10,19 +10,6 @@ import com.softwaremill.sttp._
 object storage {
   val base = uri"${googleapis.base}/storage/v1"
 
-//  case class Prefix(
-//    bucket: Bucket,
-//    path: Vector[String]
-//  )
-//  object Prefix {
-//
-//  }
-//
-//  case class File(
-//    bucket: Bucket,
-//    path: Vector[String]
-//  )
-
   case class Objects(
          prefixes: ?[Vector[  String]] = None,
             items: ?[Vector[Metadata]] = None,
@@ -50,19 +37,23 @@ object storage {
       implicit
       config: Config,
       userProject: ?[UserProject] = None
-    ): F[Bucket] = {
+    ):
+      ?[F[Δ[Bucket]]] =
+    {
       objects
-        .fold[F[Bucket]] {
-          Http(
-            uri"$uri/o?delimiter=${"/"}&prefix=${path.mkString("/")}&userProject=$userProject"
+        .fold {
+          Option(
+            Http(
+              uri"$uri/o?delimiter=${"/"}&prefix=${path.mkString("/")}&userProject=$userProject"
+            )
+            .json[Objects]
+            .map {
+              objects ⇒
+                (bucket: Bucket) ⇒ bucket.copy(objects = Some(objects))
+            }
           )
-          .json[Objects]
-          .map {
-            objects ⇒
-              copy(objects = Some(objects))
-          }
         } {
-          _ ⇒ F { this }
+          _ ⇒ None
         }
     }
   }
@@ -71,6 +62,8 @@ object storage {
     implicit val encoder = kindEncoder[Bucket]
   }
 
+  // TODO: this can probably be removed if we use a more permissive [[Decoder]] for [[Paged]], which allows the `items`
+  //  [[Vector]] to be absent
   case class Buckets(
     items: ?[Vector[Bucket]],
     nextPageToken: ?[String] = None

@@ -14,6 +14,7 @@ case class Params(
       "response_type" → "token"
     )
 }
+
 object Params {
   implicit def wrap(
     implicit
@@ -27,4 +28,3 @@ object Params {
       scopes
     )
 }
-

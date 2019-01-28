@@ -2,10 +2,8 @@ package org.lasersonlab.gcp.googleapis
 
 import com.softwaremill.sttp._
 import io.circe.generic.auto._
-import io.circe.syntax._
-import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor }
 import org.lasersonlab.gcp.googleapis.projects.{ Project, UserProject }
-import org.lasersonlab.gcp.{ Config, Metadata, googleapis, _ }
+import org.lasersonlab.gcp._
 import org.lasersonlab.uri._
 
 object storage {
@@ -17,8 +15,9 @@ object storage {
     implicit def _self = this
   }
 
-  case class Path(segments: Vector[String])
+  //case class Path(value: Vector[String])
   object Path {
+    //implicit def unwrap(path: Path): Vector[String] = path.value
     def apply(str: String)(implicit prefix: Prefix): Vector[String] = {
       val path = str.split('/').toVector
       if (path.dropRight(1) != prefix.path) {

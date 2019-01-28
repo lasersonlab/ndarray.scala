@@ -8,6 +8,7 @@ import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^.^._
 import japgolly.scalajs.react.vdom.html_<^._
+import lasersonlab.diode._
 import org.lasersonlab.gcp
 import org.lasersonlab.gcp.Config.implicits._
 import org.lasersonlab.gcp.Metadata
@@ -72,9 +73,7 @@ object Contents {
                               ΔF
                                 .map {
                                   Δ ⇒
-                                    model.dispatchCB(
-                                      UpdateDir(login.id, project.id, dir, Δ)
-                                    )
+                                    UpdateDir(login.id, project.id, dir, Δ).dispatch
                                 }
                                 .reauthenticate_?
                             }
@@ -87,7 +86,7 @@ object Contents {
                       .contents
                       .map {
                         contents ⇒
-                          import contents._
+
                           Contents(
                             login, project, contents
                           )

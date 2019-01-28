@@ -13,6 +13,7 @@ import japgolly.scalajs.react.vdom.VdomArray
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^.^._
 import japgolly.scalajs.react.vdom.html_<^._
+import lasersonlab.diode._
 import org.lasersonlab.circe.SingletonCodec._
 import org.lasersonlab.gcp.SignIn
 import org.lasersonlab.gcp.SignIn.SignOut
@@ -23,6 +24,7 @@ import org.lasersonlab.ndview.{ NewLogin, SelectProject, SelectUserProject, Upda
 import org.lasersonlab.uri.fragment
 import org.scalajs.dom.document
 import org.scalajs.dom.window.localStorage
+import LocalStorage.stateKey
 
 import scala.concurrent.ExecutionContext
 
@@ -32,7 +34,7 @@ import org.lasersonlab.gcp.googleapis.Paged.pagedEncoder
 object Page
 extends SignIn.syntax
 {
-  type Props = (ModelProxy[Logins], ExecutionContext)
+  type Props = (Logins, ModelProxy[_], ExecutionContext)
 
   implicit val CLIENT_ID = ClientId("218219996328-lltra1ss5e34hlraupaalrr6f56qmiat.apps.googleusercontent.com")
   implicit val REDIRECT_URL = RedirectUrl("http://localhost:8000")
@@ -45,32 +47,12 @@ extends SignIn.syntax
       `cloud-platform` `read-only`
     )
 
-  val stateKey = "app-state"
-
   val pprint = Printer.spaces4.copy(colonLeft = "").pretty _
-
-  def initialState = {
-    val str = localStorage.getItem(stateKey)
-    Option(str)
-      .fold {
-        Logins()
-      } {
-        decode[Logins](_) match {
-          case Left(e) ⇒
-            err.println(s"Failed to parse state from localStorage:")
-            err.println(e)
-            err.println(str)
-            localStorage.removeItem(stateKey)
-            Logins()
-          case Right(state) ⇒ state
-        }
-      }
-  }
 
   def fetchBuckets(
     implicit
-    model: ModelProxy[Logins],
     login: Login,
+    model: ModelProxy[_],
     ec: ExecutionContext
   ) = {
     println(s"fetching buckets for login $login on project change")
@@ -85,10 +67,7 @@ extends SignIn.syntax
               .map {
                 Δ ⇒
                   println("got projects post-bucket-fetch")
-                  model
-                    .dispatchCB(
-                      UpdateProjects(login.id, Δ)
-                    )
+                  UpdateProjects(login.id, Δ).dispatch
               }
           }
       }
@@ -100,9 +79,7 @@ extends SignIn.syntax
       .render {
         b ⇒
           import b._
-          implicit val (model, ec) = props
-
-          val state = model.value
+          implicit val (state, model, ec) = props
 
           val logins = state.logins
           val login  = state.login
@@ -124,8 +101,8 @@ extends SignIn.syntax
 
                     VdomArray(
                       button(key := "sign-out", onClick --> { SignOut(); Callback() }, "sign out"),
-                      ProjectSelect(login, id ⇒ fetchBuckets *> model.dispatchCB(    SelectProject(id)), login.    project,         "Project"),
-                      ProjectSelect(login, id ⇒ fetchBuckets *> model.dispatchCB(SelectUserProject(id)), login.userProject, "Bill-to Project"),
+                      ProjectSelect(login, id ⇒ fetchBuckets *>     SelectProject(id), login.    project,         "Project"),
+                      ProjectSelect(login, id ⇒ fetchBuckets *> SelectUserProject(id), login.userProject, "Bill-to Project"),
                     )
                 },
             ),
@@ -159,8 +136,7 @@ extends SignIn.syntax
           import p._
           println("did mount…")
 
-          implicit val (model, ec) = props
-          val state = model.value
+          implicit val (state, model, ec) = props
 
           Auth
             .fromFragment(fragment.map)
@@ -182,7 +158,7 @@ extends SignIn.syntax
                       .map {
                         login ⇒
                           println(s"got new login: $login")
-                          model.dispatchCB(NewLogin(login))
+                          NewLogin(login).dispatch
                       }
                       .recover[CallbackTo[Unit]] {
                         case e ⇒
@@ -211,7 +187,6 @@ extends SignIn.syntax
                 p
                   .nextProps
                   ._1
-                  .value
                   .asJson
               )
             )
@@ -219,5 +194,5 @@ extends SignIn.syntax
       }
       .build
 
-  def apply(logins: ModelProxy[Logins])(implicit ec: ExecutionContext) = component((logins, ec))
+  def apply(logins: Logins)(implicit model: ModelProxy[_], ec: ExecutionContext) = component((logins, model, ec))
 }

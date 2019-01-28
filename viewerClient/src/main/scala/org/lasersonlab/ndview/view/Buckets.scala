@@ -6,6 +6,7 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^.^._
 import japgolly.scalajs.react.vdom.html_<^._
+import lasersonlab.diode._
 import org.lasersonlab.gcp
 import org.lasersonlab.gcp.Config.implicits._
 import org.lasersonlab.gcp.SignIn
@@ -72,9 +73,7 @@ extends SignIn.syntax
                               ΔF
                                 .map {
                                   Δ ⇒
-                                    model.dispatchCB(
-                                      UpdateBucket(login.id, project.id, id, Δ)
-                                    )
+                                    UpdateBucket(login.id, project.id, id, Δ).dispatch
                                 }
                                 .reauthenticate_?
                             }
@@ -104,9 +103,7 @@ extends SignIn.syntax
 //                                              ΔF
 //                                                .map {
 //                                                  Δ ⇒
-//                                                    model.dispatchCB(
-//                                                      UpdateDir(login.id, project.id, dir, Δ)
-//                                                    )
+//                                                    UpdateDir(login.id, project.id, dir, Δ)
 //                                                }
 //                                                .reauthenticate_?
 //                                            }

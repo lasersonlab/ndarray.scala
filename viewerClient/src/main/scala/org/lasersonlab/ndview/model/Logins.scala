@@ -3,17 +3,12 @@ package org.lasersonlab.ndview.model
 import cats.implicits._
 import org.lasersonlab.uri._
 import org.lasersonlab.gcp.googleapis.?
-import org.lasersonlab.gcp.googleapis.projects.Project
-
-import scala.concurrent.ExecutionContext
 
 case class Logins(
   logins: Vector[Login] = Vector(),
   id: ?[String] = None
 ) {
   def login: Option[Login] = id.map(id ⇒ logins.find(_.id == id).get)
-
-//  def apply(id: String): Login = logins.find(_.id == id).get
 
   /**
    * Receive a new login, after as after an OAuth flow
@@ -69,21 +64,6 @@ case class Logins(
         },
       id = if (select) Some(id) else this.id
     )
-
-//  def set(newLogin: Login): Logins = map { _ ⇒ newLogin }
-//  def map(f: Login ⇒ Login): Logins = mod { case login if id.contains(login.id) ⇒ f(login) }
-//  def modF(pf: PartialFunction[Login, F[Login]])(implicit ec: ExecutionContext): F[Logins] = {
-//    def f(login: Login) = if (pf.isDefinedAt(login)) pf(login) else F { login }
-//    logins
-//      .traverse(f)
-//      .map { copy(_) }
-//  }
-//  def mod(pf: PartialFunction[Login, Login]): Logins = {
-//    def f(login: Login) = if (pf.isDefinedAt(login)) pf(login) else login
-//    copy(
-//      logins.map(f)
-//    )
-//  }
 }
 
 object Logins {

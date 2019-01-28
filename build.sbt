@@ -21,6 +21,13 @@ default(
   diode.version := "1.1.4",
 )
 
+lazy val blosc =
+  cross
+    .settings(
+      dep(math.utils)
+    )
+lazy val `blosc-x` = blosc.x
+
 lazy val cloud =
   cross
     .in(new File("cloud"))
@@ -366,6 +373,7 @@ lazy val `zarr-x` = zarr.x
 
 lazy val all =
   root(
+    `blosc-x`,
     `circe-utils-x`,
     `cloud-x`,
      convert,

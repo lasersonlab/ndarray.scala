@@ -1,6 +1,7 @@
 package org.lasersonlab.ndview.view
 
 import cats.implicits._
+import hammerlab.opt._
 import io.circe.JsonNumber
 import io.{ circe ⇒ c }
 import japgolly.scalajs.react.ScalaComponent
@@ -8,7 +9,7 @@ import japgolly.scalajs.react.component.Scala
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^.^._
 import japgolly.scalajs.react.vdom.html_<^.{ VdomNode, _ }
-import org.lasersonlab.uri.?
+import lasersonlab.opt._
 
 object Json {
   object Null { def unapply(json: c.Json): Option[                    Unit    ] = json.asNull                   }

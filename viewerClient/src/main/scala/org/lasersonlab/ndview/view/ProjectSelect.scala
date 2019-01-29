@@ -1,6 +1,7 @@
 package org.lasersonlab.ndview.view
 
 import cats.implicits._
+import hammerlab.opt._
 import io.circe.generic.auto._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.<._
@@ -8,7 +9,6 @@ import japgolly.scalajs.react.vdom.html_<^.^._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.lasersonlab.gcp.googleapis.projects.Project
 import org.lasersonlab.ndview.model.Login
-import org.lasersonlab.uri.?
 import org.scalajs.dom.raw.HTMLSelectElement
 
 // Need this to take precedence over Encoder.encodeIterable

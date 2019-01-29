@@ -5,7 +5,6 @@ import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.syntax._
 import japgolly.scalajs.react._
-import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.VdomArray
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^.^._
@@ -25,9 +24,14 @@ import org.lasersonlab.gcp.googleapis.Paged.pagedEncoder
 object Page
 extends SignIn.syntax
 {
-  type Route = Vector[String]
-  type Router = RouterCtl[Route]
-  type Props = (Model, Proxy, Router, ExecutionContext)
+  case class Props(
+    model: Model
+  )(
+    implicit
+    val proxy: Proxy,
+    val router: Router,
+    val ec: ExecutionContext
+  )
 
   val pprint = Printer.spaces4.copy(colonLeft = "").pretty _
 
@@ -56,7 +60,8 @@ extends SignIn.syntax
   }
 
   def checkBuckets(props: Props) = {
-    implicit val (Model(logins, _), proxy, _, ec) = props
+    import props._
+    implicit val Props(Model(logins, _, _)) = props
     logins
       .login
       .fold { Callback() } {
@@ -67,9 +72,9 @@ extends SignIn.syntax
   val component =
     ScalaComponent
       .builder[Props]("Page")
-      .render {
-        $ ⇒ import $._
-          implicit val (model @ Model(logins, route), proxy, router, ec) = props
+      .render_P {
+        props ⇒ import props._
+          implicit val Model(logins, route, closedFolders) = model
 
           val login  = logins.login
 
@@ -105,21 +110,20 @@ extends SignIn.syntax
                     buckets ← project.buckets
                   } yield {
                     println(s"${buckets.size} buckets, path $route (${route.toList}, ${route.size})")
-                    route.toList match {
-                      case Nil ⇒
-                        println("Nil")
+                    route match {
+                      case Vector() ⇒
                         div(
-                          cls("buckets tree"),
+                          cls("tree"),
                           h2("Buckets"),
                           Buckets(
                             login,
                             project,
-                            buckets
+                            buckets,
+                            closedFolders
                           )
                         )
                         : VdomNode
-                      case bucket :: path ⇒
-                        println(s"$bucket :: $path")
+                      case bucket +: path ⇒
                         (
                           for {
                             bucket ← buckets.find(_.name == bucket)
@@ -129,11 +133,14 @@ extends SignIn.syntax
                             div(
                               cls("contents tree"),
                               h2("Contents"),
-                              Contents(login, project, contents)
+                              Items(
+                                login,
+                                project,
+                                contents,
+                                closedFolders / entry.fullPath
+                              )
                             )
-                        )
-                        .toList
-                        .toVdomArray
+                        ): VdomNode
                     }
                   }
               },
@@ -147,22 +154,22 @@ extends SignIn.syntax
           )
       }
       .shouldComponentUpdate {
-        p ⇒
-          import p._
+        $ ⇒ import $._
           CallbackTo(
             nextProps != currentProps ||
             nextState != currentState
           )
       }
       .componentWillUpdate {
-        p ⇒
+        $ ⇒ import $._
           println("Persisting state to localstorage")
-          LocalStorage.save(p.nextProps._1)
+          LocalStorage.save(nextProps.model)
           Callback()
       }
       .componentDidMount  { $ ⇒ checkBuckets($.       props) }
       .componentDidUpdate { $ ⇒ checkBuckets($.currentProps) }
       .build
 
-  def apply(model: Model)(implicit proxy: Proxy, router: Router, ec: ExecutionContext) = component((model, proxy, router, ec))
+  def apply(model: Model)(implicit proxy: Proxy, router: Router, ec: ExecutionContext) =
+    component.withKey("page")(Props(model))
 }

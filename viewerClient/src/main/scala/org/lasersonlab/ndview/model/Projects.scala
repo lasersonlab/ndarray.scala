@@ -1,6 +1,7 @@
 package org.lasersonlab.ndview.model
 
 import cats.implicits._
+import hammerlab.opt.dsl._
 import org.lasersonlab.uri._
 import org.lasersonlab.gcp
 import org.lasersonlab.gcp.Config.implicits._

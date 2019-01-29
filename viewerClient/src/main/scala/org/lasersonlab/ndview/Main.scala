@@ -48,7 +48,7 @@ object Main
       .map {
         implicit auth ⇒
           println(s"Found fragment auth: $auth")
-          document.location.hash = ""
+          document.location.hash = model.route.mkString("/", "/", "")
           Login().logError
       }
       .fold { F { model } } {
@@ -63,7 +63,7 @@ object Main
         model ⇒
 
         val circuit = Circuit(model)
-        val connection = circuit.connect(_.logins)
+        val connection = circuit.connect(m ⇒ m)
 
         val base = BaseUrl(window.location.href.takeWhile(_ != '#'))
 
@@ -85,11 +85,17 @@ object Main
             ) {
               case p ⇒ p
             } ~> dynRenderR {
-              (path, ctl) ⇒
+              (route, ctl) ⇒
                 implicit val _ctl = ctl
                 connection {
                   implicit proxy ⇒
-                    Page(Model(proxy.value, path))
+                    Page(
+                      proxy
+                        .value
+                        .copy(
+                          route = route
+                        )
+                    )
                 }
             }
           )

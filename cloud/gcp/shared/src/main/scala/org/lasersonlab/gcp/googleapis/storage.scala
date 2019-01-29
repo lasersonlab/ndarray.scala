@@ -18,6 +18,10 @@ object storage {
 
   sealed trait Path extends Prefix {
     def contents: ?[Contents]
+    def basename: String
+    def dirs = contents.toVector.flatMap(_.dirs)
+    def objs = contents.toVector.flatMap(_.objs)
+    def /(path: Vector[String]): Option[Path] = /(path.toList)
     def /(path: List[String]): Option[Path] =
       path match {
         case Nil ⇒ Some(this)
@@ -204,6 +208,7 @@ object storage {
   extends Path
   {
     def bucket = name
+    def basename = name
     def path = Vector[String]()
     def uri = uri"${storage.base}/b/$name"
     def ls()(

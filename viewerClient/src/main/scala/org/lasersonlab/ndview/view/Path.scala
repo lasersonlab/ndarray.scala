@@ -3,7 +3,7 @@ package org.lasersonlab.ndview.view
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^._
-import org.lasersonlab.ndview.view.Page.{ Route, Router }
+import org.lasersonlab.ndview.Route
 
 object Path {
   def apply(route: Route)(implicit router: Router) =

@@ -1,6 +1,7 @@
 package org.lasersonlab.ndview.view
 
 import cats.implicits._
+import hammerlab.opt._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^.^._
@@ -12,9 +13,8 @@ import org.lasersonlab.gcp.SignIn
 import org.lasersonlab.gcp.googleapis.Paged
 import org.lasersonlab.gcp.googleapis.projects.Project
 import org.lasersonlab.gcp.googleapis.storage.Bucket
-import org.lasersonlab.ndview.UpdateBucket
+import org.lasersonlab.ndview.{ ClosedFolders, UpdateBucket }
 import org.lasersonlab.ndview.model.Login
-import org.lasersonlab.ndview.view.Page.Router
 
 object Buckets
 extends SignIn.syntax
@@ -22,7 +22,8 @@ extends SignIn.syntax
   case class Props(
     login: Login,
     project: Project,
-    buckets: Paged[Bucket]
+    buckets: Paged[Bucket],
+    closedFolders: ClosedFolders
   )(
     implicit
     val proxy: Proxy,
@@ -33,7 +34,8 @@ extends SignIn.syntax
   def apply(
     login: Login,
     project: Project,
-    buckets: Paged[Bucket]
+    buckets: Paged[Bucket],
+    closedFolders: ClosedFolders
   )(
     implicit
     proxy: Proxy,
@@ -44,11 +46,10 @@ extends SignIn.syntax
       Props(
         login,
         project,
-        buckets
+        buckets,
+        closedFolders
       )
     )
-
-  // 📁📂
 
   val component =
     ScalaComponent
@@ -57,36 +58,34 @@ extends SignIn.syntax
         props ⇒
           import props._
           div(
-            cls("items")
-          )(
-            buckets
-              .map {
-                case bucket @ Bucket(id, name, _, _, contents) ⇒
-                  div(
-                    cls(id, "bucket"),
-                    onClick --> {
-                      bucket
-                        .ls()
-                        .fold { Callback() } {
-                          ΔF ⇒
-                            Callback.future {
-                              ΔF
-                                .map {
-                                  Δ ⇒
-                                    UpdateBucket(login.id, project.id, id, Δ).dispatch
-                                }
-                                .reauthenticate_?
-                            }
-                        }
-                      }
-                  )(
-                    router.link(bucket.fullPath)(name),
-                    contents
-                      .map {
-                        Contents(login, project, _)
-                      }
-                  )
-              }: _*
+            cls("buckets"),
+            div(
+              cls("items")
+            )(
+              buckets
+                .map {
+                  case bucket @ Bucket(id, name, _, _, contents) ⇒
+                    div(
+                      cls(id, "bucket"),
+                      onClick --> {
+                        bucket
+                          .ls()
+                          .fold { Callback() } {
+                            ΔF ⇒
+                              Callback.future {
+                                ΔF
+                                  .map {
+                                    Δ ⇒
+                                      UpdateBucket(login.id, project.id, id, Δ).dispatch
+                                  }
+                                  .reauthenticate_?
+                              }
+                          }
+                        },
+                      Entry(login, project, bucket, closedFolders / bucket.name)
+                    )
+                }: _*
+            )
           )
       }
       .build

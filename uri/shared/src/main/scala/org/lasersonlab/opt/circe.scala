@@ -1,9 +1,8 @@
 package org.lasersonlab.opt
 
-import hammerlab.option.{ Non, Som }
+import hammerlab.opt._, std._
 import io.circe.Decoder.Result
 import io.circe.{ Decoder, Encoder, HCursor }
-import org.lasersonlab.uri.?
 import _root_.io.circe.syntax.EncoderOps
 
 trait circe {

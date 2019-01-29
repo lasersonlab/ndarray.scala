@@ -1,11 +1,12 @@
 package org.lasersonlab.ndview.model
 
 import cats.implicits._
+import hammerlab.opt._
 import org.lasersonlab.gcp.googleapis.User
 import org.lasersonlab.gcp.googleapis.projects.Project
 import org.lasersonlab.gcp.googleapis
 import org.lasersonlab.gcp.oauth.Auth
-import org.lasersonlab.uri.{ Δ, _ }
+import org.lasersonlab.uri._
 
 case class Login(
   auth: Auth,

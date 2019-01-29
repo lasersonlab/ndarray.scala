@@ -48,6 +48,8 @@ extends SignIn.syntax
       )
     )
 
+  // 📁📂
+
   val component =
     ScalaComponent
       .builder[Props]("Buckets")
@@ -55,18 +57,14 @@ extends SignIn.syntax
         props ⇒
           import props._
           div(
-            key := "buckets",  // TODO: remove key+className duplication boilerplate
-            className := "buckets",
-            h2("Buckets"),
+            cls("items")
           )(
             buckets
               .map {
                 case bucket @ Bucket(id, name, _, _, contents) ⇒
                   div(
-                    key := id,
-                    className := "bucket",
+                    cls(id, "bucket"),
                     onClick --> {
-                      println("clicked")
                       bucket
                         .ls()
                         .fold { Callback() } {

@@ -9,7 +9,6 @@ import org.lasersonlab.gcp.oauth.Params
 import org.scalajs.dom.document
 import org.scalajs.dom.ext.AjaxException
 import org.scalajs.dom.raw.HTMLFormElement
-import org.scalajs.dom.window.localStorage
 
 object SignIn {
 
@@ -24,7 +23,8 @@ object SignIn {
         .onError {
           case AjaxException(xhr) if xhr.status == 401 ⇒
             err.println("buckets req caught 401, sign in again…")
-            SignIn().pure[F]
+            // TODO: allow toggline of action to perform here
+            /*SignIn*/().pure[F]
           case e ⇒
             err.println(e.getMessage)
             err.println(e)

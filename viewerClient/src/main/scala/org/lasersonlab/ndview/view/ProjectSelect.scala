@@ -6,10 +6,9 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^.^._
 import japgolly.scalajs.react.vdom.html_<^._
+import org.lasersonlab.gcp.googleapis.projects.Project
 import org.lasersonlab.ndview.model.Login
 import org.lasersonlab.uri.?
-import org.lasersonlab.gcp.googleapis.projects.Project
-import org.lasersonlab.gcp.{ Metadata, SignIn, googleapis }
 import org.scalajs.dom.raw.HTMLSelectElement
 
 // Need this to take precedence over Encoder.encodeIterable

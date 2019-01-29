@@ -69,18 +69,16 @@ extends SignIn.syntax
       .builder[Props]("Page")
       .render {
         $ ⇒ import $._
-          implicit val (model @ Model(logins, path), proxy, router, ec) = props
+          implicit val (model @ Model(logins, route), proxy, router, ec) = props
 
           val login  = logins.login
 
           println(s"render (${logins.size} logins; project ${login.flatMap(_.project).map(_.name)})")
 
           div(
-            key := "page",
-            className := "page",
+            cls("page"),
             div(
-                    key := "controls",
-              className := "controls"
+              cls("controls")
             )(
               button(key := "sign-in", onClick --> { SignIn (); Callback() }, "sign in" ),
               login
@@ -96,53 +94,7 @@ extends SignIn.syntax
                 },
             ),
 
-            div(
-              key := "path",
-              className := "path"
-            ).apply(
-              span(
-                router.link(Vector())(
-                  key := "gs-base",
-                  className := "segment",
-                  "gs://"
-                )
-              ) +:
-              path
-                .foldLeft(
-                  (
-                    0,
-                    Vector[String](),
-                    Vector[TagMod]()
-                  )
-                ) {
-                  case ((idx, prefix, tags), basename) ⇒
-                    val path = prefix :+ basename
-                    val divider =
-                      span(
-                        key := s"$idx-divider",
-                        className := "divider",
-                        "/"
-                      )
-                    val segment =
-                      span(
-                        router.link(path)(
-                          key := s"$idx-$basename",
-                          className := "segment",
-                          basename
-                        )
-                      )
-                    (
-                      idx + 1,
-                      path,
-                      if (tags.isEmpty)
-                        Vector(segment)
-                      else
-                        tags ++ Vector(divider, segment)
-                    )
-                }
-                ._3
-                : _*
-            ),
+            Path(route),
 
             login
               .fold { TagMod() } {
@@ -152,16 +104,20 @@ extends SignIn.syntax
                     project ← login.project
                     buckets ← project.buckets
                   } yield {
-                    println(s"${buckets.size} buckets, path $path (${path.toList}, ${path.size})")
-                    path.toList match {
+                    println(s"${buckets.size} buckets, path $route (${route.toList}, ${route.size})")
+                    route.toList match {
                       case Nil ⇒
                         println("Nil")
-                        Buckets(
-                          login,
-                          project,
-                          buckets
+                        div(
+                          cls("buckets tree"),
+                          h2("Buckets"),
+                          Buckets(
+                            login,
+                            project,
+                            buckets
+                          )
                         )
-                          : VdomNode
+                        : VdomNode
                       case bucket :: path ⇒
                         println(s"$bucket :: $path")
                         (
@@ -170,7 +126,11 @@ extends SignIn.syntax
                             entry ← bucket / path
                             contents ← entry.contents
                           } yield
-                            Contents(login, project, contents)
+                            div(
+                              cls("contents tree"),
+                              h2("Contents"),
+                              Contents(login, project, contents)
+                            )
                         )
                         .toList
                         .toVdomArray
@@ -179,8 +139,7 @@ extends SignIn.syntax
               },
 
             div(
-              key := "state",
-              className := "state"
+              cls("state")
             )(
               h4("State (Debug)"),
               Json(model.asJson)

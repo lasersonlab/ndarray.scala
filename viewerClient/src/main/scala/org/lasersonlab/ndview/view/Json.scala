@@ -38,7 +38,7 @@ object Json {
                 field ⇒ s"$field: $str"
               }
 
-          def  open(str: String): VdomNode = div(key :=  "open")(label(str))
+          def  open(str: String): VdomNode = div(key := "open")(label(str))
           def close(str: String): VdomNode = div(key := "close")(str)
 
           div(

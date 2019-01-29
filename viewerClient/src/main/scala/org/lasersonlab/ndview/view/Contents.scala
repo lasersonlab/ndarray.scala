@@ -56,16 +56,14 @@ object Contents {
           import props._
           implicit val Props(login, project, contents) = props
           div(
-            key := "contents",
-            className := "contents"
+            cls("items")
           )(
             contents
               .dirs
               .map {
                 dir ⇒
                   div(
-                    key := dir.basename,
-                    className := "dir entry",
+                    cls(dir.basename, "dir entry"),
                     onClick --> {
                       dir
                         .ls()
@@ -87,11 +85,7 @@ object Contents {
                     dir
                       .contents
                       .map {
-                        contents ⇒
-
-                          Contents(
-                            login, project, contents
-                          )
+                        Contents(login, project, _)
                       }
                   )
               } ++
@@ -100,8 +94,7 @@ object Contents {
               .map {
                 case obj @ Obj(_, path, Metadata(_, name, size, _)) ⇒
                   div(
-                    key := obj.basename,
-                    className := "file entry"
+                    cls(obj.basename, "file entry")
                   )(
                     s"${obj.basename} (${Bytes.format(size)})"
                   )

@@ -5,11 +5,12 @@ import diode.react.ModelProxy
 import japgolly.scalajs.react.Callback
 
 object action {
+  type Proxy = ModelProxy[_]
   implicit class Ops(val action: Action) extends AnyVal {
-    def dispatch(implicit model: ModelProxy[_]) = model.dispatchCB(action)
+    def dispatch(implicit proxy: Proxy) = proxy.dispatchCB(action)
   }
   trait syntax {
     @inline implicit def makeActionOps(action: Action): Ops = Ops(action)
-    @inline implicit def actionToCallback(action: Action)(implicit model: ModelProxy[_]): Callback = model.dispatchCB(action)
+    @inline implicit def actionToCallback(action: Action)(implicit proxy: Proxy): Callback = proxy.dispatchCB(action)
   }
 }

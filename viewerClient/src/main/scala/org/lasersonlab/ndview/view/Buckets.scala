@@ -1,7 +1,6 @@
 package org.lasersonlab.ndview.view
 
 import cats.implicits._
-import diode.react.ModelProxy
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^.^._
@@ -15,6 +14,7 @@ import org.lasersonlab.gcp.googleapis.projects.Project
 import org.lasersonlab.gcp.googleapis.storage.Bucket
 import org.lasersonlab.ndview.UpdateBucket
 import org.lasersonlab.ndview.model.Login
+import org.lasersonlab.ndview.view.Page.Router
 
 object Buckets
 extends SignIn.syntax
@@ -25,7 +25,8 @@ extends SignIn.syntax
     buckets: Paged[Bucket]
   )(
     implicit
-    val model: ModelProxy[_],
+    val proxy: Proxy,
+    val router: Router,
     val config: gcp.Config
   )
 
@@ -35,10 +36,11 @@ extends SignIn.syntax
     buckets: Paged[Bucket]
   )(
     implicit
-    model: ModelProxy[_],
+    proxy: Proxy,
+    router: Router,
     config: gcp.Config
   ) =
-    component(
+    component.withKey("buckets")(
       Props(
         login,
         project,
@@ -80,60 +82,10 @@ extends SignIn.syntax
                         }
                       }
                   )(
-                    name,
+                    router.link(bucket.fullPath)(name),
                     contents
                       .map {
                         Contents(login, project, _)
-
-//                        contents ⇒
-//                          (
-//                            contents
-//                              .dirs
-//                              .map {
-//                                dir ⇒
-//                                  div(
-//                                    key := dir.name,
-//                                    className := "dir entry",
-//                                    onClick --> {
-//                                      dir
-//                                        .ls()
-//                                        .fold { Callback() } {
-//                                          ΔF ⇒
-//                                            Callback.future {
-//                                              ΔF
-//                                                .map {
-//                                                  Δ ⇒
-//                                                    UpdateDir(login.id, project.id, dir, Δ)
-//                                                }
-//                                                .reauthenticate_?
-//                                            }
-//                                        }
-//                                    }
-//                                  )(
-//                                    dir.name
-//                                  )/*(
-//                                    dir
-//                                      .contents
-//                                      .map {
-//                                        contents ⇒
-//                                          import contents._
-//
-//                                      }
-//                                  )*/
-//                              } ++
-//                            contents
-//                              .objs
-//                              .map {
-//                                case Obj(_, path, Metadata(_, name, size, _)) ⇒
-//                                  div(
-//                                    key := name,
-//                                    className := "file entry"
-//                                  )(
-//                                    s"$name (${Bytes.format(size)})"
-//                                  )
-//                              }
-//                          )
-//                          .toVdomArray
                       }
                   )
               }: _*

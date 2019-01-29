@@ -12,12 +12,36 @@ object storage {
   trait Prefix {
     def bucket: String
     def path: Vector[String]
+    def fullPath = bucket +: path
     implicit def _self = this
   }
 
-  //case class Path(value: Vector[String])
+  sealed trait Path extends Prefix {
+    def contents: ?[Contents]
+    def /(path: List[String]): Option[Path] =
+      path match {
+        case Nil ⇒ Some(this)
+        case h :: t ⇒
+          println(s"Descending: $h $t")
+          contents
+            .flatMap {
+              case Contents(prefixes, items, _) ⇒
+                prefixes
+                  .flatMap {
+                    _.find(_.basename == h)
+                  }
+                  .orElse(
+                    items
+                      .flatMap {
+                        _.find(_.basename == h)
+                      }
+                  )
+                  .flatMap { _ / t }
+            }
+      }
+  }
+
   object Path {
-    //implicit def unwrap(path: Path): Vector[String] = path.value
     def apply(str: String)(implicit prefix: Prefix): Vector[String] = {
       val path = str.split('/').toVector
       if (path.dropRight(1) != prefix.path) {
@@ -45,7 +69,7 @@ object storage {
     path: Vector[String],
     contents: ?[Contents] = None
   )
-  extends Prefix
+  extends Path
   {
     def name = (bucket +: path) mkString "/"
     def basename = path.last
@@ -99,9 +123,12 @@ object storage {
     bucket: String,
     path: Vector[String],
     metadata: Metadata
-  ) {
+  )
+  extends Path
+  {
     def name = (bucket +: path) mkString "/"
     def basename = path.last
+    def contents = None
   }
   object Obj {
     def apply(metadata: Metadata)(implicit prefix: Prefix): Obj =
@@ -172,9 +199,9 @@ object storage {
     // this doesn't exist in the Google API, but we hang it here and populate it after the fact (with subsequent
     // "list objects" requests) instead of creating separate [[Bucket]] models for the Google-API vs application
     // usage/persistence; it may be worth splitting them later to make the separation of the two concerns more explicit
-    objects: ?[Contents] = None
+    contents: ?[Contents] = None
   )
-  extends Prefix
+  extends Path
   {
     def bucket = name
     def path = Vector[String]()
@@ -186,8 +213,8 @@ object storage {
     ):
       ?[F[Δ[Bucket]]] =
     {
-      objects
-        .fold {
+      contents
+      .fold {
           Option(
             Http(
               uri"$uri/o?delimiter=${"/"}&userProject=$userProject"
@@ -195,7 +222,7 @@ object storage {
             .json[Objects]
             .map {
               objects ⇒
-                (bucket: Bucket) ⇒ bucket.copy(objects = Some(Contents(objects)))
+                (bucket: Bucket) ⇒ bucket.copy(contents = Some(Contents(objects)))
             }
           )
         } {
@@ -204,7 +231,7 @@ object storage {
     }
 
     def apply(path: List[String])(Δ: Δ[Dir]): Bucket =
-      copy(objects = Some(this.objects.get(path)(Δ)))
+      copy(contents = Some(this.contents.get(path)(Δ)))
   }
   object Bucket extends Kinded("storage#bucket") {
     implicit val decoder = kindDecoder[Bucket]

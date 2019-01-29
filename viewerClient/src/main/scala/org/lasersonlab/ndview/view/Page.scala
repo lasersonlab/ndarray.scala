@@ -1,14 +1,11 @@
 package org.lasersonlab.ndview.view
 
-import java.lang.System.err
-
 import cats.implicits._
-import diode.react.ModelProxy
 import io.circe.Printer
 import io.circe.generic.auto._
-import io.circe.parser.decode
 import io.circe.syntax._
 import japgolly.scalajs.react._
+import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.VdomArray
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^.^._
@@ -16,46 +13,31 @@ import japgolly.scalajs.react.vdom.html_<^._
 import lasersonlab.diode._
 import org.lasersonlab.circe.SingletonCodec._
 import org.lasersonlab.gcp.SignIn
-import org.lasersonlab.gcp.SignIn.SignOut
-import org.lasersonlab.gcp.oauth.scopes.auth._
-import org.lasersonlab.gcp.oauth.{ Auth, ClientId, RedirectUrl, Scopes }
-import org.lasersonlab.ndview.model.{ Login, Logins }
-import org.lasersonlab.ndview.{ NewLogin, SelectProject, SelectUserProject, UpdateProjects }
-import org.lasersonlab.uri.fragment
-import org.scalajs.dom.document
-import org.scalajs.dom.window.localStorage
-import LocalStorage.stateKey
+import org.lasersonlab.ndview.Main._
+import org.lasersonlab.ndview.model.Login
+import org.lasersonlab.ndview.{ Model, SelectProject, SelectUserProject, UpdateProjects }
 
 import scala.concurrent.ExecutionContext
 
-// Need this to take precedence over Encoder.encodeIterable; TODO: debug circe derivation that requires this
+// Need this to take precedence over Encoder.encodeIterable; TODO: debug why circe derivation requires this
 import org.lasersonlab.gcp.googleapis.Paged.pagedEncoder
 
 object Page
 extends SignIn.syntax
 {
-  type Props = (Logins, ModelProxy[_], ExecutionContext)
-
-  implicit val CLIENT_ID = ClientId("218219996328-lltra1ss5e34hlraupaalrr6f56qmiat.apps.googleusercontent.com")
-  implicit val REDIRECT_URL = RedirectUrl("http://localhost:8000")
-
-  implicit val SCOPE =
-    Scopes(
-      userinfo email,
-      userinfo profile,
-      devstorage read_only,
-      `cloud-platform` `read-only`
-    )
+  type Route = Vector[String]
+  type Router = RouterCtl[Route]
+  type Props = (Model, Proxy, Router, ExecutionContext)
 
   val pprint = Printer.spaces4.copy(colonLeft = "").pretty _
 
   def fetchBuckets(
     implicit
     login: Login,
-    model: ModelProxy[_],
+    proxy: Proxy,
     ec: ExecutionContext
   ) = {
-    println(s"fetching buckets for login $login on project change")
+    println(s"checking buckets for login ${login.id}")
     implicit val auth = login.auth
     login
       .projects
@@ -73,16 +55,23 @@ extends SignIn.syntax
       }
   }
 
+  def checkBuckets(props: Props) = {
+    implicit val (Model(logins, _), proxy, _, ec) = props
+    logins
+      .login
+      .fold { Callback() } {
+        implicit login: Login ⇒ fetchBuckets
+      }
+  }
+
   val component =
     ScalaComponent
       .builder[Props]("Page")
       .render {
-        b ⇒
-          import b._
-          implicit val (state, model, ec) = props
+        $ ⇒ import $._
+          implicit val (model @ Model(logins, path), proxy, router, ec) = props
 
-          val logins = state.logins
-          val login  = state.login
+          val login  = logins.login
 
           println(s"render (${logins.size} logins; project ${login.flatMap(_.project).map(_.name)})")
 
@@ -100,11 +89,59 @@ extends SignIn.syntax
                     implicit val auth = login.auth
 
                     VdomArray(
-                      button(key := "sign-out", onClick --> { SignOut(); Callback() }, "sign out"),
+                      button(key := "sign-out", onClick --> { LocalStorage.clear(); Callback() }, "clear state"),
                       ProjectSelect(login, id ⇒ fetchBuckets *>     SelectProject(id), login.    project,         "Project"),
                       ProjectSelect(login, id ⇒ fetchBuckets *> SelectUserProject(id), login.userProject, "Bill-to Project"),
                     )
                 },
+            ),
+
+            div(
+              key := "path",
+              className := "path"
+            ).apply(
+              span(
+                router.link(Vector())(
+                  key := "gs-base",
+                  className := "segment",
+                  "gs://"
+                )
+              ) +:
+              path
+                .foldLeft(
+                  (
+                    0,
+                    Vector[String](),
+                    Vector[TagMod]()
+                  )
+                ) {
+                  case ((idx, prefix, tags), basename) ⇒
+                    val path = prefix :+ basename
+                    val divider =
+                      span(
+                        key := s"$idx-divider",
+                        className := "divider",
+                        "/"
+                      )
+                    val segment =
+                      span(
+                        router.link(path)(
+                          key := s"$idx-$basename",
+                          className := "segment",
+                          basename
+                        )
+                      )
+                    (
+                      idx + 1,
+                      path,
+                      if (tags.isEmpty)
+                        Vector(segment)
+                      else
+                        tags ++ Vector(divider, segment)
+                    )
+                }
+                ._3
+                : _*
             ),
 
             login
@@ -114,61 +151,41 @@ extends SignIn.syntax
                   for {
                     project ← login.project
                     buckets ← project.buckets
-                  } yield
-                    Buckets(
-                      login,
-                      project,
-                      buckets
-                    )
+                  } yield {
+                    println(s"${buckets.size} buckets, path $path (${path.toList}, ${path.size})")
+                    path.toList match {
+                      case Nil ⇒
+                        println("Nil")
+                        Buckets(
+                          login,
+                          project,
+                          buckets
+                        )
+                          : VdomNode
+                      case bucket :: path ⇒
+                        println(s"$bucket :: $path")
+                        (
+                          for {
+                            bucket ← buckets.find(_.name == bucket)
+                            entry ← bucket / path
+                            contents ← entry.contents
+                          } yield
+                            Contents(login, project, contents)
+                        )
+                        .toList
+                        .toVdomArray
+                    }
+                  }
               },
 
-            h4("State (Debug)"),
             div(
               key := "state",
               className := "state"
             )(
-              Json(state.asJson)
+              h4("State (Debug)"),
+              Json(model.asJson)
             )
           )
-      }
-      .componentDidMount {
-        p ⇒
-          import p._
-          println("did mount…")
-
-          implicit val (state, model, ec) = props
-
-          Auth
-            .fromFragment(fragment.map)
-            .fold(
-              {
-                _ ⇒
-                  state
-                    .login
-                    .fold { Callback() } {
-                      implicit login ⇒ fetchBuckets
-                    }
-              },
-              {
-                implicit auth ⇒
-                  println(s"Processing fragment auth: $auth")
-                  document.location.hash = ""
-                  Callback.future(
-                    Login()
-                      .map {
-                        login ⇒
-                          println(s"got new login: $login")
-                          NewLogin(login).dispatch
-                      }
-                      .recover[CallbackTo[Unit]] {
-                        case e ⇒
-                          err.println("Failed to create login:")
-                          err.println(e)
-                          Callback()
-                      }
-                  )
-              }
-            )
       }
       .shouldComponentUpdate {
         p ⇒
@@ -180,19 +197,13 @@ extends SignIn.syntax
       }
       .componentWillUpdate {
         p ⇒
-          localStorage
-            .setItem(
-              stateKey,
-              pprint(
-                p
-                  .nextProps
-                  ._1
-                  .asJson
-              )
-            )
+          println("Persisting state to localstorage")
+          LocalStorage.save(p.nextProps._1)
           Callback()
       }
+      .componentDidMount  { $ ⇒ checkBuckets($.       props) }
+      .componentDidUpdate { $ ⇒ checkBuckets($.currentProps) }
       .build
 
-  def apply(logins: Logins)(implicit model: ModelProxy[_], ec: ExecutionContext) = component((logins, model, ec))
+  def apply(model: Model)(implicit proxy: Proxy, router: Router, ec: ExecutionContext) = component((model, proxy, router, ec))
 }

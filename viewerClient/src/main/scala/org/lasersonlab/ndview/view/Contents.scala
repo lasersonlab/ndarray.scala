@@ -1,7 +1,6 @@
 package org.lasersonlab.ndview.view
 
 import cats.implicits._
-import diode.react.ModelProxy
 import hammerlab.bytes.Bytes
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.Scala.Unmounted
@@ -17,14 +16,18 @@ import org.lasersonlab.gcp.googleapis.projects.Project
 import org.lasersonlab.gcp.googleapis.storage.{ Contents, Obj }
 import org.lasersonlab.ndview.UpdateDir
 import org.lasersonlab.ndview.model.Login
+import org.lasersonlab.ndview.view.Page.Router
 
 object Contents {
-  type Props = (
-    ModelProxy[_],
-    Login,
-    Project,
-    Contents,
-    gcp.Config
+  case class Props(
+    login: Login,
+    project: Project,
+    contents: Contents
+  )(
+    implicit
+    val proxy: Proxy,
+    val router: Router,
+    val config: gcp.Config
   )
 
   def apply(
@@ -33,26 +36,25 @@ object Contents {
     contents: Contents
   )(
     implicit
-    model: ModelProxy[_],
+    proxy: Proxy,
+    router: Router,
     config: gcp.Config
   ): Unmounted[Props, Unit, Unit] =
-    component(
-      (
-        model,
+    component.withKey("contents")(
+      Props(
         login,
         project,
-        contents,
-        config
+        contents
       )
     )
 
   val component =
     ScalaComponent
       .builder[Props]("Contents")
-      .render {
-        $ ⇒
-          import $._
-          implicit val (model, login, project, contents, config) = props
+      .render_P {
+        props ⇒
+          import props._
+          implicit val Props(login, project, contents) = props
           div(
             key := "contents",
             className := "contents"
@@ -80,7 +82,7 @@ object Contents {
                         }
                     }
                   )(
-                    dir.basename
+                    router.link(dir.fullPath)(dir.basename)
                   )(
                     dir
                       .contents

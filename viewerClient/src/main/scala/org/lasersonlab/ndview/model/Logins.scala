@@ -68,4 +68,5 @@ case class Logins(
 
 object Logins {
   implicit def loginsΔ(Δ: (String, Δ[Login])): Δ[Logins] = _.apply(Δ._1)(Δ._2)
+  implicit def unwrap(logins: Logins): Vector[Login] = logins.logins
 }

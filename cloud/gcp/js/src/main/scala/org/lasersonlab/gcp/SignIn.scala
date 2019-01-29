@@ -23,7 +23,7 @@ object SignIn {
       f
         .onError {
           case AjaxException(xhr) if xhr.status == 401 ⇒
-            println("buckets req caught 401, sign in again…")
+            err.println("buckets req caught 401, sign in again…")
             SignIn().pure[F]
           case e ⇒
             err.println(e.getMessage)
@@ -33,7 +33,6 @@ object SignIn {
   }
 
   val oauthEndpoint = "https://accounts.google.com/o/oauth2/v2/auth"
-  val credentialsKey = "gcp-credentials"
 
   def apply()(
     implicit
@@ -59,33 +58,8 @@ object SignIn {
     }
 
     document.body.appendChild(form)
-    localStorage.removeItem(credentialsKey)
     form.submit()
   }
-
-  def SignOut(): Unit = { localStorage.removeItem(credentialsKey) }
-
-//  def loadAuth: Either[Exception, Auth] =
-//    Option(
-//      localStorage.getItem(credentialsKey)
-//    )
-//    .fold {
-//      Auth
-//        .fromFragment(fragment.map)
-//        .map {
-//          auth ⇒
-//            val json = auth.asJson.noSpaces
-//            println(s"setting localstorage: $json")
-//            localStorage.setItem(credentialsKey, json)
-//            auth
-//        }
-//        .leftMap(new Exception(_))  // TODO: use leftMap elsewhere
-//    } {
-//      str ⇒
-//        val auth = decode[Auth](str)
-//        document.location.hash = ""
-//        auth
-//    }
 
   trait syntax {
     @inline implicit def makeSignInOps[F[_], T](f: F[T]): Ops[F, T] = Ops(f)

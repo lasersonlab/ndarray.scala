@@ -7,8 +7,6 @@ import org.lasersonlab.gcp.Config.implicits._
 import org.lasersonlab.gcp.googleapis.Paged
 import org.lasersonlab.gcp.googleapis.projects.Project
 
-//import scala.concurrent.ExecutionContext
-
 case class Projects(
   projects : Paged[Project],
   projectId: Option[String] = None
@@ -38,24 +36,6 @@ case class Projects(
     )
 
   def +(projects: Paged[Project]): Projects = copy(this.projects + projects)
-
-//  def modF(pf: PartialFunction[Project, F[Project]])(implicit ec: ExecutionContext): F[Projects] = {
-//    def f(project: Project) = if (pf.isDefinedAt(project)) pf(project) else F { project }
-//    projects
-//      .items
-//      .traverse { f }
-//      .map {
-//        projects ⇒
-//          Projects(
-//            this
-//              .projects
-//              .copy(
-//                items = projects
-//              ),
-//            projectId
-//          )
-//      }
-//  }
 
   def fetchBuckets(implicit cfg: gcp.Config): ?[F[Δ[Projects]]] =
     projects

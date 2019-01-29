@@ -1,19 +1,17 @@
 package org.lasersonlab.ndview
 
-import java.lang.System.err
-
 import diode._
 import diode.react.ReactConnector
 import org.lasersonlab.gcp.googleapis.Paged
 import org.lasersonlab.gcp.googleapis.projects.Project
-import org.lasersonlab.gcp.googleapis.storage.{ Bucket, Dir, Prefix }
-import org.lasersonlab.gcp.oauth.Auth
+import org.lasersonlab.gcp.googleapis.storage.{ Bucket, Dir }
 import org.lasersonlab.ndview.model.{ Login, Logins, Projects }
+import org.lasersonlab.ndview.view.Page.Route
 import org.lasersonlab.uri._
 
 case class Model(
   logins: Logins = Logins(),
-  prefix: Vector[String] = Vector()
+  route: Route = Vector()
 )
 
 case class NewLogin(login: Login) extends Action
@@ -25,20 +23,39 @@ case class UpdateBucket(loginId: String, projectId: String, id: String, Δ: Δ[B
 case class UpdateDir(loginId: String, projectId: String, dir: Dir, Δ: Δ[Dir]) extends Action
 //case class NewBuckets(loginId: String, projectId: String, buckets: Paged[Bucket]) extends Action
 
-case class Circuit(initialModel: Model)
+case class Circuit(initialModel: Model)(implicit httpConfig: http.Config)
   extends  diode.Circuit[Model]
      with ReactConnector[Model] {
   override protected def actionHandler: HandlerFunction =
     ActionHandler.extractHandler(
       new ActionHandler(zoomTo(_.logins)) {
         override protected def handle: PartialFunction[Any, ActionResult[Model]] = {
-          case NewLogin(login) ⇒ updated(
-            value :+ login
-          )
+          case NewLogin(login) ⇒
+            println("action: NewLogin")
+            implicit val auth = login.auth
+            login
+              .projects
+              .fetchBuckets
+              .map {
+                ΔF ⇒
+                  ΔF.map {
+                    Δ ⇒
+                      UpdateProjects(login.id, Δ)
+                  }
+              }
+              .map { Effect(_) }
+              .fold {
+                updated(value :+ login)
+              } {
+                updated(value :+ login, _)
+              }
           case NewProjects(id, projects) ⇒ updated(
             value(id) { _ + projects }
           )
-          case UpdateProjects(id, update) ⇒ updated(value(id) { _(update) })
+          case UpdateProjects(id, update) ⇒
+            val next = value(id) { _(update) }
+            println(s"Updating projects to $next")
+            updated(next)
           case     SelectProject(id) ⇒ updated(value(_.   project(id)))
           case SelectUserProject(id) ⇒ updated(value(_.userProject(id)))
           case UpdateBucket(loginId, projectId, id, fn) ⇒

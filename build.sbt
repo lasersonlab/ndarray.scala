@@ -266,15 +266,14 @@ lazy val viewerClient =
 
       react,
       dep(
-
         diode,
         diode.react,
         dom,
-
         cats,
         circe,
         circe.generic,
         circe.parser,
+        react.extra,
         sttp,
         hammerlab.types
       ),

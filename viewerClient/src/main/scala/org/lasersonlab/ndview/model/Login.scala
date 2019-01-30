@@ -2,9 +2,9 @@ package org.lasersonlab.ndview.model
 
 import cats.implicits._
 import hammerlab.opt._
+import org.lasersonlab.gcp.googleapis
 import org.lasersonlab.gcp.googleapis.User
 import org.lasersonlab.gcp.googleapis.projects.Project
-import org.lasersonlab.gcp.googleapis
 import org.lasersonlab.gcp.oauth.Auth
 import org.lasersonlab.uri._
 
@@ -15,7 +15,7 @@ case class Login(
   userProject: ?[Project] = None
 ) {
   def id = user.id
-  def project = projects.project
+  def     project = projects.project
   def     project(id: String): Login = copy(projects = projects.select(id))
   def userProject(id: String): Login = copy(userProject = projects(id))
   def +(projects: Projects) = copy(projects = this.projects + projects.projects)
@@ -37,4 +37,7 @@ object Login {
         user,
         projects
       )
+
+  implicit def toAuth(login: Login): Auth = login.auth
+  implicit def toUser(login: Login): User = login.user
 }

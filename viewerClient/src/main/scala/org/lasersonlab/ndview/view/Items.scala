@@ -59,6 +59,7 @@ object Items {
         props ⇒
           import props._
           implicit val Props(login, project, contents, closedFolders) = props
+          implicit val auth = login.auth
           div(
             cls("items"),
             div(

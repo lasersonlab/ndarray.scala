@@ -1,8 +1,8 @@
 package lasersonlab
 
-import org.lasersonlab.circe.{ EitherDecoder, EitherEncoder, SingletonCodec }
+import org.lasersonlab.circe.{ EitherCodec, InstantCodec, SingletonCodec }
 
 object circe
-extends EitherDecoder
-   with EitherEncoder
+extends EitherCodec
    with SingletonCodec
+   with InstantCodec

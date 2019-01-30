@@ -62,52 +62,52 @@ object Main
       .map {
         model ⇒
 
-        val circuit = Circuit(model)
-        val connection = circuit.connect(m ⇒ m)
+          val circuit = Circuit(model)
+          val connection = circuit.connect(m ⇒ m)
 
-        val base = BaseUrl(window.location.href.takeWhile(_ != '#'))
+          val base = BaseUrl(window.location.href.takeWhile(_ != '#'))
 
-        val routerConfig = RouterConfigDsl[Vector[String]].buildConfig { dsl ⇒
-          import dsl._
+          val routerConfig = RouterConfigDsl[Vector[String]].buildConfig { dsl ⇒
+            import dsl._
 
-          (
-            dynamicRoute(
-              "#/" ~
-              remainingPathOrBlank
-                .xmap[Vector[String]] {
-                  _.split("/") match {
-                    case Array("") ⇒ Vector()
-                    case arr ⇒ arr.toVector
+            (
+              dynamicRoute(
+                "#/" ~
+                remainingPathOrBlank
+                  .xmap[Vector[String]] {
+                    _.split("/") match {
+                      case Array("") ⇒ Vector()
+                      case arr ⇒ arr.toVector
+                    }
+                  } {
+                    _.mkString("/")
                   }
-                } {
-                  _.mkString("/")
-                }
-            ) {
-              case p ⇒ p
-            } ~> dynRenderR {
-              (route, ctl) ⇒
-                implicit val _ctl = ctl
-                connection {
-                  implicit proxy ⇒
-                    Page(
-                      proxy
-                        .value
-                        .copy(
-                          route = route
-                        )
-                    )
-                }
-            }
-          )
-          .notFound(redirectToPage(Vector())(Redirect.Replace))
-        }
+              ) {
+                case p ⇒ p
+              } ~> dynRenderR {
+                (route, ctl) ⇒
+                  implicit val _ctl = ctl
+                  connection {
+                    implicit proxy ⇒
+                      Page(
+                        proxy
+                          .value
+                          .copy(
+                            route = route
+                          )
+                      )
+                  }
+              }
+            )
+            .notFound(redirectToPage(Vector())(Redirect.Replace))
+          }
 
-        val router = Router(base, routerConfig.logToConsole)
+          val router = Router(base, routerConfig.logToConsole)
 
-        router()
-          .renderIntoDOM(
-            document.getElementById("root")
-          )
+          router()
+            .renderIntoDOM(
+              document.getElementById("root")
+            )
       }
   }
 }

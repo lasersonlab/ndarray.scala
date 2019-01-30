@@ -1,14 +1,16 @@
 package org.lasersonlab.ndview.model
 
 import cats.implicits._
-import org.lasersonlab.uri._
 import org.lasersonlab.gcp.googleapis.?
+import org.lasersonlab.uri._
 
 case class Logins(
   logins: Vector[Login] = Vector(),
   id: ?[String] = None
 ) {
   def login: Option[Login] = id.map(id ⇒ logins.find(_.id == id).get)
+
+  def get(id: String) = logins.find(_.id == id)
 
   /**
    * Receive a new login, after as after an OAuth flow

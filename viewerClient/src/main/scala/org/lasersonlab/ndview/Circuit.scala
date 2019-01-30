@@ -5,6 +5,7 @@ import diode.react.ReactConnector
 import org.lasersonlab.gcp.googleapis.{ Paged, storage }
 import org.lasersonlab.gcp.googleapis.projects.Project
 import org.lasersonlab.gcp.googleapis.storage.{ Bucket, Dir }
+import org.lasersonlab.gcp.oauth.Auth
 import org.lasersonlab.ndview.model.{ Login, Logins, Projects }
 import org.lasersonlab.uri._
 
@@ -15,6 +16,9 @@ case class Model(
 )
 
 case class          NewLogin(  login:  Login)                                              extends Action
+case class       ExpireLogin(  login:  Login)                                              extends Action
+case class         FailLogin(  login:  Login)                                              extends Action
+case class         FailAuth (   auth:   Auth)                                              extends Action
 case class     SelectProject(     id: String)                                              extends Action
 case class SelectUserProject(     id: String)                                              extends Action
 case class       NewProjects(     id: String, projects: Paged[Project])                    extends Action
@@ -78,7 +82,48 @@ case class Circuit(initialModel: Model)(implicit httpConfig: http.Config)
               }
             }
           )
+        case ExpireLogin(expire) ⇒
+          println(s"Expiring login: $expire")
+          newLogin(
+            for {
+              login ← value.get(expire.id)
+              if expire.auth == login.auth
+              auth ← login.expire
+            } yield
+              login.copy(auth = auth)
+          )
+        case FailLogin(failed) ⇒
+          println(s"Failing login: $failed")
+          newLogin(
+            for {
+              login ← value.get(failed.id)
+              if failed.auth == login.auth
+              auth ← login.fail
+            } yield
+              login.copy(auth = auth)
+          )
+        case FailAuth(failed) ⇒
+          newLogin(
+            for {
+              login ← value.find(_.auth.token == failed.token)
+              auth ← login.auth.fail
+            } yield
+              login.copy(auth = auth)
+          )
       }
+
+    def newLogin(login: Option[Login]) =
+      login
+        .fold { noChange } {
+          login ⇒
+            effectOnly(
+              Effect.action(
+                NewLogin(
+                  login
+                )
+              )
+            )
+        }
     }
 
   val treeHandler =

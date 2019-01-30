@@ -2,29 +2,40 @@ package org.lasersonlab.gcp
 
 import java.lang.System.err
 
-import cats.ApplicativeError
+import cats.{ Applicative, ApplicativeError }
 import cats.implicits._
 import io.circe.generic.auto._
-import org.lasersonlab.gcp.oauth.Params
+import org.lasersonlab.gcp.oauth.{ Auth, Params }
 import org.scalajs.dom.document
 import org.scalajs.dom.ext.AjaxException
 import org.scalajs.dom.raw.HTMLFormElement
 
 object SignIn {
 
+  trait Recover[F[_]] {
+    def apply()(implicit auth: Auth, params: Params): F[Unit]
+  }
+  object Recover {
+    def default[F[_]: Applicative] =
+      new Recover[F] {
+        def apply()(implicit auth: Auth, params: Params): F[Unit] = SignIn().pure[F]
+      }
+  }
+
   implicit class Ops[F[_], T](val f: F[T]) extends AnyVal {
-    def reauthenticate_?(
+    def reauthenticate_?[Ctx](
       implicit
       ae: ApplicativeError[F, Throwable],
-      params: Params
+      params: Params,
+      recover: Recover[F],
+      auth: Auth
     ):
       F[T] =
       f
         .onError {
           case AjaxException(xhr) if xhr.status == 401 ⇒
             err.println("buckets req caught 401, sign in again…")
-            // TODO: allow toggline of action to perform here
-            /*SignIn*/().pure[F]
+            recover()
           case e ⇒
             err.println(e.getMessage)
             err.println(e)
@@ -63,6 +74,9 @@ object SignIn {
 
   trait syntax {
     @inline implicit def makeSignInOps[F[_], T](f: F[T]): Ops[F, T] = Ops(f)
+    trait recover {
+      @inline implicit def default[F[_]: Applicative] = Recover.default[F]
+    }
   }
   object syntax extends syntax
 }

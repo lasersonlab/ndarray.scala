@@ -1,7 +1,6 @@
 package org.lasersonlab.ndview.view
 
 import cats.implicits._
-import hammerlab.opt._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.<._
 import japgolly.scalajs.react.vdom.html_<^.^._
@@ -13,8 +12,8 @@ import org.lasersonlab.gcp.SignIn
 import org.lasersonlab.gcp.googleapis.Paged
 import org.lasersonlab.gcp.googleapis.projects.Project
 import org.lasersonlab.gcp.googleapis.storage.Bucket
-import org.lasersonlab.ndview.{ ClosedFolders, UpdateBucket }
 import org.lasersonlab.ndview.model.Login
+import org.lasersonlab.ndview.{ ClosedFolders, UpdateBucket }
 
 object Buckets
 extends SignIn.syntax
@@ -57,35 +56,33 @@ extends SignIn.syntax
       .render_P {
         props ⇒
           import props._
+          implicit val auth = login.auth
           div(
-            cls("buckets"),
-            div(
-              cls("items")
-            )(
-              buckets
-                .map {
-                  case bucket @ Bucket(id, name, _, _, contents) ⇒
-                    div(
-                      cls(id, "bucket"),
-                      onClick --> {
-                        bucket
-                          .ls()
-                          .fold { Callback() } {
-                            ΔF ⇒
-                              Callback.future {
-                                ΔF
-                                  .map {
-                                    Δ ⇒
-                                      UpdateBucket(login.id, project.id, id, Δ).dispatch
-                                  }
-                                  .reauthenticate_?
-                              }
-                          }
-                        },
-                      Entry(login, project, bucket, closedFolders / bucket.name)
-                    )
-                }: _*
-            )
+            cls("buckets items")
+          )(
+            buckets
+              .map {
+                case bucket @ Bucket(id, name, _, _, contents) ⇒
+                  div(
+                    cls(id, "bucket"),
+                    onClick --> {
+                      bucket
+                        .ls()
+                        .fold { Callback() } {
+                          ΔF ⇒
+                            Callback.future {
+                              ΔF
+                                .map {
+                                  Δ ⇒
+                                    UpdateBucket(login.id, project.id, id, Δ).dispatch
+                                }
+                                .reauthenticate_?
+                            }
+                        }
+                      },
+                    Entry(login, project, bucket, closedFolders / bucket.name)
+                  )
+              }: _*
           )
       }
       .build

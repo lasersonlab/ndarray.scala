@@ -1,5 +1,8 @@
 package org.lasersonlab.ndview.view
 
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+
 import cats.implicits._
 import io.circe.Printer
 import io.circe.generic.auto._
@@ -13,11 +16,13 @@ import lasersonlab.diode._
 import org.lasersonlab.circe.SingletonCodec._
 import org.lasersonlab.gcp.SignIn
 import org.lasersonlab.gcp.googleapis.User
+import org.lasersonlab.gcp.oauth.Auth._
 import org.lasersonlab.ndview.Main._
-import org.lasersonlab.ndview.model.Login
-import org.lasersonlab.ndview.{ Model, NewLogin, SelectProject, SelectUserProject, UpdateProjects }
+import org.lasersonlab.ndview.model.{ Login, Logins }
+import org.lasersonlab.ndview.{ ExpireLogin, Model, NewLogin, SelectProject, SelectUserProject, UpdateProjects }
 
 import scala.concurrent.ExecutionContext
+import scala.scalajs.js.timers.setTimeout
 
 // Need this to take precedence over Encoder.encodeIterable; TODO: debug why circe derivation requires this
 import org.lasersonlab.gcp.googleapis.Paged.pagedEncoder
@@ -91,23 +96,50 @@ extends SignIn.syntax
                 logins
                   .map {
                     login ⇒
-                      val User(id, _, email, picture) = login.user
+                      val auth = login.auth
+                      val User(id, name, email, picture) = login.user
                       div(
                         cls(id, "thumbnail" + (if (logins.id.contains(login.id)) " active" else "")),
                         onClick --> (NewLogin(login).dispatch *> router.set(Vector())),
                         img(
                           cls("avatar"),
-                          src := picture
+                          src := picture,
+                          alt := email.getOrElse { name }
                         ),
                         email
                           .map {
                             email ⇒
                               val domain = email.split("@").last
                               img(
-                                cls("domain"),
+                                cls("domain insert"),
                                 src := s"http://www.google.com/s2/favicons?domain=$domain"
                               )
-                          }
+                          },
+                        auth.state match {
+                          case Valid ⇒ VdomArray()
+                          case Expired ⇒
+                            Some(
+                              img(
+                                cls("auth insert"),
+                                src := "img/caution.jpg",
+                                alt := "Credentials appear to be stale; click to regenerate",
+                                onClick --> { SignIn(); Callback() }
+                              )
+                            )
+                            .toList
+                            .toVdomArray
+                          case Failed ⇒
+                            Some(
+                              img(
+                                cls("auth insert"),
+                                src := "img/failed.png",
+                                alt := "Credentials expired; click to regenerate",
+                                onClick --> { SignIn(); Callback() }
+                              )
+                            )
+                            .toList
+                            .toVdomArray
+                        }
                       )
                   }
                   : _*
@@ -170,7 +202,6 @@ extends SignIn.syntax
                           } yield
                             div(
                               cls("contents tree"),
-                              h2("Contents"),
                               Items(
                                 login,
                                 project,
@@ -204,7 +235,41 @@ extends SignIn.syntax
           LocalStorage.save(nextProps.model)
           Callback()
       }
-      .componentDidMount  { $ ⇒ checkBuckets($.       props) }
+      .componentDidMount {
+        $ ⇒ import $._
+          val _props = props
+          import _props._
+          val Props(Model(Logins(logins, _), _, _)) = props
+          val now = Instant.now()
+          val bufferMS = 5000
+          logins
+            .map {
+              login ⇒
+                val ttl =
+                  ChronoUnit
+                    .MILLIS
+                    .between(
+                      now,
+                      login.expires
+                    ) -
+                    bufferMS
+
+                if (ttl <= 0) {
+                  println(s"Login ${login.email} is ${-ttl}ms past its expiration")
+                  ExpireLogin(login).dispatch
+                } else {
+                  println(s"Login ${login.email} has ${ttl}ms remaining; setting timeout to warn on expiration")
+                  setTimeout(ttl) {
+                    println(s"Login ${login.email} expired; firing ExpireLogin")
+                    proxy.dispatchNow(
+                      ExpireLogin(login)
+                    )
+                  }
+                  Callback()
+                }
+            }
+            .fold { checkBuckets(props) } { _ *> _ }
+      }
       .componentDidUpdate { $ ⇒ checkBuckets($.currentProps) }
       .build
 

@@ -15,7 +15,7 @@ import org.lasersonlab.gcp.SignIn
 import org.lasersonlab.gcp.googleapis.User
 import org.lasersonlab.ndview.Main._
 import org.lasersonlab.ndview.model.Login
-import org.lasersonlab.ndview.{ Model, SelectProject, SelectUserProject, UpdateProjects }
+import org.lasersonlab.ndview.{ Model, NewLogin, SelectProject, SelectUserProject, UpdateProjects }
 
 import scala.concurrent.ExecutionContext
 
@@ -93,7 +93,8 @@ extends SignIn.syntax
                     login ⇒
                       val User(id, _, email, picture) = login.user
                       div(
-                        cls(id, "thumbnail"),
+                        cls(id, "thumbnail" + (if (logins.id.contains(login.id)) " active" else "")),
+                        onClick --> (NewLogin(login).dispatch *> router.set(Vector())),
                         img(
                           cls("avatar"),
                           src := picture

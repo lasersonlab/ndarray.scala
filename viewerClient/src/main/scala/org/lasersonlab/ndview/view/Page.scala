@@ -104,7 +104,7 @@ extends SignIn.syntax
                         img(
                           cls("avatar"),
                           src := picture,
-                          alt := email.getOrElse { name }
+                          title := email.getOrElse { name }
                         ),
                         email
                           .map {
@@ -112,7 +112,8 @@ extends SignIn.syntax
                               val domain = email.split("@").last
                               img(
                                 cls("domain insert"),
-                                src := s"http://www.google.com/s2/favicons?domain=$domain"
+                                src := s"http://www.google.com/s2/favicons?domain=$domain",
+                                title := email
                               )
                           },
                         auth.state match {
@@ -121,8 +122,8 @@ extends SignIn.syntax
                             Some(
                               img(
                                 cls("auth insert"),
-                                src := "img/caution.jpg",
-                                alt := "Credentials appear to be stale; click to regenerate",
+                                src := "img/caution.png",
+                                title := "Credentials appear to be stale; click to regenerate",
                                 onClick --> { SignIn(); Callback() }
                               )
                             )
@@ -133,7 +134,7 @@ extends SignIn.syntax
                               img(
                                 cls("auth insert"),
                                 src := "img/failed.png",
-                                alt := "Credentials expired; click to regenerate",
+                                title := "Credentials expired; click to regenerate",
                                 onClick --> { SignIn(); Callback() }
                               )
                             )
@@ -214,12 +215,12 @@ extends SignIn.syntax
                   }
               },
 
-            div(
-              cls("state")
-            )(
-              h4("State (Debug)"),
-              Json(model.asJson)
-            )
+//            div(
+//              cls("state")
+//            )(
+//              h4("State (Debug)"),
+//              Json(model.asJson)
+//            )
           )
       }
       .shouldComponentUpdate {

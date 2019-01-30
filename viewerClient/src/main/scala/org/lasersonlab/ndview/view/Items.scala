@@ -16,7 +16,7 @@ import org.lasersonlab.gcp.SignIn.syntax._
 import org.lasersonlab.gcp.googleapis.projects.Project
 import org.lasersonlab.gcp.googleapis.storage.{ Contents, Obj }
 import org.lasersonlab.ndview.model.Login
-import org.lasersonlab.ndview.{ ClosedFolders, UpdateDir }
+import org.lasersonlab.ndview.{ ClosedFolders, Segment, UpdateDir }
 import Entry.`💾`
 
 object Items {
@@ -67,6 +67,7 @@ object Items {
             )(
               contents
                 .dirs
+                .sortBy { dir ⇒ Segment(dir.basename) }
                 .map {
                   dir ⇒
                     div(
@@ -103,6 +104,7 @@ object Items {
             )(
               contents
                 .objs
+                .sortBy { obj ⇒ Segment(obj.basename) }
                 .map {
                   case obj @ Obj(_, path, Metadata(_, name, size, _)) ⇒
                     Entry(

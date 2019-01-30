@@ -90,7 +90,7 @@ case class Circuit(initialModel: Model)(implicit httpConfig: http.Config)
               if expire.auth == login.auth
               auth ← login.expire
             } yield
-              login.copy(auth = auth)
+              (login.id, auth)
           )
         case FailLogin(failed) ⇒
           println(s"Failing login: $failed")
@@ -100,7 +100,7 @@ case class Circuit(initialModel: Model)(implicit httpConfig: http.Config)
               if failed.auth == login.auth
               auth ← login.fail
             } yield
-              login.copy(auth = auth)
+              (login.id, auth)
           )
         case FailAuth(failed) ⇒
           newLogin(
@@ -108,20 +108,16 @@ case class Circuit(initialModel: Model)(implicit httpConfig: http.Config)
               login ← value.find(_.auth.token == failed.token)
               auth ← login.auth.fail
             } yield
-              login.copy(auth = auth)
+              (login.id, auth)
           )
       }
 
-    def newLogin(login: Option[Login]) =
-      login
+    def newLogin(auth: Option[(String, Auth)]) =
+      auth
         .fold { noChange } {
-          login ⇒
-            effectOnly(
-              Effect.action(
-                NewLogin(
-                  login
-                )
-              )
+          case (id, auth) ⇒
+            updated(
+              value(id) { _.copy(auth = auth) }
             )
         }
     }

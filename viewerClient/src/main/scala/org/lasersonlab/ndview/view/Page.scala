@@ -125,8 +125,15 @@ extends SignIn.syntax
 
                     VdomArray(
                       div(cls("clear"), onClick --> { LocalStorage.clear(); Callback() }),
-                      ProjectSelect(login, id ⇒ fetchBuckets *>     SelectProject(id), login.    project,         "Project"),
-                      ProjectSelect(login, id ⇒ fetchBuckets *> SelectUserProject(id), login.userProject, "Bill-to Project"),
+                      h3(
+                        cls("project"),
+                        "Project: ",
+                        ProjectSelect(login, id ⇒ fetchBuckets *> SelectProject(id), login. project, "Project"),
+                        span(
+                          cls("user-project"),
+                          ProjectSelect(login, id ⇒ fetchBuckets *> SelectUserProject(id), login.userProject, "Bill-to Project")
+                        )
+                      )
                     )
                 },
             ),
@@ -135,7 +142,7 @@ extends SignIn.syntax
 
             login
               .fold { TagMod() } {
-                login ⇒
+                implicit login ⇒
                   implicit val Login(auth, user, projects, userProject) = login
                   for {
                     project ← login.project
@@ -146,7 +153,6 @@ extends SignIn.syntax
                       case Vector() ⇒
                         div(
                           cls("tree"),
-                          h2("Buckets"),
                           Buckets(
                             login,
                             project,

@@ -24,6 +24,7 @@
     }
     .controls {
       padding-bottom: 1em;
+      height: 3em;
     }
     .tree > .items {
       padding-left: 0.3em;
@@ -43,6 +44,11 @@
       font-size: 1.5em;
       padding-bottom: 0.5em;
     }
+    .path > .label {
+      font-weight: bold;
+      position: relative;
+      top: 0.05em;
+    }
     .segment {
       padding: 0 .3em;
     }
@@ -52,6 +58,53 @@
     }
     .tree .entry {
       line-height: 1.3em;
+    }
+    div.thumbnail {
+      margin-bottom: 0.7em;
+      margin-right: 0.3em;
+      float: left;
+      width: 3.5em;
+      position: relative;
+    }
+    .thumbnail {
+      float: left;
+    }
+    .thumbnails .add-login {
+      float: left;
+      width: 2.6em;
+      height: 2.6em;
+      text-align: center;
+      color: lightgrey;
+      border: 0.2em solid lightgrey;
+      border-radius: 30%;
+      margin-right: 0.3em;
+    }
+    .thumbnails .add-login .plus {
+      font-size:2.6em;
+      font-family: monospace;
+    }
+    .thumbnail > .avatar {
+      width: 3em;
+      height: 3em;
+    }
+    .thumbnail > .domain {
+      width: 1.3em;
+      position: absolute;
+      bottom: -0.3em;
+      right: 0;
+      background: white;
+      border: 1px solid grey;
+      overflow: hidden;
+      border-radius: 40%;
+    }
+    .clear {
+      background-image: url(img/clear.jpg);
+      float: left;
+      width: 3em;
+      height: 3em;
+      background-size: contain;
+      opacity: 0.2;
+      margin-right: 0.3em;
     }
   </style>
 </head>

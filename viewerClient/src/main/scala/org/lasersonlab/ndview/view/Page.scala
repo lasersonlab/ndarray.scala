@@ -12,6 +12,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import lasersonlab.diode._
 import org.lasersonlab.circe.SingletonCodec._
 import org.lasersonlab.gcp.SignIn
+import org.lasersonlab.gcp.googleapis.User
 import org.lasersonlab.ndview.Main._
 import org.lasersonlab.ndview.model.Login
 import org.lasersonlab.ndview.{ Model, SelectProject, SelectUserProject, UpdateProjects }
@@ -76,23 +77,53 @@ extends SignIn.syntax
         props ⇒ import props._
           implicit val Model(logins, route, closedFolders) = model
 
-          val login  = logins.login
+          val login = logins.login
 
           println(s"render (${logins.size} logins; project ${login.flatMap(_.project).map(_.name)})")
 
           div(
             cls("page"),
             div(
-              cls("controls")
-            )(
-              button(key := "sign-in", onClick --> { SignIn (); Callback() }, "sign in" ),
+              cls("controls"),
+              div(
+                cls("thumbnails")
+              )(
+                logins
+                  .map {
+                    login ⇒
+                      val User(id, _, email, picture) = login.user
+                      div(
+                        cls(id, "thumbnail"),
+                        img(
+                          cls("avatar"),
+                          src := picture
+                        ),
+                        email
+                          .map {
+                            email ⇒
+                              val domain = email.split("@").last
+                              img(
+                                cls("domain"),
+                                src := s"http://www.google.com/s2/favicons?domain=$domain"
+                              )
+                          }
+                      )
+                  }
+                  : _*
+              )(
+                div(
+                  cls("add-login"),
+                  span(cls("plus"), "+"),
+                  onClick --> { SignIn (); Callback() }
+                )
+              ),
               login
                 .map {
                   implicit login ⇒
                     implicit val auth = login.auth
 
                     VdomArray(
-                      button(key := "sign-out", onClick --> { LocalStorage.clear(); Callback() }, "clear state"),
+                      div(cls("clear"), onClick --> { LocalStorage.clear(); Callback() }),
                       ProjectSelect(login, id ⇒ fetchBuckets *>     SelectProject(id), login.    project,         "Project"),
                       ProjectSelect(login, id ⇒ fetchBuckets *> SelectUserProject(id), login.userProject, "Bill-to Project"),
                     )

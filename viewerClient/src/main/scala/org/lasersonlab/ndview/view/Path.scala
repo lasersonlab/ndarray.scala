@@ -16,7 +16,8 @@ object Path {
       .render_P {
         p ⇒ import p._
           div(
-            cls("path")
+            cls("path"),
+            span(cls("label"), "Current path:")
           )(
             span(
               router.link(Vector())(

@@ -46,8 +46,16 @@ object storage {
   }
 
   object Path {
-    def apply(str: String)(implicit prefix: Prefix): Vector[String] = {
-      val path = str.split('/').toVector
+    def apply(str: String, allowEmptyBasename: Boolean = false)(implicit prefix: Prefix): Vector[String] = {
+      val path =
+        str
+          .split('/')
+          .toVector ++ (
+          if (str.endsWith("/") && allowEmptyBasename)
+            Vector("")
+          else
+            Vector()
+          )
       if (path.dropRight(1) != prefix.path) {
         import System.err
         err.println(path)
@@ -138,7 +146,11 @@ object storage {
     def apply(metadata: Metadata)(implicit prefix: Prefix): Obj =
       Obj(
         prefix.bucket,
-        Path(metadata.name),
+        Path(
+          metadata.name,
+          // Objects can simply end with a slash in GCS
+          allowEmptyBasename = true
+        ),
         metadata
       )
   }

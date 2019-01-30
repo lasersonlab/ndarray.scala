@@ -27,11 +27,25 @@ case class      UpdateBucket(loginId: String, projectId: String, id: String, Δ:
 case class         UpdateDir(loginId: String, projectId: String, dir: Dir, Δ: Δ[Dir])      extends Action
 case class  OpenDir(path: storage.Path) extends Action
 case class CloseDir(path: storage.Path) extends Action
+case object Clear extends Action
 
 case class Circuit(initialModel: Model)(implicit httpConfig: http.Config)
   extends  diode.Circuit[Model]
      with ReactConnector[Model] {
-  override protected def actionHandler: HandlerFunction = composeHandlers(loginsHandler, treeHandler)
+  override protected def actionHandler: HandlerFunction =
+    composeHandlers(
+      modelHandler,
+      loginsHandler,
+      treeHandler
+    )
+
+  val modelHandler =
+    new ActionHandler[Model, Model](new RootModelRW(initialModel)) {
+      override protected def handle: PartialFunction[Any, ActionResult[Model]] = {
+        case Clear ⇒
+          updated(Model())
+      }
+    }
 
   val loginsHandler =
     new ActionHandler(zoomTo(_.logins)) {

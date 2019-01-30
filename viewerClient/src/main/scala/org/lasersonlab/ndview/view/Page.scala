@@ -18,8 +18,9 @@ import org.lasersonlab.gcp.SignIn
 import org.lasersonlab.gcp.googleapis.User
 import org.lasersonlab.gcp.oauth.Auth._
 import org.lasersonlab.ndview.Main._
-import org.lasersonlab.ndview.model.{ Login, Logins }
-import org.lasersonlab.ndview.{ ExpireLogin, Model, NewLogin, SelectProject, SelectUserProject, UpdateProjects }
+import org.lasersonlab.ndview.model._
+import org.lasersonlab.ndview._
+import org.scalajs.dom.document
 
 import scala.concurrent.ExecutionContext
 import scala.scalajs.js.timers.setTimeout
@@ -124,7 +125,7 @@ extends SignIn.syntax
                                 cls("auth insert"),
                                 src := "img/caution.png",
                                 title := "Credentials appear to be stale; click to regenerate",
-                                onClick --> { SignIn(); Callback() }
+                                onClick ==> { e ⇒ SignIn(); e.preventDefault(); Callback() }
                               )
                             )
                             .toList
@@ -135,7 +136,7 @@ extends SignIn.syntax
                                 cls("auth insert"),
                                 src := "img/failed.png",
                                 title := "Credentials expired; click to regenerate",
-                                onClick --> { SignIn(); Callback() }
+                                onClick ==> { e ⇒ SignIn(); e.preventDefault(); Callback() }
                               )
                             )
                             .toList
@@ -157,7 +158,14 @@ extends SignIn.syntax
                     implicit val auth = login.auth
 
                     VdomArray(
-                      div(cls("clear"), onClick --> { LocalStorage.clear(); Callback() }),
+                      div(
+                        cls("clear"),
+                        onClick --> {
+                          LocalStorage.clear()
+                          document.location.hash = "/"
+                          Clear.dispatch
+                        }
+                      ),
                       h3(
                         cls("project"),
                         "Project: ",

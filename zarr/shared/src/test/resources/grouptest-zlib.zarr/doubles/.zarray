@@ -6,7 +6,7 @@
         20
     ],
     "compressor": {
-        "level": 6,
+        "level": -1,
         "id": "zlib"
     },
     "dtype": "<f8",

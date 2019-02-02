@@ -29,6 +29,8 @@ object ConvertTest
       ()
       implicit def pathToArg(path: Path): Arg = Arg(path.toString)
 
+      // TODO: capture + verify the stdout from these applications (which contains verbose printlns of the groups'
+      //  metadata
       Main.main(            "-t", "2", hdf5, `64m-path`)
       Main.main("-c", "2m", "-t", "2", hdf5,  `2m-path`)
 

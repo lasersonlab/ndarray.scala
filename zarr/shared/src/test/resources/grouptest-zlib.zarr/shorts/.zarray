@@ -12,7 +12,7 @@
         1
     ],
     "compressor": {
-        "level": 6,
+        "level": -1,
         "id": "zlib"
     },
     "dtype": "<i2",

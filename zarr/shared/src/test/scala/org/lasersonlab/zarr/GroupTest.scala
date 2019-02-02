@@ -21,16 +21,7 @@ object GroupTest
   import DataType._
 
   // set this to `true` to overwrite the existing "expected" data in src/test/resources
-  val writeNewExpectedData = true
-
-  // TODO: can remove thx to sourcecode.File?
-//  val resourceDirectory =
-//    (
-//      Local.cwd.parent js_?
-//      (Local.cwd / "zarr")
-//    ) / "shared" / "src" / "test" / "resources"
-//
-//  override lazy val resourceDirectories: List[Local] = resourceDirectory :: Nil
+  val writeNewExpectedData = false
 
   val bytes =
     for {
@@ -83,7 +74,6 @@ object GroupTest
   // the JS implementation doesn't support Blosc compression (yet…), so we test it writing using zlib, and verify it
   // against a zlib-specific "expected" path
   val `grouptest.zarr` = resource("grouptest.zarr" js_? "grouptest-zlib.zarr")
-  val     `mixed.zarr` = resource(    "mixed.zarr" js_?     "mixed-zlib.zarr")
 
   implicit val compressor = Blosc() js_? ZLib()
 
@@ -145,6 +135,8 @@ object GroupTest
         // NOTE: skip this test in JS until it supports Blosc, or until I factor this test so that the compressors below
         // use zlib instead of blosc on JS (that will interfere with the API I'm trying to exercise here, so it's not
         // clear it's worth it).
+
+        val `mixed.zarr` = resource("mixed.zarr" js_? "mixed-zlib.zarr")
 
         import lasersonlab.zarr.Array
         import org.lasersonlab.zarr.Compressor.Blosc

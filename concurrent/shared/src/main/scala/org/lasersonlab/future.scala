@@ -4,7 +4,8 @@ import java.lang.System.err
 
 import lasersonlab.future.F
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Await, ExecutionContext }
+import scala.concurrent.duration.Duration
 import scala.util.Failure
 
 object future {
@@ -17,7 +18,9 @@ object future {
         }
       f
     }
-    def logError(implicit ec: ExecutionContext): F[T] = onError(err.println(_))
+    def   logError(implicit ec: ExecutionContext): F[T] = onError { err.println(_) }
+    def throwError(implicit ec: ExecutionContext): F[T] = onError { throw _ }
+    def await(implicit duration: Duration): T = Await.result(f, duration)
   }
   trait syntax {
     @inline implicit def makeFutureOps[T](f: F[T]): Ops[T] = Ops(f)

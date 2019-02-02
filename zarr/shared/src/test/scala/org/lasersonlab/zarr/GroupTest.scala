@@ -21,15 +21,16 @@ object GroupTest
   import DataType._
 
   // set this to `true` to overwrite the existing "expected" data in src/test/resources
-  val writeNewExpectedData = false
+  val writeNewExpectedData = true
 
-  val resourceDirectory =
-    (
-      Local.cwd.parent js_?
-      (Local.cwd / "zarr")
-    ) / "shared" / "src" / "test" / "resources"
-
-  override lazy val resourceDirectories: List[Local] = resourceDirectory :: Nil
+  // TODO: can remove thx to sourcecode.File?
+//  val resourceDirectory =
+//    (
+//      Local.cwd.parent js_?
+//      (Local.cwd / "zarr")
+//    ) / "shared" / "src" / "test" / "resources"
+//
+//  override lazy val resourceDirectories: List[Local] = resourceDirectory :: Nil
 
   val bytes =
     for {
@@ -81,9 +82,9 @@ object GroupTest
 
   // the JS implementation doesn't support Blosc compression (yet…), so we test it writing using zlib, and verify it
   // against a zlib-specific "expected" path
-  val `grouptest.zarr` = resourceDirectory / ("grouptest.zarr" js_? "grouptest-zlib.zarr")
-  val `mixed.zarr` = resourceDirectory / ("mixed.zarr" js_? "mixed-zlib.zarr")
-  println(s"grouptest.zarr: ${`grouptest.zarr`}")
+  val `grouptest.zarr` = resource("grouptest.zarr" js_? "grouptest-zlib.zarr")
+  val     `mixed.zarr` = resource(    "mixed.zarr" js_?     "mixed-zlib.zarr")
+
   implicit val compressor = Blosc() js_? ZLib()
 
   import scala.Array  // needed until next release of utest: https://github.com/lihaoyi/utest/pull/186/files#r247263418
@@ -180,6 +181,7 @@ object GroupTest
                   Array(10 :: ⊥)(i4s)
                 },
                 numbers = {
+                  import z.compress.-
                   implicit val short_> = I16(z.order.>)
                   implicit val  long_> = I64(z.order.>)
                   Array(

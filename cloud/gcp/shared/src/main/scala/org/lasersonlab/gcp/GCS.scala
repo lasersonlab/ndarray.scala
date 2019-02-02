@@ -3,6 +3,7 @@ package org.lasersonlab.gcp
 import java.net.URI
 
 import cats.implicits._
+import org.lasersonlab.gcp.Config.implicits._
 import org.lasersonlab.gcp.googleapis.projects.UserProject
 import org.lasersonlab.gcp.googleapis.storage
 import org.lasersonlab.gcp.googleapis.storage.{ Objects, Prefix }

@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 
 import cats.{ Eval, FlatMap, Foldable, Functor, Semigroupal }
 import cats.implicits._
-import hammerlab.option._
+import hammerlab.opt._
 import org.lasersonlab.io.FileNotFoundException
 import org.lasersonlab.ndarray.ArrayLike
 import org.lasersonlab.slist.{ Scannable, Zip }
@@ -38,7 +38,7 @@ case class Chunk[
         size:        Int     ,
      strides:     ShapeT[Idx],
   compressor: Compressor     ,
-    sizeHint:        Opt[Int]
+    sizeHint:        ?[Int]
 )(
   implicit
   val dtype: DataType[T]
@@ -127,7 +127,7 @@ object Chunk {
          shape: ShapeT[Idx],
            idx: ShapeT[Idx],
     compressor: Compressor,
-      sizeHint: Opt[Int] = None
+      sizeHint: ?[Int] = None
   )(
     implicit ec: ExecutionContext
   ):

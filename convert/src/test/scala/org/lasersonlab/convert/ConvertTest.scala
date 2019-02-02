@@ -1,51 +1,64 @@
 package org.lasersonlab.convert
 
 import cats.implicits._
-import lasersonlab.zarr._
+import lasersonlab.zarr.{ Array ⇒ _, _ }  // work-around for https://github.com/lihaoyi/utest/pull/186/files#r247263418
+import org.hammerlab.cli.base.app.Arg
+import org.lasersonlab.test.future.Assert
+import org.lasersonlab.uri.Local
 import org.lasersonlab.zarr
-import org.lasersonlab.zarr.cmp.Cmp
+import org.lasersonlab.zarr.Dimension
 import org.lasersonlab.zarr.io.Load
-import org.lasersonlab.zarr.{ Dimension, HasGetOps }
+import utest._
 
-class ConvertTest
-  extends hammerlab.test.Suite
-     with HasGetOps
+object ConvertTest
+  extends lasersonlab.Suite
      with Load.syntax
      with zarr.cmp.all
-     with Cmp.syntax {
+     with Assert.syntax
+{
+  println(s"file: $file, cwd: ${Local.cwd}")
 
-  test("hdf5 conversion") {
-    val hdf5 = resource("hgmm_100_raw_gene_bc_matrices_h5.h5")
+  val tests = Tests {
+    'hdf5 - {
+      import lasersonlab.zarr.Array
+      val hdf5 = resource("hgmm_100_raw_gene_bc_matrices_h5.h5")
 
-    val  `2m-path` = tmpPath()
-    val `64m-path` = tmpPath()
+      val  `2m-path` = tmpPath()
+      val `64m-path` = tmpPath()
 
-    Main.main(            hdf5, `64m-path`)
-    Main.main("-c", "2m", hdf5,  `2m-path`)
+      ()
+      implicit def pathToArg(path: Path): Arg = Arg(path.toString)
 
-    val  `2m` =  `2m-path`.load[Group] !
-    val `64m` = `64m-path`.load[Group] !
+      Main.main(            "-t", "2", hdf5, `64m-path`)
+      Main.main("-c", "2m", "-t", "2", hdf5,  `2m-path`)
 
-    val barcodes = (`2m` / 'hg19).→[String]('barcodes)
-    ==(
-      barcodes.shape,
-      List(
-        Dimension.int(
-          737280,
-          116508
-        )
-      )
-    )
+      for {
+         m2 ←  `2m-path`.load[Group]
+        m64 ← `64m-path`.load[Group]
+        barcodes = (m2 / 'hg19).→[String]('barcodes)
+        _ ←
+           ==(
+             barcodes.shape,
+             List(
+               Dimension.int(
+                 737280,
+                 116508
+               )
+             )
+           )
+        _ ← {
+          import dimensions.ignoreChunks
+          ==(m2, m64)
+        }
 
-    {
-      import dimensions.ignoreChunks
-      eqv(`2m`, `64m`)
+         expectedM2 ← resource("hgmm_100_raw_gene_bc_matrices.10x.2m.zarr" ).load[Group]
+        expectedM64 ← resource("hgmm_100_raw_gene_bc_matrices.10x.64m.zarr").load[Group]
+
+        _ ← ==( m2,  expectedM2)
+        _ ← ==(m64, expectedM64)
+
+      } yield
+        ()
     }
-
-    val  `2m-expected` = resource("hgmm_100_raw_gene_bc_matrices.10x.2m.zarr" ).load[Group] !
-    val `64m-expected` = resource("hgmm_100_raw_gene_bc_matrices.10x.64m.zarr").load[Group] !
-
-    eqv( `2m`,  `2m-expected`)
-    eqv(`64m`, `64m-expected`)
   }
 }

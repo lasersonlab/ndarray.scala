@@ -1,16 +1,18 @@
 package org.lasersonlab.zlib
 
+import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.typedarray._
 
-case class Deflater(level: Int = 5) {
+case class Deflater(level: Int = -1) {
   import Deflater.pako
   def apply(in: Array[Byte]): Array[Byte] = {
     val buffer =
       TypedArrayBuffer.wrap(
         pako
           .deflate(
-            new Uint8Array(in.toJSArray)
+            new Uint8Array(in.toJSArray),
+            js.Dictionary("level" → level)
           )
           .asInstanceOf[Uint8Array]
           .buffer

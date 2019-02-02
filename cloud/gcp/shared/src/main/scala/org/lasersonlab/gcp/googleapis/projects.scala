@@ -3,9 +3,11 @@ package org.lasersonlab.gcp.googleapis
 import com.softwaremill.sttp._
 import io.circe.generic.auto._
 import io.circe.generic.extras._
-import org.lasersonlab.uri._
+import org.lasersonlab.gcp.Config.implicits._
 import org.lasersonlab.gcp._
 import org.lasersonlab.gcp.googleapis.storage.Bucket
+import org.lasersonlab.uri._
+import org.lasersonlab.uri.http.Config.implicits._
 
 // Need this to take precedence over Encoder.encodeIterable
 import org.lasersonlab.gcp.googleapis.Paged.pagedEncoder

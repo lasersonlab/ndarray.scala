@@ -11,26 +11,26 @@ import circe._
 import circe.auto._
 import caseapp.core.Error.UnrecognizedValue
 import caseapp.core.argparser.{ ArgParser, SimpleArgParser }
-import hammerlab.option._
+import hammerlab.opt._, std._
+import lasersonlab.threads._
 import org.blosc.JBlosc
 import org.blosc.JBlosc._
 import org.lasersonlab.zlib.{ Deflater, Inflater }
 import shapeless.the
-import Runtime.getRuntime
 
 import org.hammerlab.shapeless.instances.InstanceMap
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 sealed trait Compressor {
-  def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]]
+  def apply(path: Path, sizeHint: ?[Int] = - )(implicit ec: ExecutionContext): F[Arr[Byte]]
   def compress(in: Arr[Byte], itemsize: Int): Arr[Byte]
 }
 object Compressor {
 
   case class ZLib(level: Int = ZLib.DEFAULT_LEVEL)
     extends Compressor {
-    def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]] =
+    def apply(path: Path, sizeHint: ?[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]] =
       path.read.map(Inflater(_)).recoverWith {
         case e ⇒ Future.failed(new IOException(s"Failed to inflate: $path", e))
       }
@@ -39,7 +39,7 @@ object Compressor {
     override def compress(in: Arr[Byte], itemsize: Int): Arr[Byte] = deflater(in)
   }
   object ZLib {
-    val DEFAULT_LEVEL = 6
+    val DEFAULT_LEVEL = -1
     val regex = """zlib(?:\((\d)\))""".r
     object parse {
       def unapply(str: String): Option[ZLib] =
@@ -52,16 +52,11 @@ object Compressor {
 
   case object None
     extends Compressor {
-    def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]] = path.read
+    def apply(path: Path, sizeHint: ?[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]] = path.read
     override def compress(in: Arr[Byte], itemsize: Int): Arr[Byte] = in
   }
 
   import Blosc._, CName._
-
-  case class NumThreads(value: Int)
-  object NumThreads {
-    implicit def unwrap(n: NumThreads): Int = n.value
-  }
 
   case class Blosc(
         cname: CName = lz4,
@@ -69,19 +64,13 @@ object Compressor {
       shuffle:   Int = 1,
     blocksize:   Int = 0
   )(
-    implicit numThreads: NumThreads =
-      NumThreads(
-        math.min(
-          8,
-          getRuntime.availableProcessors
-        )
-      )
+    implicit numThreads: NumThreads
   )
   extends Compressor {
 
     val MAX_BUFFER_SIZE = (1 << 31) - 1
 
-    def apply(path: Path, sizeHint: Opt[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]] =
+    def apply(path: Path, sizeHint: ?[Int] = Non)(implicit ec: ExecutionContext): F[Arr[Byte]] =
       path.read.map {
         arr ⇒
           val size = arr.length

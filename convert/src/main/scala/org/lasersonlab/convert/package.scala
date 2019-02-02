@@ -1,14 +1,13 @@
 package org.lasersonlab
 
+import _root_.io.circe.Json
 import cats.implicits._
 import com.tom_e_white.hdf5_java_cloud.NioReadOnlyRandomAccessFile
 import hammerlab.bytes._
 import hammerlab.indent.spaces2
 import hammerlab.lines._
 import hammerlab.math.utils._
-import hammerlab.path.Path
-import io.circe.Json
-import lasersonlab.zarr.Group
+import lasersonlab.zarr.{ Group, Path }
 import org.lasersonlab.netcdf.{ Attribute, Variable }
 import org.lasersonlab.zarr.Order.C
 import org.lasersonlab.zarr.dtype.DataType
@@ -26,7 +25,7 @@ package object convert
 {
   implicit def loadHDF5(path: Path): netcdf.Group =
     NetcdfFile.open(
-      new NioReadOnlyRandomAccessFile(path),
+      new NioReadOnlyRandomAccessFile(path.uri),
       path.toString,
       null,
       null
@@ -73,7 +72,7 @@ package object convert
       Some(
         Attrs {
           import Attribute._
-          import io.circe.Encoder.encodeSeq
+          import _root_.io.circe.Encoder.encodeSeq
           Json.obj(
             attributes
               .map {
@@ -225,7 +224,9 @@ package object convert
         new zarr.Array.Aux[
           List,
           Int,
-          Vector, // we're only chunking by "row" / major-axis; 1-D array of chunks is fine
+          // we're only chunking by "row" / major-axis; 1-D array of chunks is fine
+          // TODO: support different chunking strategies
+          Vector,
           convert.Chunk,
           tpe.T
         ] {
@@ -244,7 +245,7 @@ package object convert
                   val shape = rows :: shapeTail toArray
 
                   Chunk[T](
-                    data,
+                    Variable.copy(data),
                     start,
                     shape,
                     sectionShape

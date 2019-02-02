@@ -12,7 +12,10 @@ case class Config(
 )
 object Config {
   implicit def toExecutionContext(config: Config): ExecutionContext = config.ec
-  implicit def deriveExecutionContext(implicit config: Config): ExecutionContext = config.ec
+  trait implicits {
+    implicit def deriveExecutionContext(implicit config: Config): ExecutionContext = config.ec
+  }
+  object implicits extends implicits
   implicit def wrap(
     implicit
     ec: ExecutionContext,

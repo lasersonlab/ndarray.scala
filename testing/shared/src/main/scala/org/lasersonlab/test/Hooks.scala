@@ -1,24 +1,12 @@
 package org.lasersonlab.test
 
-import java.util.concurrent.Executor
-
 import cats.implicits._
+import lasersonlab.HasExecutionContext
 import lasersonlab.future.F
 import utest.TestSuite
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
-import ExecutionContext.fromExecutor
-
-trait HasExecutionContext {
-  implicit def ec: ExecutionContext
-  object threads {
-    implicit val single =
-      fromExecutor(
-        (task: Runnable) => task.run()
-      )
-  }
-}
 
 trait Befores {
   self: TestSuite ⇒

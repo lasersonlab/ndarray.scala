@@ -2,6 +2,7 @@ package org.lasersonlab.test
 
 import java.util.MissingResourceException
 
+import lasersonlab.HasExecutionContext
 import org.lasersonlab.uri.Local
 
 trait Resources

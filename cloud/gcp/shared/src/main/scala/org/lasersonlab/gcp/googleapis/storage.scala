@@ -2,9 +2,11 @@ package org.lasersonlab.gcp.googleapis
 
 import com.softwaremill.sttp._
 import io.circe.generic.auto._
-import org.lasersonlab.gcp.googleapis.projects.{ Project, UserProject }
+import org.lasersonlab.gcp.Config.implicits._
 import org.lasersonlab.gcp._
+import org.lasersonlab.gcp.googleapis.projects.{ Project, UserProject }
 import org.lasersonlab.uri._
+import org.lasersonlab.uri.http.Config.implicits._
 
 object storage {
   val base = uri"${googleapis.base}/storage/v1"
@@ -116,7 +118,7 @@ object storage {
           copy(
             contents =
               Some(
-                contents.get(path)(Δ)
+                contents.get(h, t)(Δ)
               )
           )
       }
@@ -176,26 +178,23 @@ object storage {
   ) {
     def dirs: Vector[Dir] = prefixes.getOrElse(Vector())
     def objs: Vector[Obj] =    items.getOrElse(Vector())
-    def apply(path: List[String])(Δ: Δ[Dir]): Contents =
-      path match {
-        case h :: t ⇒
-          copy(
-            prefixes =
-              Some(
-                prefixes
-                  .get
-                  .foldLeft { Vector[Dir]() } {
-                    (prefixes, next) ⇒
-                      prefixes :+ (
-                        if (next.path.last == h)
-                          next(t)(Δ)
-                        else
-                          next
-                      )
-                  }
-              )
+    def apply(h: String, t: List[String])(Δ: Δ[Dir]): Contents =
+      copy(
+        prefixes =
+          Some(
+            prefixes
+              .get
+              .foldLeft { Vector[Dir]() } {
+                (prefixes, next) ⇒
+                  prefixes :+ (
+                    if (next.path.last == h)
+                      next(t)(Δ)
+                    else
+                      next
+                  )
+              }
           )
-      }
+      )
   }
   object Contents {
     def apply(objects: Objects)(implicit prefix: Prefix): Contents =
@@ -246,9 +245,6 @@ object storage {
           _ ⇒ None
         }
     }
-
-    def apply(path: List[String])(Δ: Δ[Dir]): Bucket =
-      copy(contents = Some(this.contents.get(path)(Δ)))
   }
   object Bucket extends Kinded("storage#bucket") {
     implicit val decoder = kindDecoder[Bucket]

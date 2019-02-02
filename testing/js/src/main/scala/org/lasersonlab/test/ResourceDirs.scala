@@ -1,10 +1,14 @@
 package org.lasersonlab.test
 
+import lasersonlab.HasExecutionContext
 import org.lasersonlab.uri.Local
 
 trait ResourceDirs
   extends HasExecutionContext {
+  implicit def file: sourcecode.File
+
   val blacklist = Set(".git", ".idea")
+
   def resourceDirs(
     dir: Local = Local.cwd,
     maxDepth: Int = 2

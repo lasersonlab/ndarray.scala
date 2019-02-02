@@ -4,11 +4,11 @@ import java.net.URI
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystemProvider._
 import com.google.cloud.storage.contrib.nio._
-import hammerlab.option._
+import hammerlab.opt._
 import hammerlab.reflect._
 
 trait gcp {
-  def userProject(userProject: Opt[String]): Unit =
+  def userProject(userProject: ?[String]): Unit =
     for {
       userProject ← userProject
     } {

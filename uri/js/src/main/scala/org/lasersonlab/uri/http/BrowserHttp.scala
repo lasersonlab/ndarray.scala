@@ -31,9 +31,9 @@ extends Uri()(httpConfig)
     request[Try[Long]]("HEAD") {
       _
         .getResponseHeader("Content-Length") match {
-        case null | "" ⇒ Failure(new IOException(s"No Content-Length header found in HEAD response for $uri"))
-        case s ⇒ Try { s.toLong }
-      }
+          case null | "" ⇒ Failure(new IOException(s"No Content-Length header found in HEAD response for $uri"))
+          case s ⇒ Try { s.toLong }
+        }
     }
 
   private def request[A](method: String, headers: (String, String)*)(f: XMLHttpRequest ⇒ A): F[A] = {

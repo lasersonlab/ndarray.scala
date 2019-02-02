@@ -1,6 +1,5 @@
 package lasersonlab
 
-import cats.effect.IO
 import org.lasersonlab.uri.Uri
 import org.lasersonlab.zarr.{ Compressor, utils }
 import org.lasersonlab.zarr.dtype.ByteOrder._
@@ -11,6 +10,7 @@ import scala.concurrent.Future
 object zarr
   extends z.int
      with hammerlab.bytes.syntax
+     with lasersonlab.future
      with lasersonlab.slist
      with z.io.syntax
      with utils.slist.Codecs {
@@ -25,7 +25,8 @@ object zarr
     implicit val zlib = Compressor.ZLib()
   }
 
-  type F[T] = Future[T]
+  type Bytes = hammerlab.bytes.Bytes
+
   type Path = Uri
    val Path = Uri
 

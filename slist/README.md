@@ -5,12 +5,48 @@ Type-level lists with a single element type; named after "same-element [`HList`]
 
 <table>
 <thead>
-<tr><td rowspan="2" colspan="2"></td><td colspan="2" align="center"><b>List length</b></td></tr>
-<tr><td><b>Type-level</b></td><td><b>Value-level</b></td></tr>
+<tr>
+  <td rowspan="2" colspan="2">
+  </td>
+  <td colspan="2" align="center">
+    <b>List length</b>
+  </td>
+</tr>
+<tr>
+  <td align="center">
+    <b>Type-level</b>
+  </td>
+  <td align="center">
+    <b>Value-level</b>
+  </td>
+</tr>
 </thead>
 <tbody>
-<tr><td rowspan="2"><b>Element types</b></td><td><b>Homogeneous</b></td><td align="center">SLists: <code>`2`[T]</code>,  <code>`3`[T]</code>, etc.😍</td><td align="center"><code>List[T]</code> 🤷🏼‍♂️</td></tr>
-<tr><td><b>Heterogeneous</b></td><td align="center"><code>HList</code> 👍🏼</td><td align="center"><code>List[Any]</code> 😱</td></tr>
+<tr>
+  <td rowspan="2">
+    <b>Element types</b>
+  </td>
+  <td>
+    <b>Homogeneous</b>
+  </td>
+  <td align="center">
+    SLists: <br/><code>`2`[T]</code>,  <code>`3`[T]</code>, <br/> etc. 😍
+  </td>
+  <td align="center">
+    <code>List[T]</code> 🤷🏼‍♂️
+  </td>
+</tr>
+<tr>
+  <td>
+    <b>Heterogeneous</b>
+  </td>
+  <td align="center">
+    <code>HList</code> 👍🏼
+  </td>
+  <td align="center">
+    <code>List[Any]</code> 😱
+  </td>
+</tr>
 </tbody>
 </table>
 

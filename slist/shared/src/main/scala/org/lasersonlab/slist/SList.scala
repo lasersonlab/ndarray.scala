@@ -53,6 +53,8 @@ object SList {
   }
   val   ⊥     = `0`
   type  ⊥     = `0`.type
+  val   ⟘     = `0`
+  type  ⟘     = `0`.type
   type `0`[T] = `0`.type  // "Const" type-constructor
 
   // Unroll instances manually 😱

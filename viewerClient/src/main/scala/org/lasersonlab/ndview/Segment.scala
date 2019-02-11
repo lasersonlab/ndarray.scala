@@ -6,6 +6,8 @@ package org.lasersonlab.ndview
  *
  * Split a [[String]] into such"segments" for a more intuitive sort-order than lexicographic, e.g. in the presence of
  * auto-incrementing, non-zero-padded integers in filenames.
+ *
+ * TODO: factor out to an file/IO-focused module
  */
 sealed trait Segment
 

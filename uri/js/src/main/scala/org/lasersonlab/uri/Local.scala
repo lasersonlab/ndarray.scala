@@ -47,6 +47,7 @@ extends Uri {
     val parent = this.parent
 
     if (!parent.existsSync) {
+      // Doesn't work properly on Node <10! https://stackoverflow.com/a/40686853/544236
       fs.mkdirSync(
         parent.str,
         Dictionary("recursive" → true)

@@ -14,6 +14,7 @@ import org.lasersonlab.gcp.googleapis.projects.Project
 import org.lasersonlab.gcp.googleapis.storage.Bucket
 import org.lasersonlab.ndview.model.Login
 import org.lasersonlab.ndview.{ ClosedFolders, UpdateBucket }
+import org.lasersonlab.uri.http.Config.implicits._
 
 object Buckets
 extends SignIn.syntax

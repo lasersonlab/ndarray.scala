@@ -20,6 +20,7 @@ trait threads {
     implicit val `1` = fromExecutor((task: Runnable) ⇒ task.run())
     implicit val `2` = apply(2)
     implicit val global = ExecutionContext.Implicits.global
+    implicit val default = global
   }
 
   case class NumThreads(value: Int)

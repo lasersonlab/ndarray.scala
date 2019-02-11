@@ -54,6 +54,8 @@ public class NioReadOnlyRandomAccessFile extends RandomAccessFile {
     this.lastModified = Files.getLastModifiedTime(path).to(TimeUnit.MILLISECONDS);
   }
 
+  public URI getUri() { return uri; }
+
   @Override
   protected int read_(final long pos, final byte[] buffer, final int offset, final int length) {
     if (length < 0) {

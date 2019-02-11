@@ -23,7 +23,7 @@ import org.hammerlab.shapeless.instances.InstanceMap
 import scala.concurrent.{ ExecutionContext, Future }
 
 sealed trait Compressor {
-  def apply(path: Path, sizeHint: ?[Int] = - )(implicit ec: ExecutionContext): F[Arr[Byte]]
+  def apply(path: Path, sizeHint: ?[Int] = None)(implicit ec: ExecutionContext): F[Arr[Byte]]
   def compress(in: Arr[Byte], itemsize: Int): Arr[Byte]
 }
 object Compressor {

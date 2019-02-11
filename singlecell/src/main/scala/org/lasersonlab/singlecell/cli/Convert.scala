@@ -5,7 +5,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import org.lasersonlab.singlecell.hdf5.Parquet
 
-object Main {
+object Convert {
    def main(args: Array[String]): Unit = {
      implicit val conf = new SparkConf
      implicit val spark =

@@ -178,19 +178,39 @@ object storage {
   ) {
     def dirs: Vector[Dir] = prefixes.getOrElse(Vector())
     def objs: Vector[Obj] =    items.getOrElse(Vector())
+
+    // TODO: the arms-length path-unapplication here is a bit clumsy, perhaps encode Dir.path as a NonEmptyList
     def apply(h: String, t: List[String])(Δ: Δ[Dir]): Contents =
       copy(
         prefixes =
           Some(
             prefixes
               .get
-              .foldLeft { Vector[Dir]() } {
-                (prefixes, next) ⇒
-                  prefixes :+ (
-                    if (next.path.last == h)
-                      next(t)(Δ)
-                    else
-                      next
+              .foldLeft {
+                (
+                  Vector[Dir](),
+                  Vector[Dir]()
+                )
+              } {
+                case ((added, prefixes), next) ⇒
+                  if (next.path.last == h) {
+                    val newPrefix = next(t)(Δ)
+                    (
+                      added :+ newPrefix,
+                      prefixes :+ newPrefix
+                    )
+                  }
+                  else
+                    (
+                      added,
+                      prefixes :+ next
+                    )
+              } match {
+                // make sure exactly one prefix was updated
+                case (Vector(_), prefixes) ⇒ prefixes
+                case (newPrefixes, _) ⇒
+                  throw new IllegalStateException(
+                    s"${newPrefixes.length} dirs were updated with path ${h :: t mkString "/"}"
                   )
               }
           )
@@ -228,9 +248,8 @@ object storage {
       userProject: ?[UserProject] = None
     ):
       ?[F[Δ[Bucket]]] =
-    {
       contents
-      .fold {
+        .fold {
           Option(
             Http(
               uri"$uri/o?delimiter=${"/"}&userProject=$userProject"
@@ -244,7 +263,15 @@ object storage {
         } {
           _ ⇒ None
         }
-    }
+
+    def apply(path: List[String])(Δ: Δ[Dir]): Bucket =
+      path match {
+        case h :: t ⇒ copy(contents = Some(this.contents.get(h, t)(Δ)))
+        case Nil ⇒
+          throw new IllegalStateException(
+            s"Can't update empty path in bucket $bucket"
+          )
+      }
   }
   object Bucket extends Kinded("storage#bucket") {
     implicit val decoder = kindDecoder[Bucket]

@@ -17,7 +17,7 @@ import org.lasersonlab.gcp.googleapis.projects.Project
 import org.lasersonlab.gcp.googleapis.storage.{ Contents, Obj }
 import org.lasersonlab.ndview.model.Login
 import org.lasersonlab.ndview.{ ClosedFolders, Segment, UpdateDir }
-import Entry.`💾`
+import org.lasersonlab.uri.http.Config.implicits._
 
 object Items {
   case class Props(

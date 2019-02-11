@@ -26,7 +26,6 @@ object ConvertTest
       val  `2m-path` = tmpPath()
       val `64m-path` = tmpPath()
 
-      ()
       implicit def pathToArg(path: Path): Arg = Arg(path.toString)
 
       // TODO: capture + verify the stdout from these applications (which contains verbose printlns of the groups'

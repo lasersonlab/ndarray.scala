@@ -53,28 +53,6 @@ extends Top {
     Cmp.Aux[After, c.Diff] = c.map
 }
 
-//  trait CanEqSuperType
-//extends CanEqConv {
-//  implicit def forSupertype[L, R, R1 >: R](
-//    implicit
-//    c: Lazy[CanEq[L, R1]],
-//    evl: R1 =:!= R
-//  ):
-//    Aux[L, R, c.value.Diff] =
-//    c.value.map(l ⇒ l, r ⇒ r)
-//}
-//
-//  trait CanEqSubType
-//extends CanEqSuperType {
-//  implicit def forSubtype[L, R, L1 >: L](
-//    implicit
-//    c: Lazy[CanEq[L1, R]],
-//    evl: L1 =:!= L
-//  ):
-//    Aux[L, R, c.value.Diff] =
-//    c.value.map(l ⇒ l, r ⇒ r)
-//}
-
   trait FromHammerLab
 extends WithConversion
 {

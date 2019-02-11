@@ -15,6 +15,10 @@ import slogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
 
+// TODO: add (JVM-only) NIO Path implementation
+// TODO: move block-caching to an implicit ctx-param that LRU-caches blocks across paths, and can centralize logic
+//  around pre-fetching
+// TODO: generalize F[_] type from [[Future]], apply to individual methods
 abstract class Uri()(implicit val ec: ExecutionContext)
   extends LazyLogging
      with lasersonlab.future {

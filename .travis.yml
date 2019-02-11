@@ -4,15 +4,16 @@ jdk:
 - oraclejdk8
 
 scala:
-- 2.11.12
-- 2.12.7
+- 2.12.8
 
 before_install:
 - export LD_LIBRARY_PATH=$HOME/lib
 - "./.travis/setup.sh"
 
 script:
-- sbt ++$TRAVIS_SCALA_VERSION clean coverageTest
+- sbt                     clean bloscJVM/coverageTest circe-utilsJVM/coverageTest cloudJVM/coverageTest concurrentJVM/coverageTest convert/coverageTest ndarrayJVM/coverageTest netcdf/coverageTest singlecell/coverageTest slistJVM/coverageTest testingJVM/coverageTest uriJVM/coverageTest utils/coverageTest xscalaJVM/coverageTest zarrJVM/coverageTest
+- sbt -Dcoveralls.disable clean bloscJS/test          circe-utilsJS/test          cloudJS/test          concurrentJS/test                               ndarrayJS/test                                                      slistJS/test          testingJS/test          uriJS/test                             xscalaJS/test          zarrJS/test
+
 
 cache:
   directories:
@@ -28,10 +29,17 @@ after_success:
 - curl -s https://codecov.io/bash > .codecov
 - sed -i -e 's/TRAVIS_.*_VERSION/^TRAVIS_.*_VERSION=/' .codecov
 - chmod +x .codecov
-- |
-  if [[ $TRAVIS_SCALA_VERSION == 2.12.7 ]]; then ./.codecov; fi
+- ./.codecov
 
 before_cache:
 # Tricks to avoid unnecessary cache updates
 - find $HOME/.ivy2 -name "ivydata-*.properties" -delete
 - find $HOME/.sbt -name "*.lock" -delete
+
+install:
+  - . $HOME/.nvm/nvm.sh
+  - nvm install stable
+  - nvm use stable
+  - npm install
+  - npm install request jsdom
+  - node --version

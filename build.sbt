@@ -398,18 +398,18 @@ lazy val `zarr-x` = zarr.x
 
 lazy val all =
   root(
-    `blosc-x`,
-    `circe-utils-x`,
-    `cloud-x`,
-    `concurrent-x`,
-     convert,
-    `ndarray-x`,
-     netcdf,
-     singlecell,
-    `slist-x`,
-    `testing-x`,
-    `uri-x`,
-     utils,
-    `xscala-x`,
-    `zarr-x`
+          `blosc-x` ,
+    `circe-utils-x` ,
+          `cloud-x` ,
+     `concurrent-x` ,
+         convert    ,
+        `ndarray-x` ,
+          netcdf    ,
+      singlecell    ,
+          `slist-x` ,
+        `testing-x` ,
+            `uri-x` ,
+           utils    ,
+         `xscala-x` ,
+           `zarr-x` ,
   )

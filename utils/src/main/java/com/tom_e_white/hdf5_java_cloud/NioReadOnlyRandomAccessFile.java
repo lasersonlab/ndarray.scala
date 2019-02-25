@@ -32,25 +32,29 @@ public class NioReadOnlyRandomAccessFile extends RandomAccessFile {
   private static final int DEFAULT_BUFFER_SIZE = 32 * 1024;
 
   private final Path path;
+  private final URI uri;
   private final CachingChannel<org.hammerlab.channel.SeekableByteChannel.ChannelByteChannel> cachingChannel;
   private final long lastModified;
 
   public NioReadOnlyRandomAccessFile(URI uri) throws IOException {
-    this(Paths.get(uri));
+    this(Paths.get(uri), uri, DEFAULT_BUFFER_SIZE);
   }
 
   public NioReadOnlyRandomAccessFile(Path path) throws IOException {
-    this(path, DEFAULT_BUFFER_SIZE);
+    this(path, path.toUri(), DEFAULT_BUFFER_SIZE);
   }
 
-  public NioReadOnlyRandomAccessFile(Path path, int bufferSize) throws IOException {
+  public NioReadOnlyRandomAccessFile(Path path, URI uri, int bufferSize) throws IOException {
     super(bufferSize);
     this.path = path;
+    this.uri = uri;
     SeekableByteChannel sbc = Files.newByteChannel(path);
     CachingChannel.Config config = new CachingChannel.Config(1 << 20, 2, 1 << 28);
     this.cachingChannel = CachingChannel$.MODULE$.makeCachingChannel(SeekableByteChannel$.MODULE$.makeChannelByteChannel(sbc), config);
     this.lastModified = Files.getLastModifiedTime(path).to(TimeUnit.MILLISECONDS);
   }
+
+  public URI getUri() { return uri; }
 
   @Override
   protected int read_(final long pos, final byte[] buffer, final int offset, final int length) {

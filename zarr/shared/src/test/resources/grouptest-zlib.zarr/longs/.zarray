@@ -1,0 +1,17 @@
+{
+    "shape": [
+        1000
+    ],
+    "chunks": [
+        100
+    ],
+    "compressor": {
+        "level": -1,
+        "id": "zlib"
+    },
+    "dtype": "<i8",
+    "order": "C",
+    "fill_value": null,
+    "zarr_format": 2,
+    "filters": null
+}

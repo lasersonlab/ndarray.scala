@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Cloud Viewer</title>
+  <style>
+    body {
+      margin: 10px;
+      font-size: 1.2em;
+      font-family: sans-serif;
+    }
+    select,button {
+      font-size: 1em;
+      margin-right: 0.5em;
+    }
+    .indent {
+      margin-left: 1.5em;
+    }
+    .state {
+      margin-top: 2em;
+    }
+    .json {
+      font-family: monospace;
+    }
+    .tree > .items {
+      padding-left: 0.3em;
+    }
+    .items .items {
+      padding-left: 1em;
+    }
+    .tree .icon {
+      position: relative;
+      top: 0.1em;
+      padding-right: 0.3em;
+    }
+    .dir > .entry > .name > .icon {
+      left: 0.1em;
+    }
+    .path {
+      font-size: 1.5em;
+      padding-bottom: 0.5em;
+      clear: both;
+      padding-top: 0.5em;
+    }
+    .path > .label {
+      font-weight: bold;
+      position: relative;
+      top: 0.05em;
+    }
+    .segment {
+      padding: 0 .3em;
+    }
+    .tree > h2 {
+      margin-top: 0.3em;
+      margin-bottom: 0.3em;
+    }
+    .tree .entry {
+      line-height: 1.3em;
+    }
+    div.thumbnail {
+      margin-bottom: 0.7em;
+      margin-right: 0.3em;
+      float: left;
+      width: 3.5em;
+      position: relative;
+      cursor: pointer;
+    }
+    .thumbnail {
+      float: left;
+    }
+    .thumbnail.active .avatar {
+      outline: 2px solid blue;
+      position: relative;
+    }
+    .thumbnails .add-login {
+      float: left;
+      width: 2.6em;
+      height: 2.6em;
+      text-align: center;
+      color: lightgrey;
+      border: 0.2em solid lightgrey;
+      border-radius: 30%;
+      margin-right: 0.5em;
+      cursor: pointer;
+    }
+    .thumbnails .add-login .plus {
+      font-size:2.6em;
+      font-family: monospace;
+    }
+    .thumbnail > .avatar {
+      width: 3em;
+      height: 3em;
+    }
+    .thumbnail > .insert {
+      width: 1.3em;
+      position: absolute;
+      right: 0;
+    }
+    .thumbnail > .domain {
+      bottom: -0.3em;
+      background: white;
+      border: 1px solid grey;
+      overflow: hidden;
+      border-radius: 40%;
+    }
+    .thumbnail > .auth {
+      top: -0.3em;
+    }
+    .clear {
+      background-image: url(img/clear.jpg);
+      float: left;
+      width: 3em;
+      height: 3em;
+      background-size: contain;
+      opacity: 0.2;
+      margin-right: 0.3em;
+      cursor: pointer;
+    }
+    .controls .project {
+      clear: both;
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/javascript" src="./target/scala-2.12/scalajs-bundler/main/viewerclient-fastopt-library.js"></script>
+<script type="text/javascript" src="./target/scala-2.12/scalajs-bundler/main/viewerclient-fastopt-loader.js"></script>
+<script type="text/javascript" src="./target/scala-2.12/scalajs-bundler/main/viewerclient-fastopt.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "zarr",
+  "version": "0.1.0",
+  "description": "chunked, compressed, N-dimensional arrays",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lasersonlab/ndarray.scala.git"
+  },
+  "author": "Ryan Williams",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/lasersonlab/ndarray.scala/issues"
+  },
+  "homepage": "https://github.com/lasersonlab/ndarray.scala#readme",
+  "dependencies": {
+    "pako": "^1.0.7"
+  },
+  "devDependencies": {
+    "source-map-support": "^0.5.10"
+  }
+}

@@ -14,6 +14,5 @@ object Dimension {
           case Some(name) ⇒ show"($name: $size)"
           case _ ⇒ show"$size"
         }
-
     }
 }

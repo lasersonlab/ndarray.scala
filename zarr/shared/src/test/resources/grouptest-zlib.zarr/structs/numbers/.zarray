@@ -1,0 +1,40 @@
+{
+    "shape": [
+        10,
+        10
+    ],
+    "chunks": [
+        2,
+        5
+    ],
+    "compressor": {
+        "level": -1,
+        "id": "zlib"
+    },
+    "dtype": [
+        [
+            "short",
+            "<i2"
+        ],
+        [
+            "int",
+            "<i4"
+        ],
+        [
+            "long",
+            "<i8"
+        ],
+        [
+            "float",
+            "<f4"
+        ],
+        [
+            "double",
+            "<f8"
+        ]
+    ],
+    "order": "C",
+    "fill_value": null,
+    "zarr_format": 2,
+    "filters": null
+}

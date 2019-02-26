@@ -5,7 +5,7 @@ import java.util.Random
 import hammerlab.scalajs._
 import lasersonlab.{ zarr ⇒ z }
 import org.lasersonlab.test.future.Assert
-import org.lasersonlab.uri.Local
+import org.lasersonlab.files.Local
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.Compressor.{ Blosc, ZLib }
 import org.lasersonlab.zarr.dtype.DataType

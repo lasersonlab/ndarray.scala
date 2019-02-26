@@ -1,7 +1,7 @@
 package org.lasersonlab.gcp
 
 import org.lasersonlab.gcp.oauth.{ Auth, Params }
-import org.lasersonlab.uri.http
+import org.lasersonlab.files.http
 
 case class Config(auth: Auth, httpConfig: http.Config)
 object Config {

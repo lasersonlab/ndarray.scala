@@ -3,7 +3,7 @@ package org.lasersonlab
 import _root_.io.circe.generic.AutoDerivation
 import _root_.io.circe.{ Parser, ParsingFailure, Printer }
 import org.lasersonlab.ndarray.{ Arithmetic, ArrayLike }
-import org.lasersonlab.uri.Uri
+import org.lasersonlab.files.Uri
 import org.lasersonlab.zarr.utils.Idx
 
 import scala.concurrent.Future

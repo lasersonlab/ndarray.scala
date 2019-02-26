@@ -1,6 +1,6 @@
 package lasersonlab
 
-import org.lasersonlab.uri.Uri
+import org.lasersonlab.files.Uri
 import org.lasersonlab.zarr.{ Compressor, utils }
 import org.lasersonlab.zarr.dtype.ByteOrder._
 import org.lasersonlab.{ zarr ⇒ z }

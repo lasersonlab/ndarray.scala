@@ -6,8 +6,8 @@ import org.lasersonlab.gcp.googleapis
 import org.lasersonlab.gcp.googleapis.User
 import org.lasersonlab.gcp.googleapis.projects.Project
 import org.lasersonlab.gcp.oauth.Auth
-import org.lasersonlab.uri._
-import org.lasersonlab.uri.http.Config.implicits._
+import org.lasersonlab.files._
+import org.lasersonlab.files.http.Config.implicits._
 
 case class Login(
   auth: Auth,

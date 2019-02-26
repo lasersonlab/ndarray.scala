@@ -4,7 +4,7 @@ import cats.implicits._
 import lasersonlab.zarr.{ Array ⇒ _, _ }  // work-around for https://github.com/lihaoyi/utest/pull/186/files#r247263418
 import org.hammerlab.cli.base.app.Arg
 import org.lasersonlab.test.future.Assert
-import org.lasersonlab.uri.Local
+import org.lasersonlab.files.Local
 import org.lasersonlab.zarr
 import org.lasersonlab.zarr.Dimension
 import org.lasersonlab.zarr.io.Load

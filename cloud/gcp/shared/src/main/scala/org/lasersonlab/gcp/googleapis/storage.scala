@@ -5,8 +5,8 @@ import io.circe.generic.auto._
 import org.lasersonlab.gcp.Config.implicits._
 import org.lasersonlab.gcp._
 import org.lasersonlab.gcp.googleapis.projects.{ Project, UserProject }
-import org.lasersonlab.uri._
-import org.lasersonlab.uri.http.Config.implicits._
+import org.lasersonlab.files._
+import org.lasersonlab.files.http.Config.implicits._
 
 object storage {
   val base = uri"${googleapis.base}/storage/v1"

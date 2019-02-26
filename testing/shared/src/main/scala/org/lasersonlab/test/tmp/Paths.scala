@@ -2,7 +2,7 @@ package org.lasersonlab.test.tmp
 
 import cats.implicits._
 import org.lasersonlab.test.{ AfterAlls, FuturizeHook }
-import org.lasersonlab.uri.Local
+import org.lasersonlab.files.Local
 import utest._
 
 import scala.collection.mutable.ArrayBuffer

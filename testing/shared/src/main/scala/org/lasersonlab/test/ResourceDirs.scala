@@ -4,7 +4,7 @@ import hammerlab.collection._
 import hammerlab.option._
 import hammerlab.scalajs._
 import lasersonlab.HasExecutionContext
-import org.lasersonlab.uri.Local
+import org.lasersonlab.files.Local
 
 trait ResourceDirs
   extends HasExecutionContext {

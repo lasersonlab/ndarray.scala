@@ -15,7 +15,7 @@ import org.lasersonlab.ndview.view.Page.pprint
 import org.lasersonlab.test.future.Assert
 import utest._
 import org.lasersonlab.circe.SingletonCodec._
-import org.lasersonlab.uri.Local
+import org.lasersonlab.files.Local
 
 import scala.concurrent.Future
 

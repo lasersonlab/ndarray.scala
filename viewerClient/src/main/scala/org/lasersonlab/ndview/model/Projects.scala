@@ -2,12 +2,12 @@ package org.lasersonlab.ndview.model
 
 import cats.implicits._
 import hammerlab.opt.dsl._
-import org.lasersonlab.uri._
+import org.lasersonlab.files._
 import org.lasersonlab.gcp
 import org.lasersonlab.gcp.Config.implicits._
 import org.lasersonlab.gcp.googleapis.Paged
 import org.lasersonlab.gcp.googleapis.projects.Project
-import org.lasersonlab.uri.http.Config.implicits._
+import org.lasersonlab.files.http.Config.implicits._
 
 case class Projects(
   projects : Paged[Project],

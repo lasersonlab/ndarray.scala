@@ -2,7 +2,7 @@ package org.lasersonlab.ndview.model
 
 import cats.implicits._
 import org.lasersonlab.gcp.googleapis.?
-import org.lasersonlab.uri._
+import org.lasersonlab.files._
 
 case class Logins(
   logins: Vector[Login] = Vector(),

@@ -1,7 +1,11 @@
-import hammerlab.math
+import hammerlab.{ math, types }
 import org.scalajs.jsenv.nodejs.NodeJSEnv
-import sbtbuildinfo.BuildInfoKeys.{ buildInfoObject, buildInfoPackage }
 import scalajs._
+
+val        cdm  = "org.lasersonlab.thredds" ^ "cdm" ^ "5.0.0"
+val concurrent  = "org.lasersonlab" ^^     "concurrent" ^ "0.1.0"
+val      files  = "org.lasersonlab" ^^ "portable-files" ^ "0.1.0"
+val   `gcp-nio` = "org.lasersonlab" ^ "google-cloud-nio" ^ "0.55.2-alpha"
 
 default(
   group("org.lasersonlab"),
@@ -60,12 +64,10 @@ lazy val gcp =
       subgroup("cloud"),
       dep(
         cats,
-
         circe,
         circe.generic,
-
+        files ,
         hammerlab.types,
-
         shapeless,
         sttp
       ),
@@ -78,12 +80,11 @@ lazy val gcp =
     )
     .jvmSettings(
       dep(
-        "org.lasersonlab" ^ "google-cloud-nio" ^ "0.55.2-alpha",
+        `gcp-nio`
       )
     )
     .dependsOn(
-      `circe-utils`,
-       uri
+      `circe-utils`
     )
 lazy val `gcp-x` = gcp.x
 
@@ -100,21 +101,12 @@ lazy val `circe-utils` =
     )
 lazy val `circe-utils-x` = `circe-utils`.x
 
-lazy val concurrent =
-  cross
-  .settings(
-    dep(
-      case_app,
-      cats
-    ),
-  )
-lazy val `concurrent-x` = concurrent.x
-
 lazy val convert =
   project
     .settings(
       dep(
         circe,
+        concurrent,
 
         hammerlab.cli.base,
         hammerlab.io,
@@ -128,7 +120,6 @@ lazy val convert =
     )
     .dependsOn(
       cloud.jvm,
-      concurrent.jvm,
       netcdf,
       testing.jvm forTests,
       utils,
@@ -188,80 +179,21 @@ lazy val testing =
     .settings(
       dep(
         cats,
+        concurrent,
+        files,
         hammerlab.test.suite compile,
         magnolia,
         utest compile
       ),
       utest
     )
-    .dependsOn(
-      concurrent,
-      uri
-    )
 lazy val `testing-x` = testing.x
 
-lazy val uri =
-  cross
-    .settings(
-      dep(
-        cats,
-        cats.effect,
-
-        circe,
-        circe.generic,
-        circe.generic.extras,
-        circe.parser,
-
-        fs2,
-
-        hammerlab.bytes,
-        hammerlab.types,
-        hammerlab.math.utils,
-
-        sourcecode,
-        sttp,
-
-        "io.github.cquiroz" ^^ "scala-java-time" ^ "2.0.0-M13",
-      ),
-      enableMacroParadise,
-      utest
-    )
-    .jvmSettings(
-      http4s.version := "0.19.0",
-      dep(
-        akka.actor,
-        akka.stream,
-        akka.http,
-        akka.http.core,
-
-        commons.io,
-
-        http4s. dsl,
-        http4s.`blaze-client`,
-
-        slf4j.slogging,
-        slf4j.simple
-      )
-    )
-    .jsSettings(
-      scalaJSUseMainModuleInitializer := true,
-      dep(
-        slogging,
-        dom,
-        "io.scalajs.npm" ^^ "request" ^ "0.4.2"
-      ),
-    )
-    .dependsOn(
-      concurrent
-    )
-lazy val `uri-x` = uri.x
-
 lazy val utils = project.settings(
-  crossPaths := false,
   dep(
     hammerlab.channel,
 
-    "org.lasersonlab.thredds" ^ "cdm" ^ "5.0.0",
+    cdm,
     junit tests
   )
 )
@@ -288,6 +220,7 @@ lazy val viewerClient =
       react,
       dep(
         cats,
+        concurrent,
 
         circe,
         circe.generic,
@@ -299,6 +232,7 @@ lazy val viewerClient =
         dom,
         react.extra,
 
+        files,
         hammerlab.types,
         scalajs.time,
         sttp,
@@ -319,9 +253,7 @@ lazy val viewerClient =
     )
     .enablePlugins(JS, ScalaJSBundlerPlugin)
     .dependsOn(
-      concurrent.js,
       gcp.js,
-      uri.js,
       viewerCommon.js,
 
       testing.js forTests
@@ -360,16 +292,18 @@ lazy val zarr =
         circe.generic,
         circe.parser,
 
+        concurrent,
+        files,
+
         hammerlab.bytes,
         hammerlab.io,
         hammerlab.math.utils,
         hammerlab.shapeless_utils,
         hammerlab.types,
 
-        sourcecode,
-
         kittens,
-        magnolia
+        magnolia,
+        sourcecode,
       ),
       utest,
       kindProjector,
@@ -387,11 +321,9 @@ lazy val zarr =
     )
     .dependsOn(
       `circe-utils`,
-       concurrent,
        ndarray,
          slist,
        testing forTests,
-           uri,
         xscala
     )
 lazy val `zarr-x` = zarr.x
@@ -401,14 +333,12 @@ lazy val all =
           `blosc-x` ,
     `circe-utils-x` ,
           `cloud-x` ,
-     `concurrent-x` ,
          convert    ,
         `ndarray-x` ,
           netcdf    ,
       singlecell    ,
           `slist-x` ,
         `testing-x` ,
-            `uri-x` ,
            utils    ,
          `xscala-x` ,
            `zarr-x` ,

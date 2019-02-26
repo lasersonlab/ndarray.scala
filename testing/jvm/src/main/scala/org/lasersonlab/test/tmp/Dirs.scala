@@ -3,7 +3,7 @@ package org.lasersonlab.test.tmp
 import java.nio.file.Files.createTempDirectory
 
 import cats.implicits._
-import org.lasersonlab.uri.Local
+import org.lasersonlab.files.Local
 
 trait Dirs {
   self: Paths ⇒

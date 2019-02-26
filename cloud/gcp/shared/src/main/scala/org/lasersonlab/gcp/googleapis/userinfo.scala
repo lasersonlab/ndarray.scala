@@ -2,7 +2,7 @@ package org.lasersonlab.gcp.googleapis
 
 import com.softwaremill.sttp._
 import io.circe.generic.auto._
-import org.lasersonlab.uri._
+import org.lasersonlab.files._
 import org.lasersonlab.gcp._
 
 object userinfo {

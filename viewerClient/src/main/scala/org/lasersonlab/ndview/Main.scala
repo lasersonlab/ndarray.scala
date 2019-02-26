@@ -11,7 +11,7 @@ import org.lasersonlab.gcp.oauth._
 import org.lasersonlab.gcp.oauth.scopes.auth._
 import org.lasersonlab.ndview.model.Login
 import org.lasersonlab.ndview.view.{ LocalStorage, Page }
-import org.lasersonlab.uri.fragment
+import org.lasersonlab.files.fragment
 import org.scalajs.dom.{ document, window }
 
 import scala.concurrent.ExecutionContext.Implicits.global

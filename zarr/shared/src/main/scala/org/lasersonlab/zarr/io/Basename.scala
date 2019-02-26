@@ -1,7 +1,7 @@
 package org.lasersonlab.zarr.io
 
 import hammerlab.str._
-import org.lasersonlab.uri.Uri.Segment
+import org.lasersonlab.files.Uri.Segment
 
 case class Basename[-T](override val toString: String)
 

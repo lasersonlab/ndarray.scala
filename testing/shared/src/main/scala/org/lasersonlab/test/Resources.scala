@@ -3,7 +3,7 @@ package org.lasersonlab.test
 import java.util.MissingResourceException
 
 import lasersonlab.HasExecutionContext
-import org.lasersonlab.uri.Local
+import org.lasersonlab.files.Local
 
 trait Resources
  extends HasExecutionContext

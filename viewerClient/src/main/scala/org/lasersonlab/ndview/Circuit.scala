@@ -7,8 +7,8 @@ import org.lasersonlab.gcp.googleapis.projects.Project
 import org.lasersonlab.gcp.googleapis.storage.{ Bucket, Dir }
 import org.lasersonlab.gcp.oauth.Auth
 import org.lasersonlab.ndview.model.{ Login, Logins, Projects }
-import org.lasersonlab.uri._
-import org.lasersonlab.uri.http.Config.implicits._
+import org.lasersonlab.files._
+import org.lasersonlab.files.http.Config.implicits._
 
 case class Model(
   logins: Logins = Logins(),

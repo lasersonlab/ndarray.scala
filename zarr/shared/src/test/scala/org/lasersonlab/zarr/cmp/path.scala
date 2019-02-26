@@ -10,7 +10,7 @@ import hammerlab.option._
 import hammerlab.or._
 import lasersonlab.zarr.{ F, Path }
 import org.lasersonlab.test.future.{ CanEq, Cmp }
-import org.lasersonlab.uri.Local
+import org.lasersonlab.files.Local
 import Ior.fromOptions
 import NonEmptyList.fromList
 
@@ -194,7 +194,7 @@ trait path {
                           "Expected:",
                           indent(right),
                           "Actual:",
-                          indent( left)
+                          indent( left),
                         )
                       case (None, None) ⇒ Lines("binary files differ")
                       case (Some(left), None) ⇒ Lines("Expected binary, actual text")

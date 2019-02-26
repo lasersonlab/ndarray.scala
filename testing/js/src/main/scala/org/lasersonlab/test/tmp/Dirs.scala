@@ -1,7 +1,7 @@
 package org.lasersonlab.test.tmp
 
-import org.lasersonlab.uri.Local
-import org.lasersonlab.uri.Local.fs
+import org.lasersonlab.files.Local
+import org.lasersonlab.files.Local.fs
 
 trait Dirs {
   self: Paths ⇒

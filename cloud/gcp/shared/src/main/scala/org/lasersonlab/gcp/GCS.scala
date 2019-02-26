@@ -8,8 +8,8 @@ import org.lasersonlab.gcp.googleapis.projects.UserProject
 import org.lasersonlab.gcp.googleapis.storage
 import org.lasersonlab.gcp.googleapis.storage.{ Objects, Prefix }
 import org.lasersonlab.gcp.oauth.Auth
-import org.lasersonlab.uri.Uri.Segment
-import org.lasersonlab.uri.{ Http, Uri, caching, http ⇒ h }
+import org.lasersonlab.files.Uri.Segment
+import org.lasersonlab.files.{ Http, Uri, caching, http ⇒ h }
 
 case class GCS(
   bucket: String,

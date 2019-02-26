@@ -11,8 +11,8 @@ before_install:
 - "./.travis/setup.sh"
 
 script:
-- sbt                     clean bloscJVM/coverageTest circe-utilsJVM/coverageTest cloudJVM/coverageTest concurrentJVM/coverageTest convert/coverageTest ndarrayJVM/coverageTest netcdf/coverageTest singlecell/coverageTest slistJVM/coverageTest testingJVM/coverageTest uriJVM/coverageTest utils/coverageTest xscalaJVM/coverageTest zarrJVM/coverageTest
-- sbt -Dcoveralls.disable clean bloscJS/test          circe-utilsJS/test          cloudJS/test          concurrentJS/test                               ndarrayJS/test                                                      slistJS/test          testingJS/test          uriJS/test                             xscalaJS/test          zarrJS/test
+- sbt                     clean bloscJVM/coverageTest circe-utilsJVM/coverageTest cloudJVM/coverageTest convert/coverageTest ndarrayJVM/coverageTest netcdf/coverageTest singlecell/coverageTest slistJVM/coverageTest testingJVM/coverageTest utils/coverageTest xscalaJVM/coverageTest zarrJVM/coverageTest
+- sbt -Dcoveralls.disable clean bloscJS/test          circe-utilsJS/test          cloudJS/test                               ndarrayJS/test                                                      slistJS/test          testingJS/test                             xscalaJS/test          zarrJS/test
 
 
 cache:
